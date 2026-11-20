@@ -619,19 +619,35 @@ window.adminProActions = {
     renderApp();
   },
   async addColorRule() {
-    const kw = (document.getElementById('adm-new-col-kw')?.value || '').trim();
-    const color = document.getElementById('adm-new-col-hex')?.value || state.adminNewColorHex || '#a7f3d0';
-    if (!kw) return showToast('Vui lòng nhập từ khóa địa điểm!', 'error');
-    state.customColorRules.unshift({ id: 'cr_' + Date.now(), keyword: kw, color });
-    await this.saveAndApplyColors();
+    const kwEl = document.getElementById('adm-new-col-kw');
+    const hexEl = document.getElementById('adm-new-col-hex');
+    const keyword = (kwEl?.value || '').trim();
+    const color = hexEl?.value || state.adminNewColorHex || '#f2d0c9';
+    if (!keyword) return showToast('Vui lòng nhập tên địa điểm!', 'error');
+
+    if (!Array.isArray(state.customColorRules)) state.customColorRules = [];
+    state.customColorRules.push({
+      id: 'col_' + Date.now(),
+      keyword,
+      color
+    });
+    if (kwEl) kwEl.value = '';
+    await pushAdminConfigToCloud();
+    renderApp();
+    showToast(`🎨 Đã thêm màu cho "${keyword}"!`);
   },
-  updateColorRule(id, field, val) {
-    const r = state.customColorRules.find(x => x.id === id);
-    if (r) r[field] = val;
+  updateColorRule(idx, field, val) {
+    if (!state.customColorRules?.[idx]) return;
+    state.customColorRules[idx][field] = val;
+    if (field === 'color') renderApp();
   },
-  async removeColorRule(id) {
-    state.customColorRules = state.customColorRules.filter(x => x.id !== id);
-    await this.saveAndApplyColors();
+  async removeColorRule(idx) {
+    if (!state.customColorRules?.[idx]) return;
+    const removed = state.customColorRules[idx].keyword || 'màu';
+    state.customColorRules.splice(idx, 1);
+    await pushAdminConfigToCloud();
+    renderApp();
+    showToast(`🗑️ Đã xóa "${removed}"!`);
   },
   async saveAndApplyColors() {
     localStorage.setItem('as_custom_color_rules_2026', JSON.stringify(state.customColorRules));
