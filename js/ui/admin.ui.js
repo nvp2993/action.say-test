@@ -261,20 +261,23 @@ function renderCrewTabHtml(membersSorted) {
 
 function renderPricingAndColorsTabHtml() {
   const rates = state.ctpRatesConfig || {};
-  const rules = state.customColorRules || [];
+  const allRules = Array.isArray(state.customColorRules) ? state.customColorRules : [];
+  const customRules = allRules
+    .map((r, idx) => ({ ...r, _idx: idx }))
+    .filter(r => !String(r?.id || '').startsWith('def_'));
   const pickedNewHex = state.adminNewColorHex || '#f4c29f';
 
   const defaultGroups = [
-    { label: 'Mũi Né, Nha Trang, Tây Ninh', color: '#f4c29f' },
-    { label: 'Hồ Tràm, Vũng Tàu', color: '#c9b8df' },
-    { label: 'Ninh Chữ, Cam Ranh, Cưới, LK', color: '#9ec999' },
-    { label: 'Sài Gòn, SG, Củ Chi, TSN', color: '#9ad0f0' },
-    { label: 'HCM, Cần Giờ, Nhà Bè', color: '#bce3cf' },
-    { label: 'Cần Thơ, Bận', color: '#f5dc82' },
-    { label: 'Đà Lạt, ĐL', color: '#d2e391' },
-    { label: 'Kê Gà, Phú Quốc', color: '#faeec7' },
-    { label: 'Long An, Hà Nội, Đồng Nai', color: '#cfd6dc' },
-    { label: 'Các địa điểm khác (Mặc định)', color: '#dce9fa' }
+    { id: 'def_muine',   keyword: 'Mũi Né, Nha Trang, Tây Ninh', color: '#f4c29f' },
+    { id: 'def_hotram',  keyword: 'Hồ Tràm, Vũng Tàu',           color: '#c9b8df' },
+    { id: 'def_ninhchu', keyword: 'Ninh Chữ, Cam Ranh, Cưới, LK', color: '#9ec999' },
+    { id: 'def_saigon',  keyword: 'Sài Gòn, SG, Củ Chi, TSN',    color: '#9ad0f0' },
+    { id: 'def_hcm',     keyword: 'HCM, Cần Giờ, Nhà Bè',        color: '#bce3cf' },
+    { id: 'def_cantho',  keyword: 'Cần Thơ, Bận',                color: '#f5dc82' },
+    { id: 'def_dalat',   keyword: 'Đà Lạt, ĐL',                  color: '#d2e391' },
+    { id: 'def_kega',    keyword: 'Kê Gà, Phú Quốc',             color: '#faeec7' },
+    { id: 'def_longan',  keyword: 'Long An, Hà Nội, Đồng Nai',   color: '#cfd6dc' },
+    { id: 'def_other',   keyword: 'Các địa điểm khác (Mặc định)', color: '#dce9fa', isOther: true }
   ];
 
   return `
@@ -303,14 +306,14 @@ function renderPricingAndColorsTabHtml() {
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div>
             <div class="font-black text-xs uppercase tracking-wide text-slate-900">🎨 Màu Địa Điểm Trên Bảng Công Tác</div>
-            <div class="text-[10.5px] text-slate-400">Thêm màu riêng ở trên để ghi đè. Xóa đi sẽ tự quay về màu mặc định bên dưới.</div>
+            <div class="text-[10.5px] text-slate-400">Chỉnh xong bấm "Lưu & Áp Dụng" để cập nhật toàn bộ bảng lịch.</div>
           </div>
           <button onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu &amp; Áp Dụng</button>
         </div>
 
         <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2.5">
           <div class="flex gap-2">
-            <input id="adm-new-col-kw" type="text" placeholder="Nhập địa điểm muốn đổi màu riêng (VD: Đi ăn đám cưới, Măng Đen...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-white text-xs" />
+            <input id="adm-new-col-kw" type="text" placeholder="Thêm địa điểm mới (VD: Đi ăn đám cưới, Măng Đen...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-white text-xs" />
             <input id="adm-new-col-hex" type="color" value="${pickedNewHex}" onchange="adminProActions.pickNewColorSwatch(this.value)" class="w-9 h-9 rounded-xl border cursor-pointer shrink-0 bg-white p-0.5" />
             <button onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black text-xs shrink-0">+ Thêm</button>
           </div>
@@ -326,14 +329,14 @@ function renderPricingAndColorsTabHtml() {
         </div>
 
         <div class="space-y-1.5">
-          <div class="text-[10.5px] font-black text-slate-500 uppercase tracking-wide">✨ Địa điểm tùy chỉnh riêng (${rules.length})</div>
-          ${rules.length > 0 ? `
+          <div class="text-[10.5px] font-black text-slate-500 uppercase tracking-wide">✨ Địa điểm tùy chỉnh riêng (${customRules.length})</div>
+          ${customRules.length > 0 ? `
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              ${rules.map((r, idx) => `
+              ${customRules.map(r => `
                 <div style="background:${r.color}" class="px-2.5 py-1.5 rounded-2xl border border-black/10 flex items-center gap-2">
-                  <input type="color" value="${r.color}" onchange="adminProActions.updateColorRule(${idx}, 'color', this.value)" class="w-6 h-6 rounded-full border cursor-pointer shrink-0 bg-transparent" />
-                  <input type="text" value="${escapeHtml(r.keyword || '')}" oninput="adminProActions.updateColorRule(${idx}, 'keyword', this.value)" class="flex-1 min-w-0 px-2 py-1 rounded-xl bg-white/85 font-bold text-slate-900 text-[11px]" />
-                  <button onclick="adminProActions.removeColorRule(${idx})" class="w-6 h-6 rounded-full bg-white/85 hover:bg-white text-rose-600 font-black text-[10px] shrink-0">✕</button>
+                  <input type="color" value="${r.color}" onchange="adminProActions.updateColorRule(${r._idx}, 'color', this.value)" class="w-6 h-6 rounded-full border cursor-pointer shrink-0 bg-transparent" />
+                  <input type="text" value="${escapeHtml(r.keyword || '')}" oninput="adminProActions.updateColorRule(${r._idx}, 'keyword', this.value)" class="flex-1 min-w-0 px-2 py-1 rounded-xl bg-white/85 font-bold text-slate-900 text-[11px]" />
+                  <button onclick="adminProActions.removeColorRule(${r._idx})" class="w-6 h-6 rounded-full bg-white/85 hover:bg-white text-rose-600 font-black text-[10px] shrink-0">✕</button>
                 </div>
               `).join('')}
             </div>
@@ -341,14 +344,23 @@ function renderPricingAndColorsTabHtml() {
         </div>
 
         <div class="pt-2 border-t border-slate-100 space-y-2">
-          <div class="text-[10.5px] font-black text-slate-500 uppercase tracking-wide">📌 Bảng màu mặc định của hệ thống</div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-            ${defaultGroups.map(g => `
-              <div class="px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center gap-2">
-                <span style="background:${g.color}" class="w-4 h-4 rounded-full border border-black/15 shrink-0"></span>
-                <span class="text-[11px] font-bold text-slate-700 truncate">${escapeHtml(g.label)}</span>
-              </div>
-            `).join('')}
+          <div class="text-[10.5px] font-black text-slate-500 uppercase tracking-wide">📌 Bảng màu mặc định (chạm để đổi màu hoặc sửa tên)</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            ${defaultGroups.map(g => {
+              const edited = allRules.find(r => r?.id === g.id);
+              const curColor = edited ? edited.color : g.color;
+              const curKw = edited ? edited.keyword : g.keyword;
+              return `
+                <div style="background:${curColor}" class="px-2.5 py-1.5 rounded-2xl border border-black/10 flex items-center gap-2">
+                  <input type="color" value="${curColor}" onchange="adminProActions.updateDefaultColorGroup('${g.id}', 'color', this.value, '${escapeHtml(g.keyword)}', '${g.color}')" class="w-6 h-6 rounded-full border cursor-pointer shrink-0 bg-transparent" />
+                  ${g.isOther
+                    ? `<span class="flex-1 px-2 py-1 rounded-xl bg-white/80 font-bold text-slate-700 text-[11px] truncate">${escapeHtml(g.keyword)}</span>`
+                    : `<input type="text" value="${escapeHtml(curKw)}" oninput="adminProActions.updateDefaultColorGroup('${g.id}', 'keyword', this.value, '${escapeHtml(g.keyword)}', '${g.color}')" class="flex-1 min-w-0 px-2 py-1 rounded-xl bg-white/85 font-bold text-slate-900 text-[11px]" />`
+                  }
+                  ${edited ? `<button type="button" title="Khôi phục màu gốc" onclick="adminProActions.resetDefaultColorGroup('${g.id}')" class="w-6 h-6 rounded-full bg-white/85 hover:bg-white text-slate-700 font-black text-[11px] shrink-0">↩</button>` : ''}
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
       </div>
