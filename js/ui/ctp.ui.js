@@ -38,6 +38,10 @@ export function renderCtpTabHtml() {
       </div>
 
       <div id="ctp-shows-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 space-y-3">
+      <div class="px-3 py-1.5 bg-amber-50 border-b border-amber-200/80 text-[10.5px] text-amber-900 font-semibold flex items-center gap-1.5 shrink-0">
+     <span>🔒</span>
+     <span>Chế độ riêng tư: Dữ liệu CTP &amp; thông tin Đối tác chỉ hiển thị riêng cho tài khoản của bạn.</span>
+   </div>
         ${filteredShows.length === 0 ? `
           <div class="text-center py-12 bg-white rounded-3xl border border-slate-200 mx-auto max-w-sm space-y-3 p-4">
             <div class="text-3xl">📭</div>
@@ -74,7 +78,7 @@ export function renderCtpTabHtml() {
 
               <div class="flex flex-wrap gap-1.5">
                 ${taskList.map(t => {
-                  const checked = item.tasks?.[t.key] !== undefined;
+                  const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
                   const val = checked ? item.tasks[t.key] : t.def;
                   return `
                     <div class="inline-flex flex-col items-start">
