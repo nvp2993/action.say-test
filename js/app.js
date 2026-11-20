@@ -426,7 +426,6 @@ window.ctpActions = {
     renderApp();
     showToast('✅ Đã thêm show ngoài lịch vào cuối danh sách!');
   },
-  },
   autoFillFromRoles() {
     const shows = getCombinedCtpShows();
     let count = 0;
