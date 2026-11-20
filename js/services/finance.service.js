@@ -16,7 +16,6 @@ export function attachFinanceListeners(memberId) {
   detachFinanceListeners();
   if (!memberId) return;
 
-  // 1. Dữ liệu Tính CTP cá nhân (chỉ chính chủ đọc được)
   const ctpRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', memberId);
   finUnsubs.push(onSnapshot(ctpRef, (snap) => {
     if (snap.exists()) {
@@ -29,7 +28,6 @@ export function attachFinanceListeners(memberId) {
     }
   }));
 
-  // 2. Dữ liệu Công Nợ / Tài chính Chủ Show cá nhân (chỉ chính chủ đọc được)
   const ownerRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'owner_finance_v2', memberId);
   finUnsubs.push(onSnapshot(ownerRef, (snap) => {
     if (snap.exists() && snap.data()?.map) {
@@ -65,16 +63,15 @@ export function saveOwnerFinanceState(immediate = false) {
   if (immediate) push(); else ownerTimer = setTimeout(push, 500);
 }
 
-// Đọc trực tiếp từ bảng đơn giá Admin Pro (state.ctpRatesConfig)
 export function getDefaultRateForTask(taskKey, sh) {
   const days = getShowDays(sh);
-  const r = state.ctpRatesConfig;
-  if (taskKey === 'quay') return days === 1 ? r.quay1Day : r.quayMultiDay * days;
-  if (taskKey === 'chup') return days === 1 ? r.chup1Day : r.chupMultiDay * days;
-  if (taskKey === 'dung') return r.dung;
-  if (taskKey === 'lamhinh') return r.lamhinh;
-  if (taskKey === 'flycam') return r.flycam;
-  if (taskKey === 'gimbal') return r.gimbal;
+  const r = state.ctpRatesConfig || {};
+  if (taskKey === 'quay') return days === 1 ? (r.quay1Day ?? 1500000) : (r.quayMultiDay ?? 1200000) * days;
+  if (taskKey === 'chup') return days === 1 ? (r.chup1Day ?? 1500000) : (r.chupMultiDay ?? 1200000) * days;
+  if (taskKey === 'dung') return r.dung ?? 1000000;
+  if (taskKey === 'lamhinh') return r.lamhinh ?? 300000;
+  if (taskKey === 'flycam') return r.flycam ?? 1000000;
+  if (taskKey === 'gimbal') return r.gimbal ?? 200000;
   return 0;
 }
 
@@ -104,13 +101,25 @@ export function getCombinedCtpShows() {
 }
 
 export function ensureOwnerFinRecord(sh) {
-  if (!state.ownerFinanceMap[sh.id]) {
-    state.ownerFinanceMap[sh.id] = {
-      clientPrice: 0, depositPaid: 0, status: 'unpaid',
-      crewCosts: {}, crewTasks: {}, otherExpenses: [], crewMemberMeta: {}, note: ''
+  const id = typeof sh === 'string' ? sh : sh.id;
+  if (!state.ownerFinanceMap[id]) {
+    state.ownerFinanceMap[id] = {
+      clientPrice: 0,
+      depositPaid: 0,
+      status: 'unpaid',
+      crewCosts: {},
+      crewTasks: {},
+      otherExpenses: [],
+      crewMemberMeta: {},
+      note: ''
     };
   }
-  return state.ownerFinanceMap[sh.id];
+  const rec = state.ownerFinanceMap[id];
+  if (!rec.crewCosts) rec.crewCosts = {};
+  if (!rec.crewTasks) rec.crewTasks = {};
+  if (!Array.isArray(rec.otherExpenses)) rec.otherExpenses = [];
+  if (!rec.crewMemberMeta) rec.crewMemberMeta = {};
+  return rec;
 }
 
 export function calculateOwnerShowMetrics(sh) {
@@ -119,7 +128,7 @@ export function calculateOwnerShowMetrics(sh) {
   const depositPaid = Number(rec.depositPaid) || 0;
   let crewCtpTotal = 0;
   (sh.memberIds || []).forEach(mid => {
-    if (mid === state.currentUserId || mid === sh.ownerId) return;
+    if (mid === sh.ownerId) return;
     crewCtpTotal += (Number(rec.crewCosts?.[mid]) || 0);
   });
   const otherExpTotal = (rec.otherExpenses || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
@@ -131,7 +140,7 @@ export function calculateOwnerShowMetrics(sh) {
 
 export function calculateCrewShowMetrics(sh) {
   const ctpItem = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
-  const taskSum = Object.values(ctpItem.tasks || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+  const taskSum = Object.entries(ctpItem.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
   const extraBillSum = (ctpItem.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
   const grossCtp = taskSum + extraBillSum;
   const rec = ensureOwnerFinRecord(sh);
