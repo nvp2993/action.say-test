@@ -465,14 +465,33 @@ window.ctpActions = {
     }
     try {
       showToast('📸 Đang chụp ảnh Bill...');
-      const canvas = await window.html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = await window.html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          clonedDoc.querySelectorAll('*').forEach((node) => {
+            const cs = clonedDoc.defaultView?.getComputedStyle(node);
+            if (!cs) return;
+            if (cs.backgroundColor && (cs.backgroundColor.includes('oklch') || cs.backgroundColor.includes('oklab'))) {
+              node.style.backgroundColor = '#ffffff';
+            }
+            if (cs.color && (cs.color.includes('oklch') || cs.color.includes('oklab'))) {
+              node.style.color = '#0f172a';
+            }
+            if (cs.borderColor && (cs.borderColor.includes('oklch') || cs.borderColor.includes('oklab'))) {
+              node.style.borderColor = '#cbd5e1';
+            }
+          });
+        }
+      });
       const link = document.createElement('a');
       link.download = `CTP_T${state.ctpMonth}_${state.selectedYear}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       showToast('✅ Đã tải ảnh Bill về máy!');
     } catch (err) {
-      showToast('Lỗi chụp ảnh: ' + (err?.message || 'Trình duyệt không hỗ trợ màu mới'), 'error');
+      showToast('Lỗi chụp ảnh: ' + (err?.message || 'Không chụp được'), 'error');
     }
   },
   copyBillText() {
