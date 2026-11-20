@@ -98,15 +98,6 @@ export function resolveDynamicLocationColor(location = '', partner = '') {
   return '#dce9fa';
 }
 
-  const key = loc || 'default';
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = ((hash << 5) - hash) + key.charCodeAt(i);
-    hash |= 0;
-  }
-  return PASTEL_30[Math.abs(hash) % PASTEL_30.length];
-}
-
 export function getBankName(bin) {
   return BANK_LIST.find(b => b.bin === String(bin))?.name || 'Ngân hàng';
 }
