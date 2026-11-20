@@ -25,6 +25,21 @@ function applyCustomLogoToDom() {
   });
 }
 
+function syncAvatarsAcrossDom() {
+  const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
+  (state.members || []).forEach(m => {
+    const url = state.memberProfiles?.[m.id]?.avatarUrl || savedAvatars[m.id];
+    if (!url) return;
+    document.querySelectorAll(`[data-member-avatar="${m.id}"]`).forEach(el => {
+      if (el.tagName === 'IMG') {
+        el.src = url;
+      } else {
+        el.innerHTML = `<img src="${url}" alt="${m.name}" class="w-full h-full object-cover" />`;
+      }
+    });
+  });
+}
+
 function renderApp() {
   const root = document.getElementById('app');
   if (!root) return;
@@ -84,13 +99,18 @@ triggerVipAvatarUpload() {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+      const cleanUrl = String(dataUrl || '');
+      const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
+      savedAvatars[state.currentUserId] = cleanUrl;
+      localStorage.setItem('as_member_avatars_2026', JSON.stringify(savedAvatars));
+
       const cur = state.memberProfiles?.[state.currentUserId] || {};
       await saveMyProfileToCloud(state.currentUserId, {
         ...cur,
-        avatarUrl: String(dataUrl || '')
+        avatarUrl: cleanUrl
       });
       renderApp();
-      showToast('📷 Đã cập nhật ảnh đại diện!');
+      showToast('📷 Đã đổi & đồng bộ ảnh đại diện toàn app!');
     } catch (err) {
       showToast('Lỗi tải ảnh avatar: ' + err.message, 'error');
     } finally {
