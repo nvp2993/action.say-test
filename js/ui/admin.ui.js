@@ -289,41 +289,40 @@ function renderPricingAndColorsTabHtml() {
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <div class="font-black text-xs uppercase tracking-wide text-slate-900">🗺️ Màu Tô Địa Điểm Trên Bảng Công Tác</div>
-            <div class="text-[10.5px] text-slate-400">Giữ nguyên các địa điểm có sẵn &amp; thêm bảng 30 màu dịu mắt để phân biệt dễ hơn</div>
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">🎨 Màu Địa Điểm (Tự Động 30 Màu Pastel)</div>
+            <div class="text-[10.5px] text-slate-400">Mặc định hệ thống tự tô 30 màu pastel. Chỉ thêm bên dưới nếu muốn gán màu riêng cho địa điểm đặc biệt.</div>
           </div>
           <button onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu &amp; Áp Dụng Màu</button>
         </div>
 
-        <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-          <div class="flex items-center justify-between text-[10.5px] font-bold text-slate-500">
-            <span>Màu đang chọn: <span style="background:${pickedNewHex}" class="px-2 py-0.5 rounded-md border border-black/15 font-mono text-slate-900 ml-1">${escapeHtml(pickedNewHex)}</span></span>
-            <span>30 màu gợi ý</span>
+        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2.5">
+          <div class="flex gap-2">
+            <input id="adm-new-col-kw" type="text" placeholder="Nhập địa điểm muốn đổi màu riêng (VD: Mũi Né, Phú Quốc...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-white text-xs" />
+            <input id="adm-new-col-hex" type="color" value="${pickedNewHex}" onchange="adminProActions.pickNewColorSwatch(this.value)" class="w-9 h-9 rounded-xl border cursor-pointer shrink-0 bg-white p-0.5" />
+            <button onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black text-xs shrink-0">+ Thêm</button>
           </div>
-          <div class="grid grid-cols-10 sm:grid-cols-15 gap-1.5">
+
+          <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span class="text-[10px] font-bold text-slate-400 mr-1">Chọn nhanh:</span>
             ${ADMIN_SWATCH_COLORS_30.map(hex => `
               <button type="button" onclick="adminProActions.pickNewColorSwatch('${hex}')" title="${hex}"
                 style="background:${hex}"
-                class="w-full aspect-square rounded-lg border ${pickedNewHex.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-slate-900 border-slate-900 scale-105' : 'border-black/15'} transition-transform cursor-pointer"></button>
+                class="w-5 h-5 rounded-full border ${pickedNewHex.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-slate-900 border-slate-900 scale-110' : 'border-black/15'} transition-transform cursor-pointer"></button>
             `).join('')}
           </div>
         </div>
 
-        <div class="flex gap-2">
-          <input id="adm-new-col-kw" type="text" placeholder="Thêm địa điểm mới (VD: Măng Đen, Hồ Tràm...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-slate-50" />
-          <input id="adm-new-col-hex" type="color" value="${pickedNewHex}" onchange="adminProActions.pickNewColorSwatch(this.value)" class="w-10 h-9 rounded-xl border cursor-pointer" />
-          <button onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black">+ Thêm</button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          ${rules.map(r => `
-            <div style="background:${r.color}" class="p-2 rounded-2xl border border-black/10 flex items-center gap-2">
-              <input type="color" value="${r.color}" onchange="adminProActions.updateColorRule('${escapeHtml(r.id)}', 'color', this.value)" class="w-6 h-6 rounded border cursor-pointer shrink-0" />
-              <input type="text" value="${escapeHtml(r.keyword || '')}" oninput="adminProActions.updateColorRule('${escapeHtml(r.id)}', 'keyword', this.value)" class="flex-1 min-w-0 px-2.5 py-1 rounded-xl bg-white/90 font-bold text-slate-900" />
-              <button onclick="adminProActions.removeColorRule('${escapeHtml(r.id)}')" class="w-6 h-6 rounded-lg bg-white/90 text-rose-600 font-black">✕</button>
-            </div>
-          `).join('')}
-        </div>
+        ${rules.length > 0 ? `
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            ${rules.map(r => `
+              <div style="background:${r.color}" class="px-2.5 py-1.5 rounded-2xl border border-black/10 flex items-center gap-2">
+                <input type="color" value="${r.color}" onchange="adminProActions.updateColorRule('${escapeHtml(r.id)}', 'color', this.value)" class="w-6 h-6 rounded-full border cursor-pointer shrink-0 bg-transparent" />
+                <input type="text" value="${escapeHtml(r.keyword || '')}" oninput="adminProActions.updateColorRule('${escapeHtml(r.id)}', 'keyword', this.value)" class="flex-1 min-w-0 px-2 py-1 rounded-xl bg-white/85 font-bold text-slate-900 text-[11px]" />
+                <button onclick="adminProActions.removeColorRule('${escapeHtml(r.id)}')" class="w-6 h-6 rounded-full bg-white/85 hover:bg-white text-rose-600 font-black text-[10px] shrink-0">✕</button>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<div class="text-[11px] text-slate-400 italic px-1">Chưa có địa điểm tùy chỉnh riêng — tất cả đang tự động dùng bảng 30 màu pastel.</div>`}
       </div>
     </div>
   `;
