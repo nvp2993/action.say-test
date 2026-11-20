@@ -105,7 +105,7 @@ export function renderHeaderHtml(totalAlerts = 0) {
           ` : ''}
           <button type="button" id="as-header-bell-btn" onclick="holdBellActions.openBellDrawer()" class="relative ${alertCount > 0 ? 'has-alert' : ''}" title="Thông báo & Giữ lịch">
             <i class="fa-solid fa-bell text-xs"></i>
-            ${alertCount > 0 ? `<span id="as-header-bell-badge" class="absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[9.5px] font-black flex items-center justify-center leading-none shadow">${alertCount}</span>` : ''}
+            ${alertCount > 0 ? `<span id="as-header-bell-badge" style="color: #ffffff !important; background-color: #e11d48 !important;" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-black flex items-center justify-center leading-none shadow">${alertCount}</span>` : ''}
           </button>
           <button type="button" onclick="appActions.openGuideModal()" title="Hướng dẫn cài App iPhone" class="w-7 h-7 rounded-lg flex items-center justify-center border text-xs bg-slate-800 text-slate-300 border-slate-700">
             <i class="fa-solid fa-mobile-screen-button"></i>
