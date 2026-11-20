@@ -77,6 +77,8 @@ function renderApp() {
     ${renderFormModalHtml()}
     ${renderCrewPassModalHtml()}
     ${renderCtpBillModalHtml()}
+    ${renderCtpCustomShowModalHtml()}
+    ${renderHoldBellModalHtml()}
     ${renderToastHtml()}
   `;
   applyCustomLogoToDom();
@@ -386,24 +388,44 @@ window.ctpActions = {
     if (grandEl && !state.hideMoneyMode) grandEl.textContent = grand.toLocaleString('vi-VN') + 'đ';
   },
   openAddCustomShowModal() {
-    const loc = prompt('Nhập tên Show / Địa điểm ngoài lịch:');
-    if (!loc || !loc.trim()) return;
-    const defaultDate = `${state.selectedYear}-${String(state.ctpMonth).padStart(2, '0')}-01`;
-    const dateStr = prompt('Nhập ngày (YYYY-MM-DD):', defaultDate) || defaultDate;
-    const newShow = {
+    const defaultDate = `${state.selectedYear}-${String(state.ctpMonth).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+    state.ctpCustomShowModal = {
+      location: '',
+      partner: '',
+      startDate: defaultDate,
+      endDate: defaultDate,
+      ownerId: state.ctpOwnerId !== 'all' ? state.ctpOwnerId : state.currentUserId
+    };
+    renderApp();
+  },
+  closeAddCustomShowModal() {
+    state.ctpCustomShowModal = null;
+    renderApp();
+  },
+  submitAddCustomShow() {
+    const location = (document.getElementById('ctp-ext-loc')?.value || '').trim();
+    const partner = (document.getElementById('ctp-ext-partner')?.value || '').trim();
+    const startDate = document.getElementById('ctp-ext-start')?.value || `${state.selectedYear}-${String(state.ctpMonth).padStart(2, '0')}-01`;
+    const endDate = document.getElementById('ctp-ext-end')?.value || startDate;
+    const ownerId = document.getElementById('ctp-ext-owner')?.value || state.currentUserId;
+    if (!location) return showToast('Vui lòng nhập Địa điểm / Tên Show!', 'error');
+
+    if (!Array.isArray(state.ctpCustomShows)) state.ctpCustomShows = [];
+    state.ctpCustomShows.push({
       id: 'ctp_ext_' + Date.now(),
-      location: loc.trim(),
-      startDate: dateStr.trim(),
-      endDate: dateStr.trim(),
-      ownerId: state.ctpOwnerId !== 'all' ? state.ctpOwnerId : state.currentUserId,
+      location,
+      partner,
+      startDate,
+      endDate,
+      ownerId,
       memberIds: [state.currentUserId],
       isCustomCtp: true
-    };
-    if (!Array.isArray(state.ctpCustomShows)) state.ctpCustomShows = [];
-    state.ctpCustomShows.push(newShow);
+    });
+    state.ctpCustomShowModal = null;
     saveCtpState(true);
     renderApp();
-    showToast('✅ Đã thêm show ngoài lịch!');
+    showToast('✅ Đã thêm show ngoài lịch vào cuối danh sách!');
+  },
   },
   autoFillFromRoles() {
     const shows = getCombinedCtpShows();
@@ -465,40 +487,92 @@ window.ctpActions = {
   },
   closeBillModal() { state.ctpBillModal = null; renderApp(); },
   async captureBillImage() {
-    const el = document.getElementById('ctp-bill-capture-area');
-    if (!el) return showToast('Không tìm thấy khung Bill!', 'error');
-    if (typeof window.html2canvas !== 'function') {
-      return showToast('Chưa tải được thư viện chụp ảnh (html2canvas)!', 'error');
-    }
+    const bm = state.ctpBillModal;
+    if (!bm) return showToast('Không có dữ liệu Bill để chụp!', 'error');
     try {
-      showToast('📸 Đang chụp ảnh Bill...');
-      const canvas = await window.html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-          clonedDoc.querySelectorAll('*').forEach((node) => {
-            const cs = clonedDoc.defaultView?.getComputedStyle(node);
-            if (!cs) return;
-            if (cs.backgroundColor && (cs.backgroundColor.includes('oklch') || cs.backgroundColor.includes('oklab'))) {
-              node.style.backgroundColor = '#ffffff';
-            }
-            if (cs.color && (cs.color.includes('oklch') || cs.color.includes('oklab'))) {
-              node.style.color = '#0f172a';
-            }
-            if (cs.borderColor && (cs.borderColor.includes('oklch') || cs.borderColor.includes('oklab'))) {
-              node.style.borderColor = '#cbd5e1';
-            }
-          });
-        }
+      const prof = state.memberProfiles?.[state.currentUserId] || {};
+      const fullName = (prof.fullName || bm.memberName || '').trim();
+      const canvas = document.createElement('canvas');
+      const W = 900;
+      const rowH = 44;
+      const H = 220 + Math.max(1, bm.rows.length) * rowH + (prof.bankAcc ? 120 : 20);
+      canvas.width = W * 2;
+      canvas.height = H * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(`BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}`, 28, 42);
+      ctx.fillStyle = '#475569';
+      ctx.font = '13px sans-serif';
+      ctx.fillText(`Nhân sự: ${fullName}   •   Chủ show: ${bm.ownerTitle}`, 28, 66);
+
+      const tableX = 28, tableY = 86, tableW = W - 56;
+      const cols = [52, 86, 190, 210, 140, tableW - 52 - 86 - 190 - 210 - 140];
+      const headers = ['STT', 'NGÀY', 'SHOW', 'NHIỆM VỤ', 'PHÁT SINH', 'TỔNG'];
+
+      ctx.fillStyle = '#107c41';
+      ctx.fillRect(tableX, tableY, tableW, 34);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 11px sans-serif';
+      let cx = tableX;
+      headers.forEach((h, idx) => {
+        ctx.fillText(h, cx + 8, tableY + 21);
+        cx += cols[idx];
       });
+
+      let ry = tableY + 34;
+      bm.rows.forEach((r, i) => {
+        ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        ctx.fillRect(tableX, ry, tableW, rowH);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.strokeRect(tableX, ry, tableW, rowH);
+
+        let xPos = tableX;
+        const cells = [
+          String(r.stt),
+          String(r.dateLabel || ''),
+          String(r.location || ''),
+          (r.taskBulletsCompact || []).join(', ') || '-',
+          (r.extraBulletsCompact || []).join(', ') || '-',
+          Number(r.showSum || 0).toLocaleString('vi-VN') + 'đ'
+        ];
+        cells.forEach((txt, cIdx) => {
+          ctx.fillStyle = cIdx === 5 ? '#047857' : '#0f172a';
+          ctx.font = cIdx === 5 ? 'bold 12px monospace' : '12px sans-serif';
+          const clipped = txt.length > 34 ? txt.slice(0, 32) + '…' : txt;
+          ctx.fillText(clipped, xPos + 8, ry + 26);
+          xPos += cols[cIdx];
+        });
+        ry += rowH;
+      });
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(tableX, ry, tableW, 38);
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 13px monospace';
+      ctx.fillText('TỔNG CỘNG:', tableX + tableW - cols[5] - 110, ry + 24);
+      ctx.fillStyle = '#34d399';
+      ctx.fillText(Number(bm.total || 0).toLocaleString('vi-VN') + 'đ', tableX + tableW - cols[5] + 8, ry + 24);
+
+      if (prof.bankAcc) {
+        ry += 56;
+        ctx.fillStyle = '#064e3b';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(`Thanh toán: ${getBankName(prof.bankBin)} • STK: ${prof.bankAcc} • Chủ TK: ${fullName.toUpperCase()}`, tableX, ry);
+      }
+
       const link = document.createElement('a');
       link.download = `CTP_T${state.ctpMonth}_${state.selectedYear}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
-      showToast('✅ Đã tải ảnh Bill về máy!');
+      showToast('✅ Đã xuất ảnh Bill (.PNG) thành công!');
     } catch (err) {
-      showToast('Lỗi chụp ảnh: ' + (err?.message || 'Không chụp được'), 'error');
+      showToast('Lỗi chụp ảnh: ' + (err?.message || 'Không xuất được ảnh'), 'error');
     }
   },
   copyBillText() {
