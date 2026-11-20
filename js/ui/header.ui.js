@@ -71,6 +71,13 @@ export function renderHeaderHtml(totalAlerts = 0) {
   const prof = state.memberProfiles?.[state.currentUserId] || {};
   const logoSrc = state.customLogoUrl || './assets/logo.png';
 
+  const uid = state.currentUserId;
+  const activeHolds = (state.shows || []).filter(s =>
+    s && s.isHold && !s.isCancelled &&
+    (s.ownerId === uid || (s.memberIds || []).includes(uid))
+  );
+  const alertCount = totalAlerts > 0 ? totalAlerts : activeHolds.length;
+
   return `
     <header style="padding-top: max(18px, env(safe-area-inset-top));" class="bg-slate-900 text-white px-2.5 pb-2 shrink-0 border-b border-slate-800 z-30 space-y-2">
       <div class="flex items-center justify-between gap-2">
@@ -92,21 +99,21 @@ export function renderHeaderHtml(totalAlerts = 0) {
 
         <div class="flex items-center gap-1.5 shrink-0">
           ${state.isAdminMode ? `
-            <button onclick="appActions.enterBackendPortal()" class="px-2 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[9.5px] font-black flex items-center gap-1">
+            <button type="button" onclick="appActions.enterBackendPortal()" class="px-2 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[9.5px] font-black flex items-center gap-1">
               <i class="fa-solid fa-shield-halved text-amber-600"></i><span>ADMIN</span>
             </button>
           ` : ''}
-          <button id="as-header-bell-btn" onclick="holdBellActions.openBellDrawer()" class="${totalAlerts > 0 ? 'has-alert' : ''}" title="Thông báo & Giữ lịch">
+          <button type="button" id="as-header-bell-btn" onclick="holdBellActions.openBellDrawer()" class="relative ${alertCount > 0 ? 'has-alert' : ''}" title="Thông báo & Giữ lịch">
             <i class="fa-solid fa-bell text-xs"></i>
-            ${totalAlerts > 0 ? `<span id="as-header-bell-badge">${totalAlerts}</span>` : ''}
+            ${alertCount > 0 ? `<span id="as-header-bell-badge" class="absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[9.5px] font-black flex items-center justify-center leading-none shadow">${alertCount}</span>` : ''}
           </button>
-          <button onclick="appActions.openGuideModal()" title="Hướng dẫn cài App iPhone" class="w-7 h-7 rounded-lg flex items-center justify-center border text-xs bg-slate-800 text-slate-300 border-slate-700">
+          <button type="button" onclick="appActions.openGuideModal()" title="Hướng dẫn cài App iPhone" class="w-7 h-7 rounded-lg flex items-center justify-center border text-xs bg-slate-800 text-slate-300 border-slate-700">
             <i class="fa-solid fa-mobile-screen-button"></i>
           </button>
-          <button onclick="appActions.toggleZenFullscreen()" class="w-7 h-7 rounded-lg flex items-center justify-center border text-xs bg-slate-800 text-slate-300 border-slate-700">
+          <button type="button" onclick="appActions.toggleZenFullscreen()" class="w-7 h-7 rounded-lg flex items-center justify-center border text-xs bg-slate-800 text-slate-300 border-slate-700">
             <i class="fa-solid ${state.zenFullscreen ? 'fa-compress' : 'fa-expand'}"></i>
           </button>
-          <button onclick="appActions.openCrewPassModal()" class="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-full pl-1.5 pr-2 py-0.5">
+          <button type="button" onclick="appActions.openCrewPassModal()" class="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-full pl-1.5 pr-2 py-0.5">
             ${prof.avatar ? `<img src="${prof.avatar}" class="w-5 h-5 rounded-full object-cover border border-white/60 shrink-0" />` : ''}
             <span style="background-color:${curMem.bg};color:${curMem.text}" class="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase">${escapeHtml(curMem.shortLabel)}</span>
           </button>
@@ -135,22 +142,22 @@ export function renderHeaderHtml(totalAlerts = 0) {
 export function renderBottomNavHtml() {
   return `
     <nav style="padding-bottom: max(4px, env(safe-area-inset-bottom));" class="bg-white border-t border-slate-200 px-1 pt-1 shrink-0 z-30 flex items-center justify-around">
-      <button onclick="appActions.setTab('shows')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
+      <button type="button" onclick="appActions.setTab('shows')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
         <i class="fa-solid fa-table-list text-sm"></i><span class="text-[10px] mt-0.5">Lịch Show</span>
       </button>
-      <button onclick="appActions.setTab('matrix')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
+      <button type="button" onclick="appActions.setTab('matrix')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
         <i class="fa-solid fa-calendar-days text-sm"></i><span class="text-[10px] mt-0.5">Công Tác T${state.selectedMonth}</span>
       </button>
-      <button data-action="open-add-show" onclick="appActions.openAddModal()" class="active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1 text-xs shrink-0">
+      <button type="button" data-action="open-add-show" onclick="appActions.openAddModal()" class="active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1 text-xs shrink-0">
         <i class="fa-solid fa-bolt"></i><span>NỔ SHOW</span>
       </button>
-      <button onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
+      <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
         <i class="fa-solid fa-user-check text-sm"></i><span class="text-[10px] mt-0.5">Người Rảnh</span>
       </button>
-      <button onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
+      <button type="button" onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
         <i class="fa-solid fa-file-invoice-dollar text-sm"></i><span class="text-[10px] mt-0.5">Tính CTP</span>
       </button>
-      <button onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
+      <button type="button" onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
         <i class="fa-solid fa-wallet text-sm ${state.activeTab === 'owner_stats' ? 'text-amber-500' : ''}"></i><span class="text-[10px] mt-0.5">Công Nợ</span>
       </button>
     </nav>
