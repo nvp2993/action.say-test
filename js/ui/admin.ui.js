@@ -1,5 +1,5 @@
 import { state } from '../state/store.js';
-import { ALL_YEARS } from '../config/constants.js';
+import { ALL_YEARS, ADMIN_SWATCH_COLORS_30 } from '../config/constants.js';
 import { escapeHtml, getMember, getSortedMembers, formatDayMonth } from '../utils/helpers.js';
 import { isYearMonthLocked } from '../services/show.service.js';
 
@@ -156,8 +156,39 @@ function renderOverviewTabHtml(membersSorted, filteredShows) {
 }
 
 function renderCrewTabHtml(membersSorted) {
+  const pinMap = state.memberPinHints || {};
+
   return `
     <div class="space-y-4">
+      <!-- Quản lý mã PIN 13 anh em -->
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
+        <div>
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🔐 Quản Lý Mã PIN 13 Thành Viên</div>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">Nhập PIN 4 số mới hoặc bấm Reset 1234 — copy sẵn mật khẩu Firebase Auth (<code>AS2026#PIN</code>) để đồng bộ trên Firebase Console → Authentication → Users</div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          ${membersSorted.map(m => {
+            const curPin = pinMap[m.id] || '1234';
+            return `
+              <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span style="background:${m.bg};color:${m.text}" class="px-2.5 py-0.5 rounded-full text-[10px] font-black">${escapeHtml(m.name)}</span>
+                  <span class="text-[10px] font-mono text-slate-500">${escapeHtml(m.id)}@actionsay.local</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input id="adm-pin-${escapeHtml(m.id)}" type="text" inputmode="numeric" maxlength="4" value="${escapeHtml(curPin)}"
+                    class="w-20 px-2.5 py-1.5 rounded-xl bg-white border font-mono font-black text-center text-xs" />
+                  <button onclick="adminProActions.setMemberPin('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-slate-900 text-amber-400 font-extrabold text-[10.5px]">Lưu PIN</button>
+                  <button onclick="adminProActions.resetMemberPinDefault('${escapeHtml(m.id)}')" class="px-2 py-1.5 rounded-xl bg-white border text-slate-700 font-bold text-[10.5px]">1234</button>
+                  <button onclick="adminProActions.copyAuthPassForMember('${escapeHtml(m.id)}')" title="Copy mật khẩu AS2026#PIN" class="ml-auto px-2 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-[10px]">Copy Pass</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Màu thẻ & thứ tự cột -->
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div>
           <div class="font-black text-xs uppercase tracking-wide text-slate-900">🎨 Màu Thẻ & Thứ Tự Cột Bảng Công Tác</div>
@@ -175,6 +206,7 @@ function renderCrewTabHtml(membersSorted) {
         </div>
       </div>
 
+      <!-- Họ tên xuất vé chuẩn -->
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div>
           <div class="font-black text-xs uppercase tracking-wide text-slate-900">🪪 Họ Tên Xuất Vé Chuẩn (Đặt Vé Máy Bay / KS)</div>
@@ -197,6 +229,7 @@ function renderCrewTabHtml(membersSorted) {
 function renderPricingAndColorsTabHtml() {
   const rates = state.ctpRatesConfig || {};
   const rules = state.customColorRules || [];
+  const pickedNewHex = state.adminNewColorHex || '#bbf7d0';
 
   return `
     <div class="space-y-4">
@@ -223,15 +256,30 @@ function renderPricingAndColorsTabHtml() {
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <div class="font-black text-xs uppercase tracking-wide text-slate-900">🗺️ Màu Tô Địa Điểm Trên Bảng Công Tác</div>
-            <div class="text-[10.5px] text-slate-400">Thêm/sửa từ khóa địa điểm và màu nền tương ứng</div>
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">🗺️ Màu Tô Địa Điểm Trên Bảng Công Tác (30 Màu Dịu)</div>
+            <div class="text-[10.5px] text-slate-400">Chạm 1 màu trong bảng 30 màu bên dưới rồi nhập địa điểm & bấm + Thêm</div>
           </div>
           <button onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu & Áp Dụng Màu</button>
         </div>
 
+        <!-- Bảng 30 màu dịu mắt -->
+        <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+          <div class="flex items-center justify-between text-[10.5px] font-bold text-slate-500">
+            <span>Bảng 30 màu đang chọn: <span style="background:${pickedNewHex}" class="px-2 py-0.5 rounded-md border border-black/15 font-mono text-slate-900 ml-1">${escapeHtml(pickedNewHex)}</span></span>
+            <span>30 tông pastel / nhẹ</span>
+          </div>
+          <div class="grid grid-cols-10 sm:grid-cols-15 gap-1.5">
+            ${ADMIN_SWATCH_COLORS_30.map(hex => `
+              <button type="button" onclick="adminProActions.pickNewColorSwatch('${hex}')" title="${hex}"
+                style="background:${hex}"
+                class="w-full aspect-square rounded-lg border ${pickedNewHex.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-slate-900 border-slate-900 scale-105' : 'border-black/15'} transition-transform cursor-pointer"></button>
+            `).join('')}
+          </div>
+        </div>
+
         <div class="flex gap-2">
-          <input id="adm-new-col-kw" type="text" placeholder="Thêm địa điểm (VD: Sapa, Măng Đen...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-slate-50" />
-          <input id="adm-new-col-hex" type="color" value="#a7f3d0" class="w-10 h-9 rounded-xl border cursor-pointer" />
+          <input id="adm-new-col-kw" type="text" placeholder="Thêm địa điểm (VD: Sapa, Măng Đen, Hồ Tràm...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-slate-50" />
+          <input id="adm-new-col-hex" type="color" value="${pickedNewHex}" onchange="adminProActions.pickNewColorSwatch(this.value)" class="w-10 h-9 rounded-xl border cursor-pointer" />
           <button onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black">+ Thêm</button>
         </div>
 
@@ -256,6 +304,20 @@ function renderSystemTabHtml() {
 
   return `
     <div class="space-y-4">
+      <!-- Sao lưu & Backup file -->
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
+        <div>
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">💾 Sao Lưu & Backup Dữ Liệu (.JSON)</div>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">Tải file backup toàn bộ shows, cấu hình, PIN & màu sắc về máy hoặc nạp lại từ file .JSON</div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="adminProActions.exportFullJsonBackup()" class="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs">⬇️ Tải File Backup (.JSON)</button>
+          <button onclick="adminProActions.triggerRestoreJsonFile()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">⬆️ Khôi Phục Từ File (.JSON)</button>
+          <button onclick="adminProActions.copyFullJsonToClipboard()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs">📋 Copy JSON</button>
+          <input id="adm-restore-json-input" type="file" accept=".json,application/json" onchange="adminProActions.handleRestoreJsonFile(this)" class="hidden" />
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2.5">
           <div class="font-black text-xs uppercase tracking-wide text-slate-900">🛡️ Khóa Bảo Trì (Maintenance Mode)</div>
