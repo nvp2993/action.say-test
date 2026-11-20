@@ -76,26 +76,46 @@ export function resolveDynamicLocationColor(location = '', partner = '') {
   const part = String(partner || '').trim().toLowerCase();
   const combined = `${loc} ${part}`.trim();
 
-  // 1. Ưu tiên màu tùy chỉnh riêng do Admin thêm (nếu có)
-  const rules = state.customColorRules || [];
+  const rules = Array.isArray(state.customColorRules) ? state.customColorRules : [];
+
+  const matchKeywords = (kwString) => {
+    const tokens = String(kwString || '')
+      .split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
+    return tokens.some(t => combined.includes(t));
+  };
+
+  // 1. Ưu tiên địa điểm tùy chỉnh riêng (không bắt đầu bằng def_)
   for (const r of rules) {
-    const kw = String(r?.keyword || '').trim().toLowerCase();
-    if (kw && combined.includes(kw)) return r.color;
+    if (!String(r?.id || '').startsWith('def_') && matchKeywords(r?.keyword)) {
+      return r.color;
+    }
   }
 
-  // 2. Bảng màu chuẩn theo nhóm địa điểm (y hệt bản cũ dịu mắt)
-  if (/(mũi né|mui ne|nha trang|tây ninh|tay ninh)/.test(combined)) return '#f4c29f'; // Cam đất
-  if (/(hồ tràm|ho tram|vũng tàu|vung tau)/.test(combined)) return '#c9b8df';          // Tím khói
-  if (/(ninh chữ|ninh chu|cam ranh|\blk\b)/.test(combined)) return '#9ec999'; // Xanh lá dịu
-  if (/(sg|sài gòn|sai gon|\bsg\b|củ chi|cu chi|tsnhcm|cần giờ|can gio|nhà bè|nha be)/.test(combined)) return '#9ad0f0';    // Xanh dương dịu
-  if (/(cưới|cuoi|PSC)/.test(combined)) return '#bce3cf';           // Xanh bạc hà
-  if (/(cần thơ|can tho|bận|ban)/.test(combined)) return '#f5dc82';                     // Vàng ấm
-  if (/(đà lạt|da lat|\bđl\b|\bdl\b)/.test(combined)) return '#d2e391';                 // Xanh rêu nhạt
-  if (/(kê gà|ke ga|phú quốc|phu quoc)/.test(combined)) return '#faeec7';               // Vàng kem
-  if (/(long an|hà nội|ha noi|đồng nai|dong nai)/.test(combined)) return '#cfd6dc';     // Xám lạnh
+  // 2. 9 nhóm mặc định (có thể chỉnh màu & tên trực tiếp trong Admin)
+  const defaultGroups = [
+    { id: 'def_muine',   keyword: 'mũi né, mui ne, nha trang, tây ninh, tay ninh', color: '#f4c29f' },
+    { id: 'def_hotram',  keyword: 'hồ tràm, ho tram, vũng tàu, vung tau',          color: '#c9b8df' },
+    { id: 'def_ninhchu', keyword: 'ninh chữ, ninh chu, cam ranh, cưới, cuoi, lk',  color: '#9ec999' },
+    { id: 'def_saigon',  keyword: 'sài gòn, sai gon, sg, củ chi, cu chi, tsn',     color: '#9ad0f0' },
+    { id: 'def_hcm',     keyword: 'hcm, cần giờ, can gio, nhà bè, nha be',         color: '#bce3cf' },
+    { id: 'def_cantho',  keyword: 'cần thơ, can tho, bận, ban',                    color: '#f5dc82' },
+    { id: 'def_dalat',   keyword: 'đà lạt, da lat, đl, dl',                        color: '#d2e391' },
+    { id: 'def_kega',    keyword: 'kê gà, ke ga, phú quốc, phu quoc',              color: '#faeec7' },
+    { id: 'def_longan',  keyword: 'long an, hà nội, ha noi, đồng nai, dong nai',   color: '#cfd6dc' }
+  ];
 
-  // 3. Các lịch khác (Đi học, Thái Lan, Miền Tây, Madagui, Long Hải...) -> Xanh da trời siêu nhạt
-  return '#dce9fa';
+  for (const g of defaultGroups) {
+    const edited = rules.find(r => r?.id === g.id);
+    const kw = edited ? edited.keyword : g.keyword;
+    const col = edited ? edited.color : g.color;
+    if (matchKeywords(kw)) return col;
+  }
+
+  // 3. Nhóm mặc định cho các lịch khác
+  const otherEdited = rules.find(r => r?.id === 'def_other');
+  return otherEdited ? otherEdited.color : '#dce9fa';
 }
 
 export function getBankName(bin) {
