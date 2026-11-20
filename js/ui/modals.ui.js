@@ -1,6 +1,6 @@
 import { state } from '../state/store.js';
-import { ROLE_OPTIONS, BANK_LIST } from '../config/constants.js';
-import { escapeHtml, getMember, renderPillHtml, normalizeRoleName, buildVietQrUrl, getBankName } from '../utils/helpers.js';
+import { ROLE_OPTIONS } from '../config/constants.js';
+import { escapeHtml, getMember, renderPillHtml, normalizeRoleName } from '../utils/helpers.js';
 import { getBusyMembersMap } from '../services/show.service.js';
 
 export function renderPinModalHtml() {
@@ -22,7 +22,7 @@ export function renderPinModalHtml() {
 
         ${pm.step === 'select' ? `
           <div class="grid grid-cols-2 gap-1.5 max-h-[55dvh] overflow-y-auto custom-scroll">
-            ${state.members.map(m => `<button onclick="appActions.chooseMemberForPin('${m.id}')" class="p-2.5 rounded-xl border hover:border-slate-900 flex justify-between items-center bg-slate-50">${renderPillHtml(m.id, 'sm')}<i class="fa-solid fa-chevron-right text-slate-300 text-[10px]"></i></button>`).join('')}
+            ${state.members.map(m => `<button type="button" onclick="appActions.chooseMemberForPin('${m.id}')" class="p-2.5 rounded-xl border hover:border-slate-900 flex justify-between items-center bg-slate-50">${renderPillHtml(m.id, 'sm')}<i class="fa-solid fa-chevron-right text-slate-300 text-[10px]"></i></button>`).join('')}
           </div>
         ` : `
           <div class="flex flex-col items-center space-y-3 py-2">
@@ -31,7 +31,7 @@ export function renderPinModalHtml() {
               value="${escapeHtml(pm.pinInput)}" oninput="appActions.handleNativePinInput(this.value)" placeholder="••••"
               class="w-40 text-center text-xl tracking-widest font-mono py-2 px-3 border-2 border-indigo-500 rounded-2xl bg-slate-50 focus:outline-none" />
             <div class="min-h-[18px] text-xs font-bold text-rose-600 text-center">${escapeHtml(pm.error || (pm.loading ? '⏳ Đang xác thực...' : ''))}</div>
-            <button onclick="appActions.backToSelectMemberPin()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">← Chọn tên khác</button>
+            <button type="button" onclick="appActions.backToSelectMemberPin()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">← Chọn tên khác</button>
           </div>
         `}
       </div>
@@ -73,9 +73,7 @@ export function renderCrewPassModalHtml() {
     <div onclick="appActions.closeCrewPassModal()" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
       <div onclick="event.stopPropagation()" class="w-full max-w-sm bg-[#111318] text-white rounded-[32px] p-4 space-y-3.5 shadow-2xl max-h-[92dvh] overflow-y-auto custom-scroll">
 
-        <!-- 1. Thẻ VIP Pass trên -->
         <div class="relative rounded-[26px] p-4 overflow-hidden bg-gradient-to-br from-[#a3b86c]/80 via-[#212723] to-[#0e1218] shadow-lg space-y-3.5">
-          <!-- Hàng 1: Badge + Số Shows + Nút đóng -->
           <div class="flex items-center justify-between gap-2">
             <div class="px-3 py-1 rounded-full bg-black/40 text-[10px] font-black tracking-wider text-amber-300 flex items-center gap-1">
               <span>⚡ ACTION X SAY • VIP PASS</span>
@@ -88,7 +86,6 @@ export function renderCrewPassModalHtml() {
             </div>
           </div>
 
-          <!-- Hàng 2: Avatar + Tên + Chức danh + Biệt danh -->
           <div class="flex items-center gap-3.5">
             <div onclick="appActions.triggerVipAvatarUpload()" title="Chạm để đổi ảnh đại diện" class="relative w-16 h-16 rounded-2xl bg-slate-900/90 ring-2 ring-white/70 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer">
               ${avatarSrc
@@ -110,7 +107,6 @@ export function renderCrewPassModalHtml() {
 
           <div class="h-px bg-white/15"></div>
 
-          <!-- Hàng 3: VietQR Nhận CTP -->
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0 flex-1 space-y-0.5">
               <div class="text-[10px] font-black text-emerald-400 tracking-wider uppercase flex items-center gap-1.5">
@@ -130,7 +126,6 @@ export function renderCrewPassModalHtml() {
           </div>
         </div>
 
-        <!-- 2. Khối INFO / Chỉnh sửa hồ sơ -->
         <div class="rounded-[24px] bg-[#181b22] p-3.5 space-y-2.5 text-xs">
           <div class="flex items-center justify-between gap-1.5">
             <div class="flex items-center gap-1.5">
@@ -197,7 +192,6 @@ export function renderCrewPassModalHtml() {
           `}
         </div>
 
-        <!-- 3. Hàng nút dưới cùng -->
         <div class="grid grid-cols-2 gap-2.5 pt-0.5">
           <button type="button" onclick="appActions.switchMemberFromVipCard()" class="py-3 rounded-2xl bg-[#1c2029] hover:bg-[#252b37] text-amber-300 font-black text-xs flex items-center justify-center gap-1.5 transition-colors">
             <span>🔄 Đổi Nhân Sự</span>
@@ -213,6 +207,7 @@ export function renderCrewPassModalHtml() {
     </div>
   `;
 }
+
 export function renderFormModalHtml() {
   const f = state.formModal;
   if (!f) return '';
@@ -222,7 +217,7 @@ export function renderFormModalHtml() {
       <div onclick="event.stopPropagation()" class="ios-sheet custom-scroll bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-4 space-y-3 max-h-[90dvh] overflow-y-auto text-xs">
         <div class="flex justify-between items-center border-b pb-2">
           <h3 class="font-black text-sm uppercase">${f.mode === 'edit' ? `Sửa Show #${f.stt || ''}` : '⚡ NỔ SHOW MỚI'}</h3>
-          <button onclick="appActions.closeFormModal()" class="w-7 h-7 rounded-full bg-slate-100">✕</button>
+          <button type="button" onclick="appActions.closeFormModal()" class="w-7 h-7 rounded-full bg-slate-100">✕</button>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <input type="text" value="${escapeHtml(f.location)}" oninput="appActions.updateFormField('location', this.value)" placeholder="Địa điểm..." class="px-3 py-2 border rounded-xl font-bold" />
@@ -252,7 +247,6 @@ export function renderFormModalHtml() {
           }).join('')}
         </div>
 
-        <!-- Nhân sự ngoài (Freelancer) -->
         <div class="p-3 rounded-2xl border border-dashed border-indigo-400 bg-indigo-50/60 space-y-2">
           <div class="flex items-center justify-between">
             <span class="font-black text-slate-900">🤝 Nhân sự ngoài (Freelancer)</span>
@@ -267,7 +261,7 @@ export function renderFormModalHtml() {
         </div>
 
         ${f.error ? `<div class="text-rose-600 font-bold">${escapeHtml(f.error)}</div>` : ''}
-        <button onclick="appActions.saveShowForm()" class="w-full bg-indigo-600 text-white font-black py-2.5 rounded-xl uppercase">${f.mode === 'edit' ? '💾 LƯU CHỈNH SỬA' : '⚡ NỔ SHOW'}</button>
+        <button type="button" onclick="appActions.saveShowForm()" class="w-full bg-indigo-600 text-white font-black py-2.5 rounded-xl uppercase">${f.mode === 'edit' ? '💾 LƯU CHỈNH SỬA' : '⚡ NỔ SHOW'}</button>
       </div>
     </div>
   `;
@@ -323,6 +317,75 @@ export function renderCtpCustomShowModalHtml() {
           <button type="button" onclick="ctpActions.closeAddCustomShowModal()" class="py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs">Huỷ</button>
           <button type="button" onclick="ctpActions.submitAddCustomShow()" class="py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs">OK • THÊM VÀO CUỐI</button>
         </div>
+      </div>
+    </div>
+  `;
+}
+
+export function renderHoldComposerModalHtml() {
+  const hm = state.holdComposerModal;
+  if (!hm) return '';
+  const selectedIds = Array.isArray(hm.memberIds) ? hm.memberIds : [];
+
+  return `
+    <div onclick="holdBellActions.closeHoldComposer()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4">
+      <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3.5 text-xs shadow-2xl max-h-[90dvh] overflow-y-auto">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="font-black text-sm text-slate-900">📌 GIỮ LỊCH / NHẮC CHỦ SHOW</h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">Khóa trùng lịch &amp; báo cho Chủ show + anh em đi cùng</p>
+          </div>
+          <button type="button" onclick="holdBellActions.closeHoldComposer()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Từ ngày:</label>
+            <input id="hold-start-date" type="date" value="${escapeHtml(hm.startDate || '')}" class="w-full px-3 py-2 rounded-2xl bg-white border border-slate-200 text-xs font-mono font-bold" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Đến ngày:</label>
+            <input id="hold-end-date" type="date" value="${escapeHtml(hm.endDate || '')}" class="w-full px-3 py-2 rounded-2xl bg-white border border-slate-200 text-xs font-mono font-bold" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">📌 Chủ show phụ trách (nhận nhắc điền tiếp):</label>
+          <select id="hold-owner-id" class="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold">
+            ${(state.members || []).map(mem => `
+              <option value="${mem.id}" ${hm.ownerId === mem.id ? 'selected' : ''}>
+                ${escapeHtml(mem.name)}${mem.id === state.currentUserId ? ' (Chính mình — chờ khách chốt)' : ''}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1.5">👥 Nhân sự giữ lịch (nhận thông báo &amp; khóa trùng):</label>
+          <div class="flex flex-wrap gap-1.5">
+            ${(state.members || []).map(mem => {
+              const active = selectedIds.includes(mem.id);
+              return `
+                <button type="button" onclick="holdBellActions.toggleHoldMember('${mem.id}')" class="px-3 py-1.5 rounded-full text-[11px] font-bold border transition ${
+                  active
+                    ? 'bg-amber-50/90 text-amber-900 border-amber-400 ring-1 ring-amber-400'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }">
+                  ${active ? '✓' : '+'} ${escapeHtml(mem.name)}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">📝 Ghi chú nhanh:</label>
+          <input id="hold-note-inp" type="text" value="${escapeHtml(hm.note || '')}" placeholder="VD: Đi tỉnh 4 người / Chờ Agency X chốt..." class="w-full px-3.5 py-2.5 rounded-2xl bg-white border-2 border-slate-900 text-xs font-semibold focus:outline-none" />
+        </div>
+
+        <button type="button" onclick="holdBellActions.submitQuickHold()" class="w-full py-3.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-amber-400 font-black text-xs uppercase tracking-wide">
+          ⏳ LƯU GIỮ LỊCH &amp; GỬI THÔNG BÁO
+        </button>
       </div>
     </div>
   `;
