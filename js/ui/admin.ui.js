@@ -314,11 +314,11 @@ function renderPricingAndColorsTabHtml() {
 
         ${rules.length > 0 ? `
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            ${rules.map(r => `
+            ${rules.map((r, idx) => `
               <div style="background:${r.color}" class="px-2.5 py-1.5 rounded-2xl border border-black/10 flex items-center gap-2">
-                <input type="color" value="${r.color}" onchange="adminProActions.updateColorRule('${escapeHtml(r.id)}', 'color', this.value)" class="w-6 h-6 rounded-full border cursor-pointer shrink-0 bg-transparent" />
-                <input type="text" value="${escapeHtml(r.keyword || '')}" oninput="adminProActions.updateColorRule('${escapeHtml(r.id)}', 'keyword', this.value)" class="flex-1 min-w-0 px-2 py-1 rounded-xl bg-white/85 font-bold text-slate-900 text-[11px]" />
-                <button onclick="adminProActions.removeColorRule('${escapeHtml(r.id)}')" class="w-6 h-6 rounded-full bg-white/85 hover:bg-white text-rose-600 font-black text-[10px] shrink-0">✕</button>
+                <input type="color" value="${r.color}" onchange="adminProActions.updateColorRule(${idx}, 'color', this.value)" class="w-6 h-6 rounded-full border cursor-pointer shrink-0 bg-transparent" />
+                <input type="text" value="${escapeHtml(r.keyword || '')}" oninput="adminProActions.updateColorRule(${idx}, 'keyword', this.value)" class="flex-1 min-w-0 px-2 py-1 rounded-xl bg-white/85 font-bold text-slate-900 text-[11px]" />
+                <button onclick="adminProActions.removeColorRule(${idx})" class="w-6 h-6 rounded-full bg-white/85 hover:bg-white text-rose-600 font-black text-[10px] shrink-0">✕</button>
               </div>
             `).join('')}
           </div>
