@@ -1,6 +1,6 @@
 import { state, registerRenderer, triggerRender } from './state/store.js';
 import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin, logoutCurrentUser } from './services/auth.service.js';
-import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText } from './services/show.service.js';
+import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText, cleanupMatchingHoldsForOfficialShow } from './services/show.service.js';
 import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics } from './services/finance.service.js';
 import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
 import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain } from './utils/helpers.js';
@@ -41,6 +41,15 @@ function applyCustomLogoToDom() {
   });
 }
 
+function getBellAlertsCount() {
+  const uid = state.currentUserId;
+  if (!uid) return 0;
+  return (state.shows || []).filter(s =>
+    s && s.isHold && !s.isCancelled &&
+    (s.ownerId === uid || (s.memberIds || []).includes(uid))
+  ).length;
+}
+
 function renderApp() {
   const root = document.getElementById('app');
   if (!root) return;
@@ -73,7 +82,7 @@ function renderApp() {
   const prevDebtScroll = document.getElementById('owner-debt-scroll-list')?.scrollTop || 0;
 
   root.innerHTML = `
-    ${renderHeaderHtml(0)}
+    ${renderHeaderHtml(getBellAlertsCount())}
     ${main}
     ${renderBottomNavHtml()}
     ${renderDetailModalHtml()}
@@ -226,19 +235,47 @@ window.appActions = {
     if (isYearMonthLocked(y, m)) return showToast(`🔒 Tháng ${m}/${y} đã khóa sổ!`, 'error');
 
     const cleanExt = (f.externalCrew || []).filter(p => p.name.trim());
+    let savedShow = null;
+
     if (f.mode === 'edit') {
-      state.shows = state.shows.map(s => s.id === f.showId ? { ...s, ...f, externalCrew: cleanExt, color: resolveDynamicLocationColor(f.location, f.partner), updatedAt: Date.now() } : s);
+      state.shows = state.shows.map(s => {
+        if (s.id !== f.showId) return s;
+        savedShow = {
+          ...s,
+          ...f,
+          isHold: false,
+          externalCrew: cleanExt,
+          color: resolveDynamicLocationColor(f.location, f.partner),
+          updatedAt: Date.now()
+        };
+        return savedShow;
+      });
       await logStudioActivity(`Sửa show: ${f.location}`);
     } else {
       const nextStt = Math.max(300, ...state.shows.map(s => Number(s.stt) || 0)) + 1;
-      state.shows.push({ id: 'sh_' + Date.now(), stt: nextStt, ...f, externalCrew: cleanExt, postStatus: 'pending', color: resolveDynamicLocationColor(f.location, f.partner), createdAt: Date.now(), updatedAt: Date.now() });
+      savedShow = {
+        id: 'sh_' + Date.now(),
+        stt: nextStt,
+        ...f,
+        isHold: false,
+        externalCrew: cleanExt,
+        postStatus: 'pending',
+        color: resolveDynamicLocationColor(f.location, f.partner),
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      state.shows.push(savedShow);
       playStudioSound('noshow');
       await logStudioActivity(`Nổ show mới: ${f.location}`);
     }
+
+    const removedHolds = cleanupMatchingHoldsForOfficialShow(savedShow);
     state.formModal = null;
     await syncShowsToCloud();
     renderApp();
-    showToast('✅ Đã lưu & đồng bộ Cloud!');
+    showToast(removedHolds > 0
+      ? `✅ Đã lưu show & tự dọn ${removedHolds} lịch giữ chỗ trùng ngày!`
+      : '✅ Đã lưu & đồng bộ Cloud!');
   },
   async updatePostStatus(id, stVal) {
     const sh = state.shows.find(s => s.id === id);
