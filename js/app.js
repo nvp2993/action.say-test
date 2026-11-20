@@ -667,14 +667,14 @@ window.adminProActions = {
     showToast(`🗑️ Đã xóa "${removed}"!`);
   },
   async saveAndApplyColors() {
-    localStorage.setItem('as_custom_color_rules_2026', JSON.stringify(state.customColorRules));
-    state.shows.forEach(sh => {
-      if (sh) sh.color = resolveDynamicLocationColor(sh.location, sh.partner);
-    });
-    await syncShowsToCloud();
-    await pushAdminConfigToCloud();
-    renderApp();
-    showToast('🎨 Đã lưu & áp dụng màu địa điểm!');
+    try {
+      localStorage.setItem('as_custom_color_rules_2026', JSON.stringify(state.customColorRules || []));
+      await pushAdminConfigToCloud();
+      renderApp();
+      showToast('🎨 Đã lưu & áp dụng bảng màu mới!');
+    } catch (err) {
+      showToast('Lỗi lưu màu: ' + err.message, 'error');
+    }
   },
   setAdminSearch(v) { state.adminSearch = v; renderApp(); },
   openInspectShow(id) { state.adminInspectShowId = id; renderApp(); },
