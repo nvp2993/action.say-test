@@ -44,7 +44,7 @@ export function renderCrewPassModalHtml() {
   const m = getMember(state.currentUserId);
   const prof = state.memberProfiles?.[state.currentUserId] || {};
   const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
-  const avatarSrc = prof.avatarUrl || savedAvatars[state.currentUserId] || '';
+  const avatarSrc = prof.avatarUrl || prof.avatar || savedAvatars[state.currentUserId] || '';
 
   const isEditing = !!state.isEditingCrewProfile;
   const hidden = !!state.vipInfoHidden;
