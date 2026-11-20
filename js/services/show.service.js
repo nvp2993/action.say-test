@@ -1,7 +1,7 @@
 import { doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { db, APP_ID } from '../config/firebase.js';
 import { state, triggerRender } from '../state/store.js';
-import { getMember, resolveDynamicLocationColor, showToast } from '../utils/helpers.js';
+import { getMember } from '../utils/helpers.js';
 
 let unsubs = [];
 
@@ -68,6 +68,32 @@ export function attachShowListeners() {
     });
     triggerRender();
   }));
+}
+
+function datesOverlap(aStart, aEnd, bStart, bEnd) {
+  if (!aStart || !bStart) return false;
+  const s1 = new Date(`${aStart}T00:00:00`).getTime();
+  const e1 = new Date(`${aEnd || aStart}T00:00:00`).getTime();
+  const s2 = new Date(`${bStart}T00:00:00`).getTime();
+  const e2 = new Date(`${bEnd || bStart}T00:00:00`).getTime();
+  return s1 <= e2 && e1 >= s2;
+}
+
+/**
+ * Khi một show chính thức (!isHold) được lưu (VD: Đức lớn lên show có cả Phú lớn và Kiên),
+ * tự động dọn mọi bản giữ chỗ (isHold: true) cùng chủ show và giao ngày để không lặp dòng.
+ */
+export function cleanupMatchingHoldsForOfficialShow(officialShow) {
+  if (!officialShow || officialShow.isHold || officialShow.isCancelled) return 0;
+  const before = (state.shows || []).length;
+  state.shows = (state.shows || []).filter(sh => {
+    if (!sh) return false;
+    if (!sh.isHold || sh.isCancelled) return true;
+    const sameOwner = sh.ownerId && officialShow.ownerId && sh.ownerId === officialShow.ownerId;
+    const overlap = datesOverlap(sh.startDate, sh.endDate, officialShow.startDate, officialShow.endDate);
+    return !(sameOwner && overlap);
+  });
+  return before - state.shows.length;
 }
 
 export async function syncShowsToCloud() {
