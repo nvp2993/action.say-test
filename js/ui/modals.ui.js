@@ -108,13 +108,15 @@ export function renderCrewPassModalHtml() {
             </div>
           </div>
 
-          <!-- Hàng 3: Khối VietQR & Thông tin ngân hàng gắn kết sang trọng -->
-          <div class="rounded-2xl bg-black/35 p-3 flex items-center justify-between gap-3">
-            <div class="min-w-0 flex-1 space-y-1">
+          <div class="h-px bg-white/15"></div>
+
+          <!-- Hàng 3: VietQR Nhận CTP -->
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1 space-y-0.5">
               <div class="text-[10px] font-black text-emerald-400 tracking-wider uppercase flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> VIETQR NHẬN CTP
               </div>
-              <div class="text-xs font-extrabold text-white/90">${escapeHtml(bankLabel)}</div>
+              <div class="text-sm font-black text-white">${escapeHtml(bankLabel)}</div>
               <div class="text-sm font-mono font-black text-amber-300 tracking-wider">${escapeHtml(bankAcc || 'Chưa cập nhật STK')}</div>
               <div class="text-[11px] font-bold text-white/75 uppercase truncate">${escapeHtml(displayName)}</div>
             </div>
@@ -126,7 +128,6 @@ export function renderCrewPassModalHtml() {
               }
             </div>
           </div>
-        </div>
 
         <!-- Khối INFO / Chỉnh sửa hồ sơ -->
         <div class="rounded-[24px] bg-[#181b22] p-3.5 space-y-2.5 text-xs">
