@@ -163,7 +163,6 @@ function renderCrewTabHtml(membersSorted) {
   return `
     <div class="space-y-3.5">
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
-        <!-- Thanh tiêu đề + Nút Thêm Nhân Sự -->
         <div class="flex items-center justify-between gap-2">
           <div>
             <div class="font-black text-xs uppercase tracking-wide text-slate-900">👥 Danh Sách Nhân Sự (${membersSorted.length})</div>
@@ -174,7 +173,6 @@ function renderCrewTabHtml(membersSorted) {
           </button>
         </div>
 
-        <!-- Form Thêm Nhân Sự Mới -->
         ${isAdding ? `
           <div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2.5">
             <div class="font-black text-[11px] text-amber-900 uppercase">➕ Thêm Thành Viên Mới</div>
@@ -190,7 +188,6 @@ function renderCrewTabHtml(membersSorted) {
           </div>
         ` : ''}
 
-        <!-- Danh sách gọn 1 dòng / người -->
         <div class="divide-y divide-slate-100">
           ${membersSorted.map((m, idx) => {
             const isEd = editId === m.id;
@@ -200,7 +197,6 @@ function renderCrewTabHtml(membersSorted) {
 
             return `
               <div class="py-2.5">
-                <!-- Dòng hiển thị gọn -->
                 <div class="flex items-center justify-between gap-2">
                   <div class="flex items-center gap-2.5 min-w-0 flex-1">
                     <span class="text-[10px] font-mono font-bold text-slate-400 w-5 text-center shrink-0">#${ord}</span>
@@ -218,7 +214,6 @@ function renderCrewTabHtml(membersSorted) {
                   </div>
                 </div>
 
-                <!-- Khung Sửa Mở Rộng (chỉ hiện khi bấm Sửa) -->
                 ${isEd ? `
                   <div class="mt-2.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -264,27 +259,6 @@ function renderCrewTabHtml(membersSorted) {
   `;
 }
 
-      <!-- Màu thẻ & thứ tự cột -->
-      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
-        <div>
-          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🎨 Màu Thẻ &amp; Thứ Tự Cột Bảng Công Tác</div>
-          <div class="text-[10.5px] text-slate-400 mt-0.5">Đổi màu nền thẻ và số thứ tự đứng cột (1 → 13) rồi tự động lưu</div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          ${membersSorted.map((m, idx) => `
-            <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center gap-2">
-              <input type="color" value="${m.bg || '#334155'}" onchange="adminProActions.updateMemberColor('${escapeHtml(m.id)}', this.value)" class="w-7 h-7 rounded-lg border cursor-pointer shrink-0" />
-              <span style="background:${m.bg};color:${m.text}" class="flex-1 min-w-0 px-2.5 py-1 rounded-lg font-black text-[11px] truncate">${escapeHtml(m.name)}</span>
-              <span class="text-[10px] font-bold text-slate-400">Cột</span>
-              <input type="number" min="1" max="50" value="${m.order ?? (idx + 1)}" onchange="adminProActions.updateMemberOrder('${escapeHtml(m.id)}', this.value)" class="w-11 px-1 py-1 text-center border rounded-lg font-mono font-black bg-white" />
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 function renderPricingAndColorsTabHtml() {
   const rates = state.ctpRatesConfig || {};
   const rules = state.customColorRules || [];
@@ -321,7 +295,6 @@ function renderPricingAndColorsTabHtml() {
           <button onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu &amp; Áp Dụng Màu</button>
         </div>
 
-        <!-- Bảng 30 màu gợi ý -->
         <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
           <div class="flex items-center justify-between text-[10.5px] font-bold text-slate-500">
             <span>Màu đang chọn: <span style="background:${pickedNewHex}" class="px-2 py-0.5 rounded-md border border-black/15 font-mono text-slate-900 ml-1">${escapeHtml(pickedNewHex)}</span></span>
@@ -342,7 +315,6 @@ function renderPricingAndColorsTabHtml() {
           <button onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black">+ Thêm</button>
         </div>
 
-        <!-- Danh sách địa điểm & màu hiện tại -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           ${rules.map(r => `
             <div style="background:${r.color}" class="p-2 rounded-2xl border border-black/10 flex items-center gap-2">
@@ -365,7 +337,6 @@ function renderSystemTabHtml() {
 
   return `
     <div class="space-y-4">
-      <!-- Đổi Logo Studio -->
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div>
           <div class="font-black text-xs uppercase tracking-wide text-slate-900">🖼️ Đổi Logo Studio</div>
@@ -381,7 +352,6 @@ function renderSystemTabHtml() {
         </div>
       </div>
 
-      <!-- Sao lưu & Backup file -->
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div>
           <div class="font-black text-xs uppercase tracking-wide text-slate-900">💾 Sao Lưu &amp; Backup Dữ Liệu (.JSON)</div>
