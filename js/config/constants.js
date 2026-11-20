@@ -101,4 +101,4 @@ export const ADMIN_SWATCH_COLORS_30 = [
   '#efc4a3', '#eab896', '#f0cbb5', '#e8c1b4', '#e6b8af', '#f2d0c9',
   '#c9bde0', '#d7cde8', '#e0cce0', '#d9c2d0', '#d0d7de', '#dde2e6'
 ];
-];
+
