@@ -68,6 +68,7 @@ function renderApp() {
   else if (state.activeTab === 'ctp') main = renderCtpTabHtml();
   else if (state.activeTab === 'owner_stats') main = renderDebtTabHtml();
 
+  const prevCtpScroll = document.getElementById('ctp-shows-scroll-list')?.scrollTop || 0;
   root.innerHTML = `
     ${renderHeaderHtml(0)}
     ${main}
@@ -79,6 +80,10 @@ function renderApp() {
     ${renderToastHtml()}
   `;
   applyCustomLogoToDom();
+  if (prevCtpScroll > 0) {
+  const nextCtpScroll = document.getElementById('ctp-shows-scroll-list');
+  if (nextCtpScroll) nextCtpScroll.scrollTop = prevCtpScroll;
+}
 }
 
 registerRenderer(renderApp);
@@ -325,46 +330,220 @@ window.ctpActions = {
   setOwner(o) { state.ctpOwnerId = o; renderApp(); },
   toggleTask(id, k) {
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
-    if (state.ctpItems[id].tasks[k] !== undefined) delete state.ctpItems[id].tasks[k];
-    else state.ctpItems[id].tasks[k] = getDefaultRateForTask(k, findAnyCtpShow(id));
-    saveCtpState(); renderApp();
+    if (!state.ctpItems[id].tasks) state.ctpItems[id].tasks = {};
+    const cur = state.ctpItems[id].tasks[k];
+    if (cur !== undefined && cur !== null) {
+      state.ctpItems[id].tasks[k] = null; // Gán null để Firestore merge không tự bật lại
+    } else {
+      state.ctpItems[id].tasks[k] = getDefaultRateForTask(k, findAnyCtpShow(id));
+    }
+    saveCtpState();
+    renderApp();
   },
   handleTaskPriceInput(id, k, el) {
     const num = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+    if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
     state.ctpItems[id].tasks[k] = num;
     el.value = num ? num.toLocaleString('vi-VN') : '';
+    this._refreshLiveTotals(id);
     saveCtpState();
   },
   addExtraItem(id) {
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
+    if (!Array.isArray(state.ctpItems[id].extras)) state.ctpItems[id].extras = [];
     state.ctpItems[id].extras.push({ name: '', amount: 0 });
-    saveCtpState(); renderApp();
+    saveCtpState();
+    renderApp();
   },
   saveExtraField(id, idx, f, el) {
     const val = f === 'amount' ? (parseInt(String(el.value).replace(/\D/g, ''), 10) || 0) : el.value;
     state.ctpItems[id].extras[idx][f] = val;
-    if (f === 'amount') el.value = val ? val.toLocaleString('vi-VN') : '';
+    if (f === 'amount') {
+      el.value = val ? val.toLocaleString('vi-VN') : '';
+      this._refreshLiveTotals(id);
+    }
     saveCtpState();
   },
-  removeExtraItem(id, idx) { state.ctpItems[id].extras.splice(idx, 1); saveCtpState(); renderApp(); },
+  removeExtraItem(id, idx) {
+    state.ctpItems[id].extras.splice(idx, 1);
+    saveCtpState();
+    renderApp();
+  },
+  _refreshLiveTotals(showId) {
+    const it = state.ctpItems[showId] || { tasks: {}, extras: [] };
+    const sub = Object.values(it.tasks || {}).reduce((s, v) => s + (Number(v) || 0), 0)
+      + (it.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+    const showEl = document.getElementById(`ctp-show-total-${showId}`);
+    if (showEl) showEl.textContent = sub.toLocaleString('vi-VN') + 'đ';
+
+    let grand = 0;
+    getCombinedCtpShows().forEach(sh => {
+      const x = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
+      Object.values(x.tasks || {}).forEach(v => grand += (Number(v) || 0));
+      (x.extras || []).forEach(ex => grand += (Number(ex.amount) || 0));
+    });
+    const grandEl = document.getElementById('ctp-grand-total-display');
+    if (grandEl && !state.hideMoneyMode) grandEl.textContent = grand.toLocaleString('vi-VN') + 'đ';
+  },
+  openAddCustomShowModal() {
+    const loc = prompt('Nhập tên Show / Địa điểm ngoài lịch:');
+    if (!loc || !loc.trim()) return;
+    const defaultDate = `${state.selectedYear}-${String(state.ctpMonth).padStart(2, '0')}-01`;
+    const dateStr = prompt('Nhập ngày (YYYY-MM-DD):', defaultDate) || defaultDate;
+    const newShow = {
+      id: 'ctp_ext_' + Date.now(),
+      location: loc.trim(),
+      startDate: dateStr.trim(),
+      endDate: dateStr.trim(),
+      ownerId: state.ctpOwnerId !== 'all' ? state.ctpOwnerId : state.currentUserId,
+      memberIds: [state.currentUserId],
+      isCustomCtp: true
+    };
+    if (!Array.isArray(state.customCtpShows)) state.customCtpShows = [];
+    state.customCtpShows.push(newShow);
+    saveCtpState(true);
+    renderApp();
+    showToast('✅ Đã thêm show ngoài lịch!');
+  },
+  autoFillFromRoles() {
+    const shows = getCombinedCtpShows();
+    let count = 0;
+    const roleMap = {
+      'quay': 'quay', 'dựng': 'dung', 'dung': 'dung',
+      'chụp': 'chup', 'chup': 'chup', 'làm hình': 'lamhinh',
+      'flycam': 'flycam', 'gimbal': 'gimbal'
+    };
+    shows.forEach(sh => {
+      const rawRoles = sh.roles?.[state.currentUserId];
+      const list = Array.isArray(rawRoles) ? rawRoles : (rawRoles ? [rawRoles] : []);
+      if (!list.length) return;
+      if (!state.ctpItems[sh.id]) state.ctpItems[sh.id] = { tasks: {}, extras: [] };
+      if (!state.ctpItems[sh.id].tasks) state.ctpItems[sh.id].tasks = {};
+      list.forEach(r => {
+        const key = roleMap[String(r).trim().toLowerCase()];
+        if (key && (state.ctpItems[sh.id].tasks[key] === undefined || state.ctpItems[sh.id].tasks[key] === null)) {
+          state.ctpItems[sh.id].tasks[key] = getDefaultRateForTask(key, sh);
+          count++;
+        }
+      });
+    });
+    saveCtpState(true);
+    renderApp();
+    showToast(`⚡ Đã tự điền ${count} nhiệm vụ theo vai trò!`);
+  },
   saveNow() { saveCtpState(true); showToast('💾 Đã lưu CTP lên Cloud!'); },
   generateBill() {
     playStudioSound('lum');
     const shows = getCombinedCtpShows();
+    const labelMap = { quay: 'Quay', dung: 'Dựng', chup: 'Chụp', lamhinh: 'Làm hình', flycam: 'Flycam', gimbal: 'Gimbal' };
     let total = 0;
     const rows = shows.map((sh, i) => {
       const it = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
-      const taskBulletsCompact = Object.entries(it.tasks || {}).map(([k, v]) => `- ${k}: ${formatCompactMoneyPlain(v)}`);
-      const extraBulletsCompact = (it.extras || []).filter(e => e.amount > 0).map(e => `- ${e.name || 'Phí'}: ${formatCompactMoneyPlain(e.amount)}`);
-      const showSum = Object.values(it.tasks || {}).reduce((s, v) => s + (Number(v) || 0), 0) + (it.extras || []).reduce((s, e) => s + (Number(e) || 0), 0);
+      const activeTasks = Object.entries(it.tasks || {}).filter(([, v]) => v !== null && v !== undefined);
+      const taskBulletsCompact = activeTasks.map(([k, v]) => `- ${labelMap[k] || k}: ${formatCompactMoneyPlain(v)}`);
+      const extraBulletsCompact = (it.extras || []).filter(e => Number(e.amount) > 0).map(e => `- ${e.name || 'Phí'}: ${formatCompactMoneyPlain(e.amount)}`);
+      const showSum = activeTasks.reduce((s, [, v]) => s + (Number(v) || 0), 0)
+        + (it.extras || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
       total += showSum;
       return { stt: i + 1, dateLabel: formatDayMonth(sh.startDate), location: sh.location, taskBulletsCompact, extraBulletsCompact, showSum };
     });
-    state.ctpBillModal = { month: state.ctpMonth, memberName: getMember(state.currentUserId).name, ownerTitle: state.ctpOwnerId === 'all' ? 'Tất cả' : getMember(state.ctpOwnerId).name, rows, total };
+    state.ctpBillModal = {
+      month: state.ctpMonth,
+      memberName: getMember(state.currentUserId).name,
+      ownerTitle: state.ctpOwnerId === 'all' ? 'Tất cả' : getMember(state.ctpOwnerId).name,
+      rows,
+      total
+    };
     renderApp();
   },
   closeBillModal() { state.ctpBillModal = null; renderApp(); },
-  captureBillImage() { captureElementToPreview('ctp-bill-capture-area', `CTP_T${state.ctpMonth}.png`, `Bảng CTP T${state.ctpMonth}`); }
+  async captureBillImage() {
+    const el = document.getElementById('ctp-bill-capture-area');
+    if (!el) return showToast('Không tìm thấy khung Bill!', 'error');
+    if (typeof window.html2canvas !== 'function') {
+      return showToast('Chưa tải được thư viện chụp ảnh (html2canvas)!', 'error');
+    }
+    try {
+      showToast('📸 Đang chụp ảnh Bill...');
+      const canvas = await window.html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.download = `CTP_T${state.ctpMonth}_${state.selectedYear}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('✅ Đã tải ảnh Bill về máy!');
+    } catch (err) {
+      showToast('Lỗi chụp ảnh: ' + (err?.message || 'Trình duyệt không hỗ trợ màu mới'), 'error');
+    }
+  },
+  copyBillText() {
+    const bm = state.ctpBillModal;
+    if (!bm) return;
+    const lines = [
+      `BẢNG CTP THÁNG ${bm.month}/${state.selectedYear} - ${bm.memberName.toUpperCase()}`,
+      `Chủ show: ${bm.ownerTitle}`,
+      '-----------------------'
+    ];
+    bm.rows.forEach(r => {
+      if (r.showSum <= 0 && !r.taskBulletsCompact.length) return;
+      lines.push(`${r.stt}. [${r.dateLabel}] ${r.location}: ${r.showSum.toLocaleString('vi-VN')}đ`);
+      r.taskBulletsCompact.forEach(t => lines.push(`   ${t}`));
+      r.extraBulletsCompact.forEach(e => lines.push(`   ${e}`));
+    });
+    lines.push('-----------------------');
+    lines.push(`TỔNG CỘNG: ${bm.total.toLocaleString('vi-VN')}đ`);
+    navigator.clipboard?.writeText(lines.join('\n'))
+      .then(() => showToast('📋 Đã copy nội dung gửi Zalo!'))
+      .catch(() => showToast('Không thể copy, vui lòng thử lại!', 'error'));
+  },
+  copyExcelTable() {
+    const bm = state.ctpBillModal;
+    if (!bm) return;
+    const header = ['STT', 'NGÀY', 'SHOW', 'NHIỆM VỤ', 'PHÁT SINH', 'TỔNG'].join('\t');
+    const body = bm.rows.map(r => [
+      r.stt,
+      r.dateLabel,
+      r.location,
+      r.taskBulletsCompact.join('; '),
+      r.extraBulletsCompact.join('; '),
+      r.showSum
+    ].join('\t'));
+    const footer = ['', '', '', '', 'TỔNG CỘNG', bm.total].join('\t');
+    navigator.clipboard?.writeText([header, ...body, footer].join('\n'))
+      .then(() => showToast('📋 Đã copy bảng (dán thẳng vào Excel/Sheets)!'))
+      .catch(() => showToast('Không thể copy bảng!', 'error'));
+  },
+  exportBillExcelFile() {
+    const bm = state.ctpBillModal;
+    if (!bm) return;
+    const rowsHtml = bm.rows.map(r => `
+      <tr>
+        <td>${r.stt}</td>
+        <td>${r.dateLabel}</td>
+        <td>${r.location}</td>
+        <td>${r.taskBulletsCompact.join('<br/>')}</td>
+        <td>${r.extraBulletsCompact.join('<br/>')}</td>
+        <td>${r.showSum}</td>
+      </tr>
+    `).join('');
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+      <head><meta charset="utf-8" /></head>
+      <body>
+        <table border="1">
+          <tr><th colspan="6">BẢNG CTP THÁNG ${bm.month}/${state.selectedYear} - ${bm.memberName}</th></tr>
+          <tr><th>STT</th><th>NGÀY</th><th>SHOW</th><th>NHIỆM VỤ</th><th>PHÁT SINH</th><th>TỔNG</th></tr>
+          ${rowsHtml}
+          <tr><td colspan="5"><b>TỔNG CỘNG</b></td><td><b>${bm.total}</b></td></tr>
+        </table>
+      </body></html>
+    `;
+    const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `CTP_T${bm.month}_${state.selectedYear}_${bm.memberName}.xls`;
+    a.click();
+    showToast('📊 Đã tải file Excel về máy!');
+  }
 };
 
 window.ownerActions = {
