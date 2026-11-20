@@ -160,27 +160,39 @@ function renderCrewTabHtml(membersSorted) {
 
   return `
     <div class="space-y-4">
-      <!-- Quản lý mã PIN 13 anh em -->
+      <!-- Gom chung Quản lý mã PIN & Họ tên book vé cho từng thành viên -->
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div>
-          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🔐 Quản Lý Mã PIN 13 Thành Viên</div>
-          <div class="text-[10.5px] text-slate-400 mt-0.5">Nhập PIN 4 số mới hoặc bấm Reset 1234 — copy sẵn mật khẩu Firebase Auth (<code>AS2026#PIN</code>) để đồng bộ trên Firebase Console → Authentication → Users</div>
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🔐🪪 Quản Lý Mã PIN &amp; Họ Tên Book Vé</div>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">Quản lý PIN 4 số / Reset 1234 / Copy pass Auth (<code>AS2026#PIN</code>) và Họ tên xuất vé CCCD ngay trên từng thẻ thành viên</div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           ${membersSorted.map(m => {
             const curPin = pinMap[m.id] || '1234';
+            const legalVal = state.officialLegalNames?.[m.id] || '';
             return `
-              <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2">
+              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
                 <div class="flex items-center justify-between gap-2">
-                  <span style="background:${m.bg};color:${m.text}" class="px-2.5 py-0.5 rounded-full text-[10px] font-black">${escapeHtml(m.name)}</span>
-                  <span class="text-[10px] font-mono text-slate-500">${escapeHtml(m.id)}@actionsay.local</span>
+                  <span style="background:${m.bg};color:${m.text}" class="px-2.5 py-0.5 rounded-full text-[11px] font-black">${escapeHtml(m.name)}</span>
+                  <span class="text-[10px] font-mono text-slate-500 truncate">${escapeHtml(m.id)}@actionsay.local</span>
                 </div>
+
+                <!-- Dòng 1: Mã PIN -->
                 <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-bold text-slate-500 w-10 shrink-0">PIN:</span>
                   <input id="adm-pin-${escapeHtml(m.id)}" type="text" inputmode="numeric" maxlength="4" value="${escapeHtml(curPin)}"
-                    class="w-20 px-2.5 py-1.5 rounded-xl bg-white border font-mono font-black text-center text-xs" />
-                  <button onclick="adminProActions.setMemberPin('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-slate-900 text-amber-400 font-extrabold text-[10.5px]">Lưu PIN</button>
-                  <button onclick="adminProActions.resetMemberPinDefault('${escapeHtml(m.id)}')" class="px-2 py-1.5 rounded-xl bg-white border text-slate-700 font-bold text-[10.5px]">1234</button>
-                  <button onclick="adminProActions.copyAuthPassForMember('${escapeHtml(m.id)}')" title="Copy mật khẩu AS2026#PIN" class="ml-auto px-2 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-[10px]">Copy Pass</button>
+                    class="w-16 px-2 py-1.5 rounded-xl bg-white border font-mono font-black text-center text-xs" />
+                  <button onclick="adminProActions.setMemberPin('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-slate-900 text-amber-400 font-extrabold text-[10px]">Lưu PIN</button>
+                  <button onclick="adminProActions.resetMemberPinDefault('${escapeHtml(m.id)}')" class="px-2 py-1.5 rounded-xl bg-white border text-slate-700 font-bold text-[10px]">1234</button>
+                  <button onclick="adminProActions.copyAuthPassForMember('${escapeHtml(m.id)}')" class="ml-auto px-2 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-[10px]">Copy Pass</button>
+                </div>
+
+                <!-- Dòng 2: Họ tên book vé -->
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-bold text-slate-500 w-10 shrink-0">Vé:</span>
+                  <input id="adm-legal-${escapeHtml(m.id)}" type="text" value="${escapeHtml(legalVal)}" placeholder="HỌ TÊN TRÊN CCCD / BOOK VÉ"
+                    class="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-white border text-[11px] font-bold uppercase" />
+                  <button onclick="adminProActions.saveLegalNameFromInput('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px]">Lưu Vé</button>
                 </div>
               </div>
             `;
@@ -191,7 +203,7 @@ function renderCrewTabHtml(membersSorted) {
       <!-- Màu thẻ & thứ tự cột -->
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div>
-          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🎨 Màu Thẻ & Thứ Tự Cột Bảng Công Tác</div>
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🎨 Màu Thẻ &amp; Thứ Tự Cột Bảng Công Tác</div>
           <div class="text-[10.5px] text-slate-400 mt-0.5">Đổi màu nền thẻ và số thứ tự đứng cột (1 → 13) rồi tự động lưu</div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -201,23 +213,6 @@ function renderCrewTabHtml(membersSorted) {
               <span style="background:${m.bg};color:${m.text}" class="flex-1 min-w-0 px-2.5 py-1 rounded-lg font-black text-[11px] truncate">${escapeHtml(m.name)}</span>
               <span class="text-[10px] font-bold text-slate-400">Cột</span>
               <input type="number" min="1" max="50" value="${m.order ?? (idx + 1)}" onchange="adminProActions.updateMemberOrder('${escapeHtml(m.id)}', this.value)" class="w-11 px-1 py-1 text-center border rounded-lg font-mono font-black bg-white" />
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <!-- Họ tên xuất vé chuẩn -->
-      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
-        <div>
-          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🪪 Họ Tên Xuất Vé Chuẩn (Đặt Vé Máy Bay / KS)</div>
-          <div class="text-[10.5px] text-slate-400 mt-0.5">Dùng khi copy danh sách đoàn để xuất vé, bỏ qua biệt danh</div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          ${membersSorted.map(m => `
-            <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center gap-2">
-              <span class="w-20 font-extrabold text-slate-800 truncate">${escapeHtml(m.name)}</span>
-              <input id="adm-legal-${escapeHtml(m.id)}" type="text" value="${escapeHtml(state.officialLegalNames?.[m.id] || '')}" placeholder="HỌ TÊN TRÊN CCCD" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-white border text-[11px] font-bold uppercase" />
-              <button onclick="adminProActions.saveLegalNameFromInput('${escapeHtml(m.id)}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10.5px]">Lưu</button>
             </div>
           `).join('')}
         </div>
@@ -256,17 +251,17 @@ function renderPricingAndColorsTabHtml() {
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <div class="font-black text-xs uppercase tracking-wide text-slate-900">🗺️ Màu Tô Địa Điểm Trên Bảng Công Tác (30 Màu Dịu)</div>
-            <div class="text-[10.5px] text-slate-400">Chạm 1 màu trong bảng 30 màu bên dưới rồi nhập địa điểm & bấm + Thêm</div>
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">🗺️ Màu Tô Địa Điểm Trên Bảng Công Tác</div>
+            <div class="text-[10.5px] text-slate-400">Giữ nguyên các địa điểm có sẵn &amp; thêm bảng 30 màu dịu mắt để phân biệt dễ hơn</div>
           </div>
-          <button onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu & Áp Dụng Màu</button>
+          <button onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu &amp; Áp Dụng Màu</button>
         </div>
 
-        <!-- Bảng 30 màu dịu mắt -->
+        <!-- Bảng 30 màu gợi ý -->
         <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
           <div class="flex items-center justify-between text-[10.5px] font-bold text-slate-500">
-            <span>Bảng 30 màu đang chọn: <span style="background:${pickedNewHex}" class="px-2 py-0.5 rounded-md border border-black/15 font-mono text-slate-900 ml-1">${escapeHtml(pickedNewHex)}</span></span>
-            <span>30 tông pastel / nhẹ</span>
+            <span>Màu đang chọn: <span style="background:${pickedNewHex}" class="px-2 py-0.5 rounded-md border border-black/15 font-mono text-slate-900 ml-1">${escapeHtml(pickedNewHex)}</span></span>
+            <span>30 màu gợi ý</span>
           </div>
           <div class="grid grid-cols-10 sm:grid-cols-15 gap-1.5">
             ${ADMIN_SWATCH_COLORS_30.map(hex => `
@@ -278,11 +273,12 @@ function renderPricingAndColorsTabHtml() {
         </div>
 
         <div class="flex gap-2">
-          <input id="adm-new-col-kw" type="text" placeholder="Thêm địa điểm (VD: Sapa, Măng Đen, Hồ Tràm...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-slate-50" />
+          <input id="adm-new-col-kw" type="text" placeholder="Thêm địa điểm mới (VD: Măng Đen, Hồ Tràm...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-slate-50" />
           <input id="adm-new-col-hex" type="color" value="${pickedNewHex}" onchange="adminProActions.pickNewColorSwatch(this.value)" class="w-10 h-9 rounded-xl border cursor-pointer" />
           <button onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black">+ Thêm</button>
         </div>
 
+        <!-- Danh sách địa điểm & màu hiện tại -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           ${rules.map(r => `
             <div style="background:${r.color}" class="p-2 rounded-2xl border border-black/10 flex items-center gap-2">
@@ -301,14 +297,31 @@ function renderSystemTabHtml() {
   const lockYear = Number(state.adminLockViewYear) || 2026;
   const trash = state.deletedShowsTrash || [];
   const bc = state.studioBroadcast || { enabled: false, text: '' };
+  const curLogo = state.customLogoDataUrl || './assets/logo.png';
 
   return `
     <div class="space-y-4">
+      <!-- Đổi Logo Studio -->
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
+        <div>
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🖼️ Đổi Logo Studio</div>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">Chọn ảnh logo mới từ máy để cập nhật ngay trên Header &amp; ứng dụng</div>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+            <img src="${escapeHtml(curLogo)}" alt="Logo" class="w-full h-full object-contain" />
+          </div>
+          <button onclick="adminProActions.triggerLogoUpload()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black text-xs">📤 Chọn Ảnh Logo Mới</button>
+          ${state.customLogoDataUrl ? `<button onclick="adminProActions.resetLogoDefault()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">↩ Dùng Logo Mặc Định</button>` : ''}
+          <input id="adm-logo-file-input" type="file" accept="image/*" onchange="adminProActions.handleLogoUpload(this)" class="hidden" />
+        </div>
+      </div>
+
       <!-- Sao lưu & Backup file -->
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div>
-          <div class="font-black text-xs uppercase tracking-wide text-slate-900">💾 Sao Lưu & Backup Dữ Liệu (.JSON)</div>
-          <div class="text-[10.5px] text-slate-400 mt-0.5">Tải file backup toàn bộ shows, cấu hình, PIN & màu sắc về máy hoặc nạp lại từ file .JSON</div>
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">💾 Sao Lưu &amp; Backup Dữ Liệu (.JSON)</div>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">Tải file backup toàn bộ shows, cấu hình, PIN &amp; màu sắc về máy hoặc nạp lại từ file .JSON</div>
         </div>
         <div class="flex flex-wrap gap-2">
           <button onclick="adminProActions.exportFullJsonBackup()" class="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs">⬇️ Tải File Backup (.JSON)</button>
@@ -359,7 +372,7 @@ function renderSystemTabHtml() {
           </div>
           <input id="adm-broadcast-inp" type="text" value="${escapeHtml(bc.text || '')}" placeholder="VD: Chốt bill CTP tháng trước ngày 03..." class="w-full px-3 py-2 rounded-xl bg-slate-50 border font-bold" />
           <div class="flex gap-2">
-            <button onclick="adminProActions.publishBroadcast()" class="flex-1 py-2 rounded-xl bg-rose-600 text-white font-black">📢 Lưu & Phát Ngay</button>
+            <button onclick="adminProActions.publishBroadcast()" class="flex-1 py-2 rounded-xl bg-rose-600 text-white font-black">📢 Lưu &amp; Phát Ngay</button>
             ${bc.enabled ? `<button onclick="adminProActions.disableBroadcast()" class="px-3 py-2 rounded-xl bg-slate-200 text-slate-800 font-bold">🔕 Tắt</button>` : ''}
           </div>
         </div>
