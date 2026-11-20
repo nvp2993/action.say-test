@@ -1755,101 +1755,97 @@
           authNotice = { type: 'success', message: 'Đã đổi mật khẩu Admin thành công.' };
           renderAdminPortal();
         } catch (err) {
-          authNotice = { type: 'error', message: mapFirebaseAuthError(err) };
+async importBackupJson(file) {
+        try {
+          const rawText = await file.text();
+          const data = JSON.parse(rawText);
+          if (!data || typeof data !== 'object') {
+            window.showToast('File JSON không hợp lệ!', 'error');
+            return;
+          }
+
+          const showCount = Array.isArray(data.shows) ? data.shows.length : 0;
+          const memberCount = Array.isArray(data.members) ? data.members.length : 0;
+          const ok = window.confirm(
+            `Nạp "${file.name}" vào MÔI TRƯỜNG TEST?\n- Shows: ${showCount}\n- Nhân sự: ${memberCount}`
+          );
+          if (!ok) return;
+
+          window.showToast('Đang nạp dữ liệu test...', 'loading');
+
+          if (Array.isArray(data.shows)) {
+            st.shows = data.shows;
+            try { localStorage.setItem('as_shows_backup_2026', JSON.stringify(st.shows)); } catch (e) {}
+          }
+          if (Array.isArray(data.members) && data.members.length > 0) {
+            st.members = typeof window.normalizeCrewList === 'function'
+              ? window.normalizeCrewList(data.members)
+              : data.members;
+            try { localStorage.setItem('as_members_backup_2026', JSON.stringify(st.members)); } catch (e) {}
+          }
+          const rawPins = data.pinsMap?.pins && typeof data.pinsMap.pins === 'object'
+            ? data.pinsMap.pins
+            : data.pinsMap;
+          if (rawPins && typeof rawPins === 'object') {
+            const cleanPins = {};
+            Object.entries(rawPins).forEach(([k, v]) => {
+              if (k !== 'pins' && k !== 'updatedAt' && typeof v === 'string') cleanPins[k] = v;
+            });
+            st.memberPins = { ...(st.memberPins || {}), ...cleanPins };
+            st.pinsMap = { ...st.memberPins };
+            try { localStorage.setItem('as_member_pins_2026', JSON.stringify(st.memberPins)); } catch (e) {}
+          }
+          if (data.memberProfiles && typeof data.memberProfiles === 'object') {
+            st.memberProfiles = { ...(st.memberProfiles || {}), ...data.memberProfiles };
+            try { localStorage.setItem('as_member_profiles_2026', JSON.stringify(st.memberProfiles)); } catch (e) {}
+          }
+          if (data.ownerFinanceMap && typeof data.ownerFinanceMap === 'object') {
+            st.ownerFinanceMap = { ...(st.ownerFinanceMap || {}), ...data.ownerFinanceMap };
+            try { localStorage.setItem('as_owner_finance_2026', JSON.stringify(st.ownerFinanceMap)); } catch (e) {}
+          }
+
+          const ctx = getFirebaseCtx();
+          if (ctx?.db) {
+            const writes = [
+              setDoc(doc(ctx.db, 'artifacts', APP_ID, 'public', 'data', 'app_single_doc', 'shows_master'), {
+                shows: Array.isArray(st.shows) ? st.shows : [],
+                membersConfig: (st.members || []).map(m => ({
+                  id: m.id, bg: m.bg, text: m.text, order: m.order, shortLabel: m.shortLabel
+                })),
+                updatedAt: Date.now()
+              }, { merge: true })
+            ];
+            if (st.memberPins && Object.keys(st.memberPins).length > 0) {
+              writes.push(
+                setDoc(doc(ctx.db, 'artifacts', APP_ID, 'public', 'data', 'member_pins', 'pins_config'), {
+                  pins: st.memberPins, updatedAt: Date.now()
+                }, { merge: true })
+              );
+            }
+            if (st.memberProfiles && Object.keys(st.memberProfiles).length > 0) {
+              writes.push(
+                setDoc(doc(ctx.db, 'artifacts', APP_ID, 'public', 'data', 'member_pins', 'profiles_config'), {
+                  profiles: st.memberProfiles, updatedAt: Date.now()
+                }, { merge: true })
+              );
+            }
+            await Promise.all(writes);
+          }
+
+          if (typeof window.renderApp === 'function') window.renderApp();
           renderAdminPortal();
+          window.showToast(`Đã nạp ${showCount} show vào bản test!`);
+        } catch (err) {
+          console.error(err);
+          window.showToast('Lỗi nạp JSON: ' + (err?.message || err), 'error');
         }
       },
-      async importBackupJson(file) {
-    try {
-      const rawText = await file.text();
-      const data = JSON.parse(rawText);
-      if (!data || typeof data !== 'object') {
-        window.showToast('File JSON không hợp lệ!', 'error');
-        return;
-      }
-
-      const showCount = Array.isArray(data.shows) ? data.shows.length : 0;
-      const memberCount = Array.isArray(data.members) ? data.members.length : 0;
-      const ok = window.confirm(
-        `Nạp "${file.name}" vào MÔI TRƯỜNG TEST?\n- Shows: ${showCount}\n- Nhân sự: ${memberCount}`
-      );
-      if (!ok) return;
-
-      window.showToast('Đang nạp dữ liệu test...', 'loading');
-
-      if (Array.isArray(data.shows)) {
-        st.shows = data.shows;
-        try { localStorage.setItem('as_shows_backup_2026', JSON.stringify(st.shows)); } catch (e) {}
-      }
-      if (Array.isArray(data.members) && data.members.length > 0) {
-        st.members = typeof window.normalizeCrewList === 'function'
-          ? window.normalizeCrewList(data.members)
-          : data.members;
-        try { localStorage.setItem('as_members_backup_2026', JSON.stringify(st.members)); } catch (e) {}
-      }
-      const rawPins = data.pinsMap?.pins && typeof data.pinsMap.pins === 'object'
-        ? data.pinsMap.pins
-        : data.pinsMap;
-      if (rawPins && typeof rawPins === 'object') {
-        const cleanPins = {};
-        Object.entries(rawPins).forEach(([k, v]) => {
-          if (k !== 'pins' && k !== 'updatedAt' && typeof v === 'string') cleanPins[k] = v;
-        });
-        st.memberPins = { ...(st.memberPins || {}), ...cleanPins };
-        st.pinsMap = { ...st.memberPins };
-        try { localStorage.setItem('as_member_pins_2026', JSON.stringify(st.memberPins)); } catch (e) {}
-      }
-      if (data.memberProfiles && typeof data.memberProfiles === 'object') {
-        st.memberProfiles = { ...(st.memberProfiles || {}), ...data.memberProfiles };
-        try { localStorage.setItem('as_member_profiles_2026', JSON.stringify(st.memberProfiles)); } catch (e) {}
-      }
-      if (data.ownerFinanceMap && typeof data.ownerFinanceMap === 'object') {
-        st.ownerFinanceMap = { ...(st.ownerFinanceMap || {}), ...data.ownerFinanceMap };
-        try { localStorage.setItem('as_owner_finance_2026', JSON.stringify(st.ownerFinanceMap)); } catch (e) {}
-      }
-
-      const ctx = getFirebaseCtx();
-      if (ctx?.db) {
-        const writes = [
-          setDoc(doc(ctx.db, 'artifacts', APP_ID, 'public', 'data', 'app_single_doc', 'shows_master'), {
-            shows: Array.isArray(st.shows) ? st.shows : [],
-            membersConfig: (st.members || []).map(m => ({
-              id: m.id, bg: m.bg, text: m.text, order: m.order, shortLabel: m.shortLabel
-            })),
-            updatedAt: Date.now()
-          }, { merge: true })
-        ];
-        if (st.memberPins && Object.keys(st.memberPins).length > 0) {
-          writes.push(
-            setDoc(doc(ctx.db, 'artifacts', APP_ID, 'public', 'data', 'member_pins', 'pins_config'), {
-              pins: st.memberPins, updatedAt: Date.now()
-            }, { merge: true })
-          );
-        }
-        if (st.memberProfiles && Object.keys(st.memberProfiles).length > 0) {
-          writes.push(
-            setDoc(doc(ctx.db, 'artifacts', APP_ID, 'public', 'data', 'member_pins', 'profiles_config'), {
-              profiles: st.memberProfiles, updatedAt: Date.now()
-            }, { merge: true })
-          );
-        }
-        await Promise.all(writes);
-      }
-
-      if (typeof window.renderApp === 'function') window.renderApp();
-      renderAdminPortal();
-      window.showToast(`Đã nạp ${showCount} show vào bản test!`);
-    } catch (err) {
-      console.error(err);
-      window.showToast('Lỗi nạp JSON: ' + (err?.message || err), 'error');
-    }
-  },
-  inspectShow(showId) {
       inspectShow(showId) {
         window.__adminAuthActions.backToApp();
         if (typeof window.appActions.openShowDetail === 'function') {
           window.appActions.openShowDetail(showId);
         }
+      },
       },
       async updateMemberStyle(memId, field, val) {
         const crew = typeof window.normalizeCrewList === 'function' ? window.normalizeCrewList(st.members) : (st.members || []);
