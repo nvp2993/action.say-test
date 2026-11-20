@@ -93,3 +93,12 @@ export const BANK_LIST = [
   { bin: '970423', name: 'TPBank' },
   { bin: '970405', name: 'Agribank' }
 ];
+
+export const ADMIN_SWATCH_COLORS_30 = [
+  '#dbeafe', '#bfdbfe', '#bae6fd', '#a5f3fc', '#99f6e4',
+  '#a7f3d0', '#bbf7d0', '#d9f99d', '#fef08a', '#fde68a',
+  '#fed7aa', '#fecdd3', '#fbcfe8', '#f5d0fe', '#e9d5ff',
+  '#ddd6fe', '#c7d2fe', '#e2e8f0', '#f1f5f9', '#fef3c7',
+  '#dcfce7', '#e0f2fe', '#ede9fe', '#fce7f3', '#ffedd5',
+  '#ccfbf1', '#ecfccb', '#fae8ff', '#ffe4e6', '#f3e8ff'
+];
