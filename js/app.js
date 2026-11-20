@@ -991,8 +991,51 @@ window.adminProActions = {
 };
 
 window.holdBellActions = {
-  openBellDrawer() { showToast('🔔 Danh sách giữ lịch đang được đồng bộ!'); },
-  openQuickHoldSheet(dateStr) { appActions.openAddModal(dateStr); }
+  openBellDrawer() {
+    state.holdBellModalOpen = true;
+    renderApp();
+  },
+  closeBellDrawer() {
+    state.holdBellModalOpen = false;
+    renderApp();
+  },
+  async createQuickHold() {
+    const loc = prompt('Nhập tên / địa điểm giữ lịch (VD: Show Đà Lạt):');
+    if (!loc || !loc.trim()) return;
+    const d = prompt('Nhập ngày giữ lịch (YYYY-MM-DD):', getTodayISO()) || getTodayISO();
+    const newHold = {
+      id: 'hold_' + Date.now(),
+      stt: Math.max(300, ...state.shows.map(s => Number(s.stt) || 0)) + 1,
+      location: loc.trim(),
+      startDate: d.trim(),
+      endDate: d.trim(),
+      memberIds: [state.currentUserId],
+      ownerId: state.currentUserId,
+      creatorId: state.currentUserId,
+      isHold: true,
+      color: resolveDynamicLocationColor(loc.trim(), ''),
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    state.shows.push(newHold);
+    await syncShowsToCloud();
+    renderApp();
+    showToast('⏳ Đã tạo lịch giữ chỗ!');
+  },
+  async releaseHold(id) {
+    const idx = state.shows.findIndex(s => s && s.id === id);
+    if (idx < 0) return;
+    if (!confirm('Gỡ lịch giữ chỗ này?')) return;
+    state.shows.splice(idx, 1);
+    await syncShowsToCloud();
+    renderApp();
+    showToast('🗑️ Đã gỡ lịch giữ chỗ!');
+  },
+  openQuickHoldSheet(dateStr) {
+    state.holdBellModalOpen = true;
+    if (dateStr) this.createQuickHold();
+    else renderApp();
+  }
 };
 
 // Khởi chạy hệ thống
