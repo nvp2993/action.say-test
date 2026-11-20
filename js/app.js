@@ -380,6 +380,65 @@ window.ownerActions = {
 };
 
 window.adminProActions = {
+  toggleAddMemberForm() {
+    state.adminAddMemberOpen = !state.adminAddMemberOpen;
+    renderApp();
+  },
+  async addNewMember() {
+    const name = (document.getElementById('adm-add-name')?.value || '').trim();
+    const legal = (document.getElementById('adm-add-legal')?.value || '').trim().toUpperCase();
+    const bg = document.getElementById('adm-add-color')?.value || '#334155';
+    const order = Number(document.getElementById('adm-add-order')?.value) || (state.members.length + 1);
+    if (!name) return showToast('Vui lòng nhập tên nhân sự!', 'error');
+
+    const slug = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const id = state.members.some(m => m.id === slug) ? `${slug}_${Date.now().toString().slice(-3)}` : (slug || `mem_${Date.now()}`);
+
+    state.members.push({ id, name, shortLabel: name, bg, text: '#ffffff', order });
+    if (legal) await saveOfficialLegalName(id, legal);
+    state.adminAddMemberOpen = false;
+    await pushAdminConfigToCloud();
+    await logStudioActivity(`Thêm nhân sự mới: ${name}`);
+    renderApp();
+    showToast(`✅ Đã thêm nhân sự ${name}!`);
+  },
+  toggleEditMember(mid) {
+    state.adminEditMemberId = state.adminEditMemberId === mid ? null : mid;
+    renderApp();
+  },
+  async saveMemberAllInOne(mid) {
+    const m = state.members.find(x => x.id === mid);
+    if (!m) return;
+    const name = (document.getElementById(`adm-ed-name-${mid}`)?.value || '').trim();
+    const legal = (document.getElementById(`adm-ed-legal-${mid}`)?.value || '').trim().toUpperCase();
+    const order = Number(document.getElementById(`adm-ed-ord-${mid}`)?.value) || m.order || 99;
+    const bg = document.getElementById(`adm-ed-col-${mid}`)?.value || m.bg;
+    const pin = (document.getElementById(`adm-ed-pin-${mid}`)?.value || '').replace(/\D/g, '').slice(0, 4);
+
+    if (name) { m.name = name; m.shortLabel = name; }
+    m.order = order;
+    m.bg = bg;
+    if (pin.length === 4) {
+      state.memberPinHints = { ...(state.memberPinHints || {}), [mid]: pin };
+      localStorage.setItem('as_member_pin_hints_2026', JSON.stringify(state.memberPinHints));
+    }
+    await saveOfficialLegalName(mid, legal);
+    await pushAdminConfigToCloud();
+    await logStudioActivity(`Cập nhật nhân sự: ${m.name}`);
+    state.adminEditMemberId = null;
+    renderApp();
+    showToast(`💾 Đã lưu thông tin ${m.name}!`);
+  },
+  async deleteMemberFromAdmin(mid) {
+    const m = state.members.find(x => x.id === mid);
+    if (!m || !confirm(`Xóa nhân sự "${m.name}" khỏi danh sách ekip?`)) return;
+    state.members = state.members.filter(x => x.id !== mid);
+    if (state.adminEditMemberId === mid) state.adminEditMemberId = null;
+    await pushAdminConfigToCloud();
+    await logStudioActivity(`Xóa nhân sự: ${m.name}`);
+    renderApp();
+    showToast(`🗑️ Đã xóa ${m.name}!`);
+  },
   setAdminTab(tab) { state.adminTab = tab; renderApp(); },
   pickNewColorSwatch(hex) {
     state.adminNewColorHex = hex;
