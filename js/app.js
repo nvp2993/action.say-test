@@ -93,13 +93,30 @@ triggerVipAvatarUpload() {
     const file = inputEl?.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await new Promise((resolve, reject) => {
+      // Nén ảnh về 256x256px để lưu Firestore siêu nhẹ & không bao giờ bị lỗi dung lượng
+      const cleanUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
         reader.onerror = reject;
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = reject;
+          img.onload = () => {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const minSide = Math.min(img.width, img.height);
+            const sx = (img.width - minSide) / 2;
+            const sy = (img.height - minSide) / 2;
+            ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+          };
+          img.src = reader.result;
+        };
         reader.readAsDataURL(file);
       });
-      const cleanUrl = String(dataUrl || '');
+
       const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
       savedAvatars[state.currentUserId] = cleanUrl;
       localStorage.setItem('as_member_avatars_2026', JSON.stringify(savedAvatars));
@@ -107,10 +124,11 @@ triggerVipAvatarUpload() {
       const cur = state.memberProfiles?.[state.currentUserId] || {};
       await saveMyProfileToCloud(state.currentUserId, {
         ...cur,
+        avatar: cleanUrl,
         avatarUrl: cleanUrl
       });
       renderApp();
-      showToast('📷 Đã đổi & đồng bộ ảnh đại diện toàn app!');
+      showToast('📷 Đã cập nhật & đồng bộ ảnh đại diện!');
     } catch (err) {
       showToast('Lỗi tải ảnh avatar: ' + err.message, 'error');
     } finally {
