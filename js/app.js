@@ -71,6 +71,52 @@ registerRenderer(renderApp);
 // Gắn các hành động ra window để HTML gọi mượt mà
 window.state = state;
 window.appActions = {
+triggerVipAvatarUpload() {
+    document.getElementById('vip-avatar-file-input')?.click();
+  },
+  async handleVipAvatarUpload(inputEl) {
+    const file = inputEl?.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const cur = state.memberProfiles?.[state.currentUserId] || {};
+      await saveMyProfileToCloud(state.currentUserId, {
+        ...cur,
+        avatarUrl: String(dataUrl || '')
+      });
+      renderApp();
+      showToast('📷 Đã cập nhật ảnh đại diện!');
+    } catch (err) {
+      showToast('Lỗi tải ảnh avatar: ' + err.message, 'error');
+    } finally {
+      inputEl.value = '';
+    }
+  },
+  copyVipInfoText() {
+    const prof = state.memberProfiles?.[state.currentUserId] || {};
+    const m = getMember(state.currentUserId);
+    const name = (prof.fullName || m.name || '').toUpperCase();
+    const lines = [
+      `${name} (${m.name})`,
+      `CCCD: ${prof.cccd || '-'}`,
+      `Ngày sinh: ${prof.dob || '-'}`,
+      `SĐT: ${prof.phone || '-'}`,
+      `STK: ${prof.bankAcc || '-'}`
+    ];
+    navigator.clipboard?.writeText(lines.join('\n'));
+    showToast('📋 Đã copy thông tin thẻ VIP!');
+  },
+  async switchMemberFromVipCard() {
+    state.crewPassModal = false;
+    await logoutCurrentUser();
+    state.pinModal = { step: 'select', selectedId: null, pinInput: '', error: '', loading: false };
+    renderApp();
+  },
   setTab(tab) { state.activeTab = tab; renderApp(); },
   setYear(y) {
     state.selectedYear = Number(y);
