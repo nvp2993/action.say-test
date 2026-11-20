@@ -38,10 +38,6 @@ export function renderCtpTabHtml() {
       </div>
 
       <div id="ctp-shows-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 space-y-3">
-      <div class="px-3 py-1.5 bg-amber-50 border-b border-amber-200/80 text-[10.5px] text-amber-900 font-semibold flex items-center gap-1.5 shrink-0">
-     <span>🔒</span>
-     <span>Chế độ riêng tư: Dữ liệu CTP &amp; thông tin Đối tác chỉ hiển thị riêng cho tài khoản của bạn.</span>
-   </div>
         ${filteredShows.length === 0 ? `
           <div class="text-center py-12 bg-white rounded-3xl border border-slate-200 mx-auto max-w-sm space-y-3 p-4">
             <div class="text-3xl">📭</div>
@@ -67,7 +63,11 @@ export function renderCtpTabHtml() {
                 <div class="min-w-0 flex-1">
                   <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-bold text-[10px]">#${idx + 1}</span>
                   <span class="font-mono font-bold text-indigo-600 text-[10px] ml-1">${formatDayMonth(sh.startDate)} (${days}n)</span>
-                  <h4 class="font-black text-slate-900 text-sm mt-1">📍 ${escapeHtml(sh.location)} ${getVisiblePartnerText(sh) ? `(${escapeHtml(getVisiblePartnerText(sh))})` : ''}</h4>
+                  <h4 class="font-black text-slate-900 text-sm mt-1 flex items-center gap-1.5 flex-wrap">
+  <span>📍 ${escapeHtml(sh.location)}</span>
+  ${getVisiblePartnerText(sh) ? `<span class="text-slate-600 font-bold">(${escapeHtml(getVisiblePartnerText(sh))})</span>` : ''}
+  ${(sh.hidePartner || sh.isPrivate) ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-extrabold">🔒 Riêng tư</span>` : ''}
+</h4>
                   <p class="text-[10px] text-slate-500 mt-0.5">Chủ show: <b class="text-slate-700">${escapeHtml(owner.name)}</b></p>
                 </div>
                 <div class="text-right shrink-0 bg-emerald-50 px-3 py-1.5 rounded-2xl border border-emerald-200">
