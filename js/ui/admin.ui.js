@@ -1,6 +1,7 @@
 import { state } from '../state/store.js';
 import { ALL_YEARS } from '../config/constants.js';
 import { escapeHtml, getMember, getSortedMembers, formatDayMonth } from '../utils/helpers.js';
+import { isYearMonthLocked } from '../services/show.service.js';
 
 function getFilteredAdminShows() {
   const q = String(state.adminSearch || '').trim().toLowerCase();
@@ -36,20 +37,20 @@ function renderAdminInspectModalHtml() {
   }).join('') || '<div class="py-2 text-slate-400">Chưa gán nhân sự</div>';
 
   return `
-    <div onclick="adminProActions.closeInspectShow()" class="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
+    <div onclick="adminProActions.closeInspectShow()" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3 text-xs shadow-2xl max-h-[88dvh] overflow-y-auto">
-        <div class="flex items-start justify-between border-b pb-2">
+        <div class="flex items-start justify-between border-b border-slate-100 pb-2.5">
           <div>
-            <div class="text-[10px] font-black text-emerald-700 uppercase">Chi Tiết Show (Admin)</div>
+            <div class="text-[10px] font-black text-emerald-700 uppercase tracking-wider">Chi Tiết Show</div>
             <h3 class="text-base font-black text-slate-900 mt-0.5">${escapeHtml(sh.location || '')} ${sh.partner ? `<span class="text-slate-400 font-semibold">(${escapeHtml(sh.partner)})</span>` : ''}</h3>
           </div>
-          <button onclick="adminProActions.closeInspectShow()" class="w-8 h-8 rounded-full bg-slate-100 font-bold">✕</button>
+          <button onclick="adminProActions.closeInspectShow()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
         </div>
 
         <div class="divide-y divide-slate-100">
-          <div class="py-2 flex justify-between"><span class="text-slate-400">Thời gian</span><span class="font-mono font-bold">${escapeHtml(formatDayMonth(sh.startDate))}${sh.endDate && sh.endDate !== sh.startDate ? ' → ' + escapeHtml(formatDayMonth(sh.endDate)) : ''}</span></div>
-          <div class="py-2 flex justify-between"><span class="text-slate-400">Chủ show</span><span class="font-bold">${escapeHtml(ownerName)}</span></div>
-          <div class="py-2 flex justify-between"><span class="text-slate-400">Người tạo</span><span class="font-bold">${escapeHtml(creatorName)}</span></div>
+          <div class="py-2 flex justify-between"><span class="text-slate-400">Thời gian</span><span class="font-mono font-bold text-slate-900">${escapeHtml(formatDayMonth(sh.startDate))}${sh.endDate && sh.endDate !== sh.startDate ? ' → ' + escapeHtml(formatDayMonth(sh.endDate)) : ''}</span></div>
+          <div class="py-2 flex justify-between"><span class="text-slate-400">Chủ show</span><span class="font-bold text-slate-900">${escapeHtml(ownerName)}</span></div>
+          <div class="py-2 flex justify-between"><span class="text-slate-400">Người tạo</span><span class="font-bold text-slate-900">${escapeHtml(creatorName)}</span></div>
         </div>
 
         <div>
@@ -60,8 +61,259 @@ function renderAdminInspectModalHtml() {
         ${sh.note ? `<div class="p-3 rounded-2xl bg-slate-50 text-slate-700"><b>Ghi chú:</b> ${escapeHtml(sh.note)}</div>` : ''}
 
         <div class="grid grid-cols-2 gap-2 pt-2">
-          <button onclick="adminProActions.deleteShowFromAdmin('${escapeHtml(sh.id)}')" class="py-2.5 rounded-2xl bg-rose-50 text-rose-600 font-bold">🗑️ Xóa Show</button>
-          <button onclick="adminProActions.closeInspectShow()" class="py-2.5 rounded-2xl bg-slate-900 text-white font-bold">Đóng</button>
+          <button onclick="adminProActions.deleteShowFromAdmin('${escapeHtml(sh.id)}')" class="py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold">🗑️ Xóa Show</button>
+          <button onclick="adminProActions.closeInspectShow()" class="py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold">Đóng</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderOverviewTabHtml(membersSorted, filteredShows) {
+  const activeShowsCount = (state.shows || []).filter(s => s && !s.isCancelled).length;
+  const cancelledCount = (state.shows || []).filter(s => s && s.isCancelled).length;
+
+  return `
+    <div class="space-y-4">
+      <div class="grid grid-cols-3 gap-2.5">
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80">
+          <div class="text-[10px] font-bold text-slate-400 uppercase">Tổng Show</div>
+          <div class="text-xl sm:text-2xl font-black font-mono text-slate-900 mt-1">${state.shows.length}</div>
+        </div>
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80">
+          <div class="text-[10px] font-bold text-slate-400 uppercase">Đang Chạy</div>
+          <div class="text-xl sm:text-2xl font-black font-mono text-emerald-600 mt-1">${activeShowsCount}</div>
+        </div>
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80">
+          <div class="text-[10px] font-bold text-slate-400 uppercase">Đã Hủy</div>
+          <div class="text-xl sm:text-2xl font-black font-mono text-rose-600 mt-1">${cancelledCount}</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="font-black text-xs uppercase tracking-wide text-slate-900">📊 Hiệu Suất Ekip (${membersSorted.length} người)</span>
+          <span class="text-[10.5px] text-slate-400 font-semibold">Show đang chạy</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          ${membersSorted.map(m => {
+            const cnt = (state.shows || []).filter(s => s && !s.isCancelled && (s.memberIds || []).includes(m.id)).length;
+            return `
+              <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-1">
+                <span style="background:${m.bg};color:${m.text}" class="px-2 py-0.5 rounded-full text-[10px] font-black truncate">${escapeHtml(m.shortLabel)}</span>
+                <span class="font-mono font-black text-slate-900 text-xs shrink-0">${cnt}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">📋 Danh Sách Show (${filteredShows.length})</div>
+            <div class="text-[10.5px] text-slate-400">Bấm vào từng show để xem chi tiết hoặc xóa</div>
+          </div>
+          <input type="text" value="${escapeHtml(state.adminSearch)}" oninput="adminProActions.setAdminSearch(this.value)"
+            placeholder="Tìm địa điểm, đối tác, ekip..." class="w-full sm:w-64 px-3.5 py-2 rounded-2xl bg-slate-100 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
+        </div>
+        <div class="max-h-72 overflow-y-auto custom-scroll divide-y divide-slate-100">
+          ${filteredShows.length === 0
+            ? `<div class="py-7 text-center text-slate-400">Chưa có dữ liệu show phù hợp</div>`
+            : filteredShows.map((sh, i) => {
+                const crew = (sh.memberIds || []).map(id => getMember(id).name).join(', ');
+                return `
+                  <div onclick="adminProActions.openInspectShow('${escapeHtml(sh.id)}')" class="py-2.5 px-2.5 flex items-center justify-between gap-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2 truncate">
+                        <span class="text-[10px] font-mono text-slate-400">#${i + 1}</span>
+                        <span class="font-mono font-bold text-emerald-700">${escapeHtml(formatDayMonth(sh.startDate))}</span>
+                        <span class="font-bold text-slate-900 truncate ${sh.isCancelled ? 'line-through text-rose-600' : ''}">${escapeHtml(sh.location || '')}</span>
+                      </div>
+                      <div class="text-[11px] text-slate-500 truncate mt-0.5">Ekip: ${escapeHtml(crew || 'Trống')}</div>
+                    </div>
+                    <span class="text-slate-400 font-bold text-sm">›</span>
+                  </div>
+                `;
+              }).join('')}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2">
+        <div class="font-black text-xs uppercase tracking-wide text-slate-900">📜 Nhật Ký Hoạt Động (${state.activityLogs.length})</div>
+        <div class="max-h-48 overflow-y-auto custom-scroll space-y-1.5">
+          ${state.activityLogs.map(l => `
+            <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200/60 text-[11px]">
+              <b class="font-mono text-slate-500">[${escapeHtml(l.time)}]</b>
+              <b class="text-slate-900 ml-1">${escapeHtml(l.actor)}:</b>
+              <span class="text-slate-700">${escapeHtml(l.text)}</span>
+            </div>
+          `).join('') || '<div class="text-slate-400 py-2">Chưa có nhật ký nào</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCrewTabHtml(membersSorted) {
+  return `
+    <div class="space-y-4">
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
+        <div>
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🎨 Màu Thẻ & Thứ Tự Cột Bảng Công Tác</div>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">Đổi màu nền thẻ và số thứ tự đứng cột (1 → 13) rồi tự động lưu</div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          ${membersSorted.map((m, idx) => `
+            <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center gap-2">
+              <input type="color" value="${m.bg || '#334155'}" onchange="adminProActions.updateMemberColor('${escapeHtml(m.id)}', this.value)" class="w-7 h-7 rounded-lg border cursor-pointer shrink-0" />
+              <span style="background:${m.bg};color:${m.text}" class="flex-1 min-w-0 px-2.5 py-1 rounded-lg font-black text-[11px] truncate">${escapeHtml(m.name)}</span>
+              <span class="text-[10px] font-bold text-slate-400">Cột</span>
+              <input type="number" min="1" max="50" value="${m.order ?? (idx + 1)}" onchange="adminProActions.updateMemberOrder('${escapeHtml(m.id)}', this.value)" class="w-11 px-1 py-1 text-center border rounded-lg font-mono font-black bg-white" />
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
+        <div>
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🪪 Họ Tên Xuất Vé Chuẩn (Đặt Vé Máy Bay / KS)</div>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">Dùng khi copy danh sách đoàn để xuất vé, bỏ qua biệt danh</div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          ${membersSorted.map(m => `
+            <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center gap-2">
+              <span class="w-20 font-extrabold text-slate-800 truncate">${escapeHtml(m.name)}</span>
+              <input id="adm-legal-${escapeHtml(m.id)}" type="text" value="${escapeHtml(state.officialLegalNames?.[m.id] || '')}" placeholder="HỌ TÊN TRÊN CCCD" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-white border text-[11px] font-bold uppercase" />
+              <button onclick="adminProActions.saveLegalNameFromInput('${escapeHtml(m.id)}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10.5px]">Lưu</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPricingAndColorsTabHtml() {
+  const rates = state.ctpRatesConfig || {};
+  const rules = state.customColorRules || [];
+
+  return `
+    <div class="space-y-4">
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">💰 Đơn Giá CTP Mặc Định</div>
+            <div class="text-[10.5px] text-slate-400">Áp dụng khi bật nhiệm vụ ở tab Tính CTP</div>
+          </div>
+          <button onclick="adminProActions.saveCtpRates()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu Giá</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
+          <div><b>🎥 Quay 1n:</b><input id="adm-r-quay1" type="text" value="${Number(rates.quay1Day || 1500000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
+          <div><b>🎥 Quay ≥2n:</b><input id="adm-r-quayN" type="text" value="${Number(rates.quayMultiDay || 1200000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
+          <div><b>📸 Chụp 1n:</b><input id="adm-r-chup1" type="text" value="${Number(rates.chup1Day || 1500000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
+          <div><b>📸 Chụp ≥2n:</b><input id="adm-r-chupN" type="text" value="${Number(rates.chupMultiDay || 1200000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
+          <div><b>✂️ Dựng:</b><input id="adm-r-dung" type="text" value="${Number(rates.dung || 1000000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
+          <div><b>🚁 Flycam:</b><input id="adm-r-flycam" type="text" value="${Number(rates.flycam || 1000000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
+          <div><b>🖼️ Làm hình:</b><input id="adm-r-lamhinh" type="text" value="${Number(rates.lamhinh || 300000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
+          <div><b>⚖️ Gimbal:</b><input id="adm-r-gimbal" type="text" value="${Number(rates.gimbal || 200000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">🗺️ Màu Tô Địa Điểm Trên Bảng Công Tác</div>
+            <div class="text-[10.5px] text-slate-400">Thêm/sửa từ khóa địa điểm và màu nền tương ứng</div>
+          </div>
+          <button onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu & Áp Dụng Màu</button>
+        </div>
+
+        <div class="flex gap-2">
+          <input id="adm-new-col-kw" type="text" placeholder="Thêm địa điểm (VD: Sapa, Măng Đen...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-slate-50" />
+          <input id="adm-new-col-hex" type="color" value="#a7f3d0" class="w-10 h-9 rounded-xl border cursor-pointer" />
+          <button onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black">+ Thêm</button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          ${rules.map(r => `
+            <div style="background:${r.color}" class="p-2 rounded-2xl border border-black/10 flex items-center gap-2">
+              <input type="color" value="${r.color}" onchange="adminProActions.updateColorRule('${escapeHtml(r.id)}', 'color', this.value)" class="w-6 h-6 rounded border cursor-pointer shrink-0" />
+              <input type="text" value="${escapeHtml(r.keyword || '')}" oninput="adminProActions.updateColorRule('${escapeHtml(r.id)}', 'keyword', this.value)" class="flex-1 min-w-0 px-2.5 py-1 rounded-xl bg-white/90 font-bold text-slate-900" />
+              <button onclick="adminProActions.removeColorRule('${escapeHtml(r.id)}')" class="w-6 h-6 rounded-lg bg-white/90 text-rose-600 font-black">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSystemTabHtml() {
+  const lockYear = Number(state.adminLockViewYear) || 2026;
+  const trash = state.deletedShowsTrash || [];
+  const bc = state.studioBroadcast || { enabled: false, text: '' };
+
+  return `
+    <div class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2.5">
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🛡️ Khóa Bảo Trì (Maintenance Mode)</div>
+          <p class="text-[11px] text-slate-500">Bật khi cần khóa tạm quyền Nổ Show / sửa / xóa của thành viên để đối soát.</p>
+          <button onclick="adminProActions.toggleMaintenanceMode()" class="px-4 py-2 rounded-xl font-black text-white ${state.readonlyMaintenanceMode ? 'bg-emerald-600' : 'bg-rose-600'}">
+            ${state.readonlyMaintenanceMode ? '🔓 Tắt Khóa Bảo Trì' : '🛡️ Bật Khóa Bảo Trì'}
+          </button>
+        </div>
+
+        <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2.5">
+          <div class="font-black text-xs uppercase tracking-wide text-slate-900">📅 Bật / Ẩn Năm Hiển Thị</div>
+          <p class="text-[11px] text-slate-500">Chọn các năm xuất hiện trên thanh chọn đầu ứng dụng.</p>
+          <div class="flex flex-wrap gap-1.5">
+            ${ALL_YEARS.map(yr => `<button onclick="adminProActions.toggleYear(${yr})" class="px-3 py-1 rounded-full font-black border ${state.visibleYears.includes(yr) ? 'bg-slate-900 text-amber-400' : 'bg-slate-50 text-slate-500'}">${yr}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">🔒 Khóa Sổ Tháng (${lockYear})</div>
+            <div class="flex gap-1 bg-slate-100 p-0.5 rounded-full">
+              ${ALL_YEARS.map(yr => `<button onclick="adminProActions.setLockViewYear(${yr})" class="px-2.5 py-0.5 rounded-full text-[10px] font-black ${lockYear === yr ? 'bg-slate-900 text-amber-400' : 'text-slate-600'}">${yr}</button>`).join('')}
+            </div>
+          </div>
+          <div class="grid grid-cols-6 gap-1.5">
+            ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
+              const locked = isYearMonthLocked(lockYear, m);
+              return `<button onclick="adminProActions.toggleLockMonthAdmin(${m})" class="py-1.5 rounded-xl font-extrabold text-[10.5px] border ${locked ? 'bg-rose-50 text-rose-600 border-rose-300' : 'bg-slate-50 text-slate-700 border-slate-200'}">${locked ? '🔒' : '🔓'} T${m}</button>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">📢 Thông Báo Ghim Đầu App</div>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${bc.enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">${bc.enabled ? 'ĐANG PHÁT' : 'ĐANG TẮT'}</span>
+          </div>
+          <input id="adm-broadcast-inp" type="text" value="${escapeHtml(bc.text || '')}" placeholder="VD: Chốt bill CTP tháng trước ngày 03..." class="w-full px-3 py-2 rounded-xl bg-slate-50 border font-bold" />
+          <div class="flex gap-2">
+            <button onclick="adminProActions.publishBroadcast()" class="flex-1 py-2 rounded-xl bg-rose-600 text-white font-black">📢 Lưu & Phát Ngay</button>
+            ${bc.enabled ? `<button onclick="adminProActions.disableBroadcast()" class="px-3 py-2 rounded-xl bg-slate-200 text-slate-800 font-bold">🔕 Tắt</button>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2.5">
+        <div class="font-black text-xs uppercase tracking-wide text-slate-900">♻️ Thùng Rác Khôi Phục Show Đã Xóa (${trash.length})</div>
+        <div class="space-y-1.5 max-h-44 overflow-y-auto custom-scroll">
+          ${trash.length === 0
+            ? `<div class="text-slate-400">Thùng rác trống.</div>`
+            : trash.map(sh => `
+                <div class="p-2.5 rounded-xl bg-slate-50 border flex items-center justify-between gap-2">
+                  <span class="font-bold truncate">📍 ${escapeHtml(sh.location)} (${escapeHtml(formatDayMonth(sh.startDate))})</span>
+                  <button onclick="adminProActions.restoreDeletedShow('${escapeHtml(sh.id)}')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-black text-[10.5px] shrink-0">↩ Khôi phục</button>
+                </div>
+              `).join('')}
         </div>
       </div>
     </div>
@@ -86,105 +338,44 @@ export function renderAdminPortalHtml() {
 
   const membersSorted = getSortedMembers();
   const filteredShows = getFilteredAdminShows();
+  const curAdminTab = state.adminTab || 'overview';
+
+  const tabs = [
+    { id: 'overview', label: '📊 Tổng Quan' },
+    { id: 'crew',     label: '👥 Ekip & Vé' },
+    { id: 'pricing',  label: '💰 Giá & Màu' },
+    { id: 'system',   label: '🛡️ Hệ Thống' }
+  ];
+
+  let bodyHtml = '';
+  if (curAdminTab === 'crew') bodyHtml = renderCrewTabHtml(membersSorted);
+  else if (curAdminTab === 'pricing') bodyHtml = renderPricingAndColorsTabHtml();
+  else if (curAdminTab === 'system') bodyHtml = renderSystemTabHtml();
+  else bodyHtml = renderOverviewTabHtml(membersSorted, filteredShows);
 
   return `
-    <div class="w-full h-[100dvh] bg-slate-50 text-slate-900 flex flex-col overflow-hidden">
-      <header class="bg-white border-b px-4 py-3 flex items-center justify-between gap-2 shrink-0">
-        <div>
-          <div class="font-black text-sm uppercase">Studio Control</div>
-          <div class="text-[11px] text-slate-400">${state.shows.length} Shows • Action Media x Say Studios</div>
+    <div class="w-full h-[100dvh] bg-[#f4f5f7] text-slate-900 flex flex-col overflow-hidden">
+      <header class="bg-white border-b border-slate-200 px-4 py-3 shrink-0 space-y-2.5">
+        <div class="max-w-5xl w-full mx-auto flex items-center justify-between gap-2">
+          <div>
+            <div class="font-black text-sm uppercase tracking-tight text-slate-900">Studio Control</div>
+            <div class="text-[11px] text-slate-400 font-medium">${state.shows.length} Shows • Action Media x Say Studios</div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="adminProActions.exportFullJsonBackup()" class="px-3 py-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs">💾 Backup</button>
+            <button onclick="appActions.exitBackendPortal()" class="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs">← Về App</button>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <button onclick="adminProActions.exportFullJsonBackup()" class="px-3 py-1.5 rounded-full bg-amber-400 text-slate-950 font-bold text-xs">💾 Backup</button>
-          <button onclick="appActions.exitBackendPortal()" class="px-3.5 py-1.5 rounded-full bg-slate-900 text-white font-bold text-xs">← Về App</button>
+
+        <div class="max-w-5xl w-full mx-auto bg-slate-100 p-1 rounded-2xl grid grid-cols-4 gap-1 text-xs">
+          ${tabs.map(t => `
+            <button onclick="adminProActions.setAdminTab('${t.id}')" class="py-2 px-2 rounded-xl font-extrabold truncate transition-all ${curAdminTab === t.id ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'}">${t.label}</button>
+          `).join('')}
         </div>
       </header>
 
-      <div class="flex-1 overflow-y-auto custom-scroll p-4 max-w-5xl w-full mx-auto space-y-4 text-xs pb-16">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-white rounded-3xl p-4 border space-y-2">
-            <div class="font-black uppercase">🛡️ Khóa Bảo Trì (Maintenance Mode)</div>
-            <p class="text-[11px] text-slate-500">Bật khi cần khóa tạm quyền Nổ Show / sửa / xóa của thành viên để đối soát.</p>
-            <button onclick="adminProActions.toggleMaintenanceMode()" class="px-4 py-2 rounded-xl font-black text-white ${state.readonlyMaintenanceMode ? 'bg-emerald-600' : 'bg-rose-600'}">
-              ${state.readonlyMaintenanceMode ? '🔓 Tắt Khóa Bảo Trì' : '🛡️ Bật Khóa Bảo Trì'}
-            </button>
-          </div>
-          <div class="bg-white rounded-3xl p-4 border space-y-2">
-            <div class="font-black uppercase">📅 Bật / Ẩn Năm Hiển Thị</div>
-            <p class="text-[11px] text-slate-500">Chọn các năm hiển thị trên thanh lọc đầu ứng dụng.</p>
-            <div class="flex flex-wrap gap-1.5">
-              ${ALL_YEARS.map(yr => `<button onclick="adminProActions.toggleYear(${yr})" class="px-3 py-1 rounded-full font-black border ${state.visibleYears.includes(yr) ? 'bg-slate-900 text-amber-400' : 'bg-slate-50 text-slate-500'}">${yr}</button>`).join('')}
-            </div>
-          </div>
-        </div>
-
-        <!-- Thống kê số show theo từng nhân sự -->
-        <div class="bg-white rounded-3xl p-4 border space-y-2.5">
-          <div class="font-black uppercase">📊 Hiệu Suất Ekip (${membersSorted.length} người)</div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            ${membersSorted.map(m => {
-              const cnt = (state.shows || []).filter(s => s && !s.isCancelled && (s.memberIds || []).includes(m.id)).length;
-              return `
-                <div class="p-2.5 rounded-2xl bg-slate-50 border flex items-center justify-between">
-                  <span style="background:${m.bg};color:${m.text}" class="px-2 py-0.5 rounded-full text-[10px] font-black">${escapeHtml(m.shortLabel)}</span>
-                  <span class="font-mono font-black text-slate-900">${cnt} show</span>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-
-        <!-- Danh sách show để Admin kiểm tra & xóa nếu cần -->
-        <div class="bg-white rounded-3xl p-4 border space-y-3">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <div class="font-black uppercase">📋 Danh Sách Show (${filteredShows.length})</div>
-              <div class="text-[11px] text-slate-400">Bấm vào từng show để xem chi tiết hoặc xóa</div>
-            </div>
-            <input type="text" value="${escapeHtml(state.adminSearch)}" oninput="adminProActions.setAdminSearch(this.value)" placeholder="Tìm địa điểm, đối tác, ekip..." class="w-full sm:w-64 px-3 py-2 rounded-2xl bg-slate-100 text-xs font-semibold focus:outline-none" />
-          </div>
-
-          <div class="max-h-72 overflow-y-auto custom-scroll divide-y divide-slate-100">
-            ${filteredShows.length === 0 ? `<div class="py-6 text-center text-slate-400">Chưa có dữ liệu show</div>` : filteredShows.map((sh, i) => {
-              const crew = (sh.memberIds || []).map(id => getMember(id).name).join(', ');
-              return `
-                <div onclick="adminProActions.openInspectShow('${escapeHtml(sh.id)}')" class="py-2.5 px-2 flex items-center justify-between gap-2 hover:bg-slate-50 rounded-xl cursor-pointer">
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 truncate">
-                      <span class="text-[10px] font-mono text-slate-400">#${i + 1}</span>
-                      <span class="font-mono font-bold text-emerald-700">${escapeHtml(formatDayMonth(sh.startDate))}</span>
-                      <span class="font-bold text-slate-900 truncate ${sh.isCancelled ? 'line-through text-rose-600' : ''}">${escapeHtml(sh.location || '')}</span>
-                    </div>
-                    <div class="text-[11px] text-slate-500 truncate mt-0.5">Ekip: ${escapeHtml(crew || 'Trống')}</div>
-                  </div>
-                  <span class="text-slate-400 font-bold">›</span>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-
-        <!-- Cấu hình Họ tên xuất vé chuẩn (dùng khi copy danh sách đoàn đặt vé/KS) -->
-        <div class="bg-white rounded-3xl p-4 border space-y-2.5">
-          <div class="font-black uppercase">🪪 Họ Tên Xuất Vé Chuẩn (Đặt vé máy bay / KS)</div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            ${membersSorted.map(m => `
-              <div class="p-2.5 rounded-2xl bg-slate-50 border flex items-center gap-2">
-                <span class="w-20 font-extrabold text-slate-800 truncate">${escapeHtml(m.name)}</span>
-                <input id="adm-legal-${escapeHtml(m.id)}" type="text" value="${escapeHtml(state.officialLegalNames?.[m.id] || '')}" placeholder="HỌ TÊN TRÊN CCCD" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-white border text-[11px] font-bold uppercase" />
-                <button onclick="adminProActions.saveLegalNameFromInput('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[10.5px]">Lưu</button>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Nhật ký hoạt động -->
-        <div class="bg-white rounded-3xl p-4 border space-y-2">
-          <div class="font-black uppercase">📜 Nhật Ký Hoạt Động (${state.activityLogs.length})</div>
-          <div class="max-h-48 overflow-y-auto custom-scroll space-y-1">
-            ${state.activityLogs.map(l => `<div class="p-2 bg-slate-50 rounded-xl"><b class="font-mono text-slate-500">[${escapeHtml(l.time)}]</b> <b>${escapeHtml(l.actor)}:</b> ${escapeHtml(l.text)}</div>`).join('') || '<div class="text-slate-400">Chưa có log</div>'}
-          </div>
-        </div>
+      <div class="flex-1 overflow-y-auto custom-scroll p-4 max-w-5xl w-full mx-auto text-xs pb-16">
+        ${bodyHtml}
       </div>
 
       ${renderAdminInspectModalHtml()}
