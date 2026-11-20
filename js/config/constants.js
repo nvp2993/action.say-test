@@ -95,10 +95,8 @@ export const BANK_LIST = [
 ];
 
 export const ADMIN_SWATCH_COLORS_30 = [
-  '#d6e4f0', '#bdd7ee', '#9dc3e6', '#b8d8e8', '#a8d0db', '#c9d6df',
-  '#c4e3d4', '#b7e1cd', '#a9d6be', '#c5dec0', '#a9cfa5', '#d5e09b',
-  '#f5ebc6', '#f2e2b1', '#edd8a0', '#efe5c8', '#e6ddb8', '#e8d5b7',
-  '#efc4a3', '#eab896', '#f0cbb5', '#e8c1b4', '#e6b8af', '#f2d0c9',
-  '#c9bde0', '#d7cde8', '#e0cce0', '#d9c2d0', '#d0d7de', '#dde2e6'
+  '#f4c29f', '#c9b8df', '#9ec999', '#9ad0f0', '#bce3cf',
+  '#f5dc82', '#d2e391', '#faeec7', '#cfd6dc', '#dce9fa',
+  '#f2d0c9', '#e8d5b7', '#ffffff'
 ];
 
