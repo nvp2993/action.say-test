@@ -15,6 +15,7 @@ import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
 import { renderPinModalHtml, renderCrewPassModalHtml, renderFormModalHtml, renderToastHtml } from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
+import { saveOfficialLegalName } from './services/admin.service.js';
 
 function renderApp() {
   const root = document.getElementById('app');
@@ -284,16 +285,34 @@ window.ownerActions = {
 };
 
 window.adminProActions = {
-  async toggleMaintenanceMode() { state.readonlyMaintenanceMode = !state.readonlyMaintenanceMode; await pushAdminConfigToCloud(); renderApp(); },
-  async toggleYear(y) {
-    const i = state.visibleYears.indexOf(y);
-    if (i >= 0 && state.visibleYears.length > 1) state.visibleYears.splice(i, 1);
-    else if (i < 0) state.visibleYears.push(y);
-    state.visibleYears.sort((a, b) => a - b);
-    await pushAdminConfigToCloud(); renderApp();
-  },
-  exportFullJsonBackup
-};
+    async toggleMaintenanceMode() { state.readonlyMaintenanceMode = !state.readonlyMaintenanceMode; await pushAdminConfigToCloud(); renderApp(); },
+    async toggleYear(y) {
+      const i = state.visibleYears.indexOf(y);
+      if (i >= 0 && state.visibleYears.length > 1) state.visibleYears.splice(i, 1);
+      else if (i < 0) state.visibleYears.push(y);
+      state.visibleYears.sort((a, b) => a - b);
+      await pushAdminConfigToCloud(); renderApp();
+    },
+    exportFullJsonBackup,
+    setAdminSearch(v) { state.adminSearch = v; renderApp(); },
+    openInspectShow(id) { state.adminInspectShowId = id; renderApp(); },
+    closeInspectShow() { state.adminInspectShowId = null; renderApp(); },
+    async deleteShowFromAdmin(id) {
+      const sh = state.shows.find(s => s && s.id === id);
+      if (!sh || !confirm(`Xóa show "${sh.location}"?`)) return;
+      state.deletedShowsTrash.unshift({ ...sh, deletedAt: Date.now() });
+      state.shows = state.shows.filter(s => s && s.id !== id);
+      state.adminInspectShowId = null;
+      await syncShowsToCloud();
+      await logStudioActivity(`Admin xóa show: ${sh.location}`);
+      renderApp();
+      showToast('🗑️ Đã xóa show!');
+    },
+    async saveLegalNameFromInput(mid) {
+      const val = document.getElementById(`adm-legal-${mid}`)?.value || '';
+      await saveOfficialLegalName(mid, val);
+    }
+  };
 
 window.holdBellActions = {
   openBellDrawer() { showToast('🔔 Danh sách giữ lịch đang được đồng bộ!'); },
