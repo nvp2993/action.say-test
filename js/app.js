@@ -408,11 +408,18 @@ window.ctpActions = {
   autoFillFromRoles() {
     const shows = getCombinedCtpShows();
     let count = 0;
-    const roleMap = {
-      'quay': 'quay', 'dựng': 'dung', 'dung': 'dung',
-      'chụp': 'chup', 'chup': 'chup', 'làm hình': 'lamhinh',
-      'flycam': 'flycam', 'gimbal': 'gimbal'
+    const detectTaskKey = (raw) => {
+      const s = String(raw || '').toLowerCase().trim();
+      if (!s) return null;
+      if (s.includes('quay') || s.includes('cam') || s.includes('video')) return 'quay';
+      if (s.includes('dựng') || s.includes('dung') || s.includes('edit')) return 'dung';
+      if (s.includes('chụp') || s.includes('chup') || s.includes('photo') || s.includes('ảnh')) return 'chup';
+      if (s.includes('làm hình') || s.includes('lam hinh') || s.includes('hậu kỳ') || s.includes('retouch')) return 'lamhinh';
+      if (s.includes('flycam') || s.includes('drone')) return 'flycam';
+      if (s.includes('gimbal') || s.includes('stabilizer')) return 'gimbal';
+      return null;
     };
+
     shows.forEach(sh => {
       const rawRoles = sh.roles?.[state.currentUserId];
       const list = Array.isArray(rawRoles) ? rawRoles : (rawRoles ? [rawRoles] : []);
@@ -420,7 +427,7 @@ window.ctpActions = {
       if (!state.ctpItems[sh.id]) state.ctpItems[sh.id] = { tasks: {}, extras: [] };
       if (!state.ctpItems[sh.id].tasks) state.ctpItems[sh.id].tasks = {};
       list.forEach(r => {
-        const key = roleMap[String(r).trim().toLowerCase()];
+        const key = detectTaskKey(r);
         if (key && (state.ctpItems[sh.id].tasks[key] === undefined || state.ctpItems[sh.id].tasks[key] === null)) {
           state.ctpItems[sh.id].tasks[key] = getDefaultRateForTask(key, sh);
           count++;
@@ -429,7 +436,7 @@ window.ctpActions = {
     });
     saveCtpState(true);
     renderApp();
-    showToast(`⚡ Đã tự điền ${count} nhiệm vụ theo vai trò!`);
+    showToast(count > 0 ? `⚡ Đã tự điền ${count} nhiệm vụ theo vai trò!` : 'ℹ️ Không có nhiệm vụ mới nào cần điền thêm.');
   },
   saveNow() { saveCtpState(true); showToast('💾 Đã lưu CTP lên Cloud!'); },
   generateBill() {
