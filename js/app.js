@@ -285,15 +285,107 @@ window.ownerActions = {
 };
 
 window.adminProActions = {
-    async toggleMaintenanceMode() { state.readonlyMaintenanceMode = !state.readonlyMaintenanceMode; await pushAdminConfigToCloud(); renderApp(); },
+    setAdminTab(tab) { state.adminTab = tab; renderApp(); },
+    async toggleMaintenanceMode() {
+      state.readonlyMaintenanceMode = !state.readonlyMaintenanceMode;
+      await pushAdminConfigToCloud();
+      await logStudioActivity(state.readonlyMaintenanceMode ? 'Bật Khóa bảo trì' : 'Tắt Khóa bảo trì');
+      renderApp();
+    },
     async toggleYear(y) {
       const i = state.visibleYears.indexOf(y);
       if (i >= 0 && state.visibleYears.length > 1) state.visibleYears.splice(i, 1);
       else if (i < 0) state.visibleYears.push(y);
       state.visibleYears.sort((a, b) => a - b);
-      await pushAdminConfigToCloud(); renderApp();
+      await pushAdminConfigToCloud();
+      renderApp();
     },
-    exportFullJsonBackup,
+    setLockViewYear(y) {
+      state.adminLockViewYear = Number(y);
+      renderApp();
+    },
+    async toggleLockMonthAdmin(m) {
+      const y = Number(state.adminLockViewYear) || 2026;
+      const key = `${y}-${Number(m)}`;
+      const cur = isYearMonthLocked(y, m);
+      state.lockedMonths[key] = !cur;
+      localStorage.setItem('as_locked_months_2026', JSON.stringify(state.lockedMonths));
+      await pushAdminConfigToCloud();
+      await logStudioActivity(`${!cur ? 'Khóa sổ' : 'Mở khóa'} Tháng ${m}/${y}`);
+      renderApp();
+    },
+    async publishBroadcast() {
+      const txt = (document.getElementById('adm-broadcast-inp')?.value || '').trim();
+      if (!txt) return showToast('Vui lòng nhập nội dung thông báo!', 'error');
+      state.studioBroadcast = { enabled: true, text: txt, updatedAt: Date.now() };
+      localStorage.setItem('as_studio_broadcast_2026', JSON.stringify(state.studioBroadcast));
+      await pushAdminConfigToCloud();
+      await logStudioActivity(`Phát thông báo đầu app: "${txt}"`);
+      renderApp();
+      showToast('📢 Đã phát thông báo!');
+    },
+    async disableBroadcast() {
+      state.studioBroadcast = { enabled: false, text: state.studioBroadcast?.text || '', updatedAt: Date.now() };
+      localStorage.setItem('as_studio_broadcast_2026', JSON.stringify(state.studioBroadcast));
+      await pushAdminConfigToCloud();
+      renderApp();
+    },
+    async saveCtpRates() {
+      const num = (id, def) => parseInt(String(document.getElementById(id)?.value || '').replace(/\D/g, ''), 10) || def;
+      state.ctpRatesConfig = {
+        quay1Day: num('adm-r-quay1', 1500000),
+        quayMultiDay: num('adm-r-quayN', 1200000),
+        chup1Day: num('adm-r-chup1', 1500000),
+        chupMultiDay: num('adm-r-chupN', 1200000),
+        dung: num('adm-r-dung', 1000000),
+        flycam: num('adm-r-flycam', 1000000),
+        lamhinh: num('adm-r-lamhinh', 300000),
+        gimbal: num('adm-r-gimbal', 200000)
+      };
+      localStorage.setItem('as_ctp_rates_config_2026', JSON.stringify(state.ctpRatesConfig));
+      await pushAdminConfigToCloud();
+      await logStudioActivity('Cập nhật Đơn giá CTP mặc định');
+      showToast('💰 Đã lưu Đơn giá CTP!');
+    },
+    async updateMemberColor(mid, hex) {
+      const m = state.members.find(x => x.id === mid);
+      if (!m) return;
+      m.bg = hex;
+      await pushAdminConfigToCloud();
+      renderApp();
+    },
+    async updateMemberOrder(mid, ord) {
+      const m = state.members.find(x => x.id === mid);
+      if (!m) return;
+      m.order = Number(ord) || 99;
+      await pushAdminConfigToCloud();
+      renderApp();
+    },
+    async addColorRule() {
+      const kw = (document.getElementById('adm-new-col-kw')?.value || '').trim();
+      const color = document.getElementById('adm-new-col-hex')?.value || '#a7f3d0';
+      if (!kw) return showToast('Vui lòng nhập từ khóa địa điểm!', 'error');
+      state.customColorRules.unshift({ id: 'cr_' + Date.now(), keyword: kw, color });
+      await this.saveAndApplyColors();
+    },
+    updateColorRule(id, field, val) {
+      const r = state.customColorRules.find(x => x.id === id);
+      if (r) r[field] = val;
+    },
+    async removeColorRule(id) {
+      state.customColorRules = state.customColorRules.filter(x => x.id !== id);
+      await this.saveAndApplyColors();
+    },
+    async saveAndApplyColors() {
+      localStorage.setItem('as_custom_color_rules_2026', JSON.stringify(state.customColorRules));
+      state.shows.forEach(sh => {
+        if (sh) sh.color = resolveDynamicLocationColor(sh.location, sh.partner);
+      });
+      await syncShowsToCloud();
+      await pushAdminConfigToCloud();
+      renderApp();
+      showToast('🎨 Đã lưu & áp dụng màu địa điểm!');
+    },
     setAdminSearch(v) { state.adminSearch = v; renderApp(); },
     openInspectShow(id) { state.adminInspectShowId = id; renderApp(); },
     closeInspectShow() { state.adminInspectShowId = null; renderApp(); },
@@ -304,14 +396,28 @@ window.adminProActions = {
       state.shows = state.shows.filter(s => s && s.id !== id);
       state.adminInspectShowId = null;
       await syncShowsToCloud();
+      await pushAdminConfigToCloud();
       await logStudioActivity(`Admin xóa show: ${sh.location}`);
       renderApp();
       showToast('🗑️ Đã xóa show!');
     },
+    async restoreDeletedShow(id) {
+      const idx = state.deletedShowsTrash.findIndex(s => s && s.id === id);
+      if (idx < 0) return;
+      const [restored] = state.deletedShowsTrash.splice(idx, 1);
+      delete restored.deletedAt;
+      state.shows.push(restored);
+      await syncShowsToCloud();
+      await pushAdminConfigToCloud();
+      await logStudioActivity(`Khôi phục show: ${restored.location}`);
+      renderApp();
+      showToast('♻️ Đã khôi phục show!');
+    },
     async saveLegalNameFromInput(mid) {
       const val = document.getElementById(`adm-legal-${mid}`)?.value || '';
       await saveOfficialLegalName(mid, val);
-    }
+    },
+    exportFullJsonBackup
   };
 
 window.holdBellActions = {
