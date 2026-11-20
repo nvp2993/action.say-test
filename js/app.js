@@ -399,8 +399,8 @@ window.ctpActions = {
       memberIds: [state.currentUserId],
       isCustomCtp: true
     };
-    if (!Array.isArray(state.customCtpShows)) state.customCtpShows = [];
-    state.customCtpShows.push(newShow);
+    if (!Array.isArray(state.ctpCustomShows)) state.ctpCustomShows = [];
+    state.ctpCustomShows.push(newShow);
     saveCtpState(true);
     renderApp();
     showToast('✅ Đã thêm show ngoài lịch!');
