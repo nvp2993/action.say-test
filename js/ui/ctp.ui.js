@@ -98,9 +98,9 @@ export function renderCtpTabHtml() {
                 </div>
                 ${(item.extras || []).map((ex, exIdx) => `
                   <div class="flex items-center gap-1.5">
-                    <input type="text" value="${escapeHtml(ex.name || '')}" oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this)" placeholder="Tên phí..." class="flex-1 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-bold" />
-                    <input type="tel" inputmode="numeric" value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}" oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this)" placeholder="Số tiền" class="w-24 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-mono font-black text-right" />
-                    <button onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx})" class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600">✕</button>
+                    <input type="text" value="${escapeHtml(ex.name || '')}" oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this)" placeholder="Tên phí..." class="flex-1 min-w-0 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-bold" />
+                    <input type="tel" inputmode="numeric" value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}" oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this)" placeholder="Số tiền" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-mono font-black text-right shrink-0" />
+                    <button type="button" onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx})" class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600 font-bold shrink-0">✕</button>
                   </div>
                 `).join('')}
               </div>
