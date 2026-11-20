@@ -157,48 +157,112 @@ function renderOverviewTabHtml(membersSorted, filteredShows) {
 
 function renderCrewTabHtml(membersSorted) {
   const pinMap = state.memberPinHints || {};
+  const editId = state.adminEditMemberId || null;
+  const isAdding = !!state.adminAddMemberOpen;
 
   return `
-    <div class="space-y-4">
-      <!-- Gom chung Quản lý mã PIN & Họ tên book vé cho từng thành viên -->
+    <div class="space-y-3.5">
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
-        <div>
-          <div class="font-black text-xs uppercase tracking-wide text-slate-900">🔐🪪 Quản Lý Mã PIN &amp; Họ Tên Book Vé</div>
-          <div class="text-[10.5px] text-slate-400 mt-0.5">Quản lý PIN 4 số / Reset 1234 / Copy pass Auth (<code>AS2026#PIN</code>) và Họ tên xuất vé CCCD ngay trên từng thẻ thành viên</div>
+        <!-- Thanh tiêu đề + Nút Thêm Nhân Sự -->
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">👥 Danh Sách Nhân Sự (${membersSorted.length})</div>
+            <div class="text-[10.5px] text-slate-400">Bấm Sửa để chỉnh Tên, Màu, Cột, Mã PIN và Họ tên book vé</div>
+          </div>
+          <button onclick="adminProActions.toggleAddMemberForm()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs shrink-0">
+            ${isAdding ? '✕ Đóng' : '+ Thêm Nhân Sự'}
+          </button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          ${membersSorted.map(m => {
+
+        <!-- Form Thêm Nhân Sự Mới -->
+        ${isAdding ? `
+          <div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2.5">
+            <div class="font-black text-[11px] text-amber-900 uppercase">➕ Thêm Thành Viên Mới</div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input id="adm-add-name" type="text" placeholder="Tên gọi (VD: Minh, Huy...)" class="px-3 py-2 rounded-xl bg-white border text-xs font-bold" />
+              <input id="adm-add-legal" type="text" placeholder="Họ tên CCCD / Book vé" class="px-3 py-2 rounded-xl bg-white border text-xs font-bold uppercase" />
+              <div class="flex items-center gap-2">
+                <input id="adm-add-color" type="color" value="#334155" class="w-9 h-9 rounded-xl border cursor-pointer shrink-0" />
+                <input id="adm-add-order" type="number" min="1" max="50" value="${membersSorted.length + 1}" placeholder="Cột" class="w-16 px-2 py-2 rounded-xl bg-white border text-xs font-mono font-bold text-center" />
+                <button onclick="adminProActions.addNewMember()" class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">Lưu Mới</button>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Danh sách gọn 1 dòng / người -->
+        <div class="divide-y divide-slate-100">
+          ${membersSorted.map((m, idx) => {
+            const isEd = editId === m.id;
             const curPin = pinMap[m.id] || '1234';
             const legalVal = state.officialLegalNames?.[m.id] || '';
+            const ord = m.order ?? (idx + 1);
+
             return `
-              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+              <div class="py-2.5">
+                <!-- Dòng hiển thị gọn -->
                 <div class="flex items-center justify-between gap-2">
-                  <span style="background:${m.bg};color:${m.text}" class="px-2.5 py-0.5 rounded-full text-[11px] font-black">${escapeHtml(m.name)}</span>
-                  <span class="text-[10px] font-mono text-slate-500 truncate">${escapeHtml(m.id)}@actionsay.local</span>
+                  <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span class="text-[10px] font-mono font-bold text-slate-400 w-5 text-center shrink-0">#${ord}</span>
+                    <span style="background:${m.bg};color:${m.text || '#fff'}" class="px-2.5 py-1 rounded-xl text-[11px] font-black shrink-0">${escapeHtml(m.name)}</span>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-[11px] font-bold text-slate-800 truncate">${escapeHtml(legalVal || 'Chưa nhập tên book vé')}</div>
+                      <div class="text-[10px] font-mono text-slate-400 truncate">PIN: ${escapeHtml(curPin)} • ${escapeHtml(m.id)}@actionsay.local</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button onclick="adminProActions.toggleEditMember('${escapeHtml(m.id)}')" class="px-3 py-1.5 rounded-xl font-bold text-[11px] ${isEd ? 'bg-slate-900 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
+                      ${isEd ? 'Đóng' : '✏️ Sửa'}
+                    </button>
+                    <button onclick="adminProActions.deleteMemberFromAdmin('${escapeHtml(m.id)}')" title="Xóa nhân sự" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold flex items-center justify-center">🗑️</button>
+                  </div>
                 </div>
 
-                <!-- Dòng 1: Mã PIN -->
-                <div class="flex items-center gap-1.5">
-                  <span class="text-[10px] font-bold text-slate-500 w-10 shrink-0">PIN:</span>
-                  <input id="adm-pin-${escapeHtml(m.id)}" type="text" inputmode="numeric" maxlength="4" value="${escapeHtml(curPin)}"
-                    class="w-16 px-2 py-1.5 rounded-xl bg-white border font-mono font-black text-center text-xs" />
-                  <button onclick="adminProActions.setMemberPin('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-slate-900 text-amber-400 font-extrabold text-[10px]">Lưu PIN</button>
-                  <button onclick="adminProActions.resetMemberPinDefault('${escapeHtml(m.id)}')" class="px-2 py-1.5 rounded-xl bg-white border text-slate-700 font-bold text-[10px]">1234</button>
-                  <button onclick="adminProActions.copyAuthPassForMember('${escapeHtml(m.id)}')" class="ml-auto px-2 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-[10px]">Copy Pass</button>
-                </div>
+                <!-- Khung Sửa Mở Rộng (chỉ hiện khi bấm Sửa) -->
+                ${isEd ? `
+                  <div class="mt-2.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Tên hiển thị</label>
+                        <input id="adm-ed-name-${escapeHtml(m.id)}" type="text" value="${escapeHtml(m.name)}" class="w-full mt-1 px-2.5 py-1.5 rounded-xl bg-white border text-xs font-bold" />
+                      </div>
+                      <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Họ tên book vé (CCCD)</label>
+                        <input id="adm-ed-legal-${escapeHtml(m.id)}" type="text" value="${escapeHtml(legalVal)}" placeholder="NGUYỄN VĂN A" class="w-full mt-1 px-2.5 py-1.5 rounded-xl bg-white border text-xs font-bold uppercase" />
+                      </div>
+                      <div class="flex items-end gap-2">
+                        <div class="flex-1">
+                          <label class="text-[10px] font-bold text-slate-500 uppercase">Thứ tự cột</label>
+                          <input id="adm-ed-ord-${escapeHtml(m.id)}" type="number" min="1" max="50" value="${ord}" class="w-full mt-1 px-2.5 py-1.5 rounded-xl bg-white border text-xs font-mono font-bold text-center" />
+                        </div>
+                        <div>
+                          <label class="text-[10px] font-bold text-slate-500 uppercase block">Màu</label>
+                          <input id="adm-ed-col-${escapeHtml(m.id)}" type="color" value="${m.bg || '#334155'}" class="w-9 h-8 mt-1 rounded-xl border cursor-pointer" />
+                        </div>
+                      </div>
+                    </div>
 
-                <!-- Dòng 2: Họ tên book vé -->
-                <div class="flex items-center gap-1.5">
-                  <span class="text-[10px] font-bold text-slate-500 w-10 shrink-0">Vé:</span>
-                  <input id="adm-legal-${escapeHtml(m.id)}" type="text" value="${escapeHtml(legalVal)}" placeholder="HỌ TÊN TRÊN CCCD / BOOK VÉ"
-                    class="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-white border text-[11px] font-bold uppercase" />
-                  <button onclick="adminProActions.saveLegalNameFromInput('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px]">Lưu Vé</button>
-                </div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/70">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Mã PIN:</span>
+                        <input id="adm-ed-pin-${escapeHtml(m.id)}" type="text" inputmode="numeric" maxlength="4" value="${escapeHtml(curPin)}" class="w-16 px-2 py-1.5 rounded-xl bg-white border font-mono font-black text-center text-xs" />
+                        <button type="button" onclick="adminProActions.resetMemberPinDefault('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-white border text-slate-600 font-bold text-[10.5px]">Reset 1234</button>
+                        <button type="button" onclick="adminProActions.copyAuthPassForMember('${escapeHtml(m.id)}')" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10.5px]">Copy Pass</button>
+                      </div>
+                      <button type="button" onclick="adminProActions.saveMemberAllInOne('${escapeHtml(m.id)}')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">
+                        💾 Lưu Thay Đổi
+                      </button>
+                    </div>
+                  </div>
+                ` : ''}
               </div>
             `;
           }).join('')}
         </div>
       </div>
+    </div>
+  `;
+}
 
       <!-- Màu thẻ & thứ tự cột -->
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
@@ -417,8 +481,8 @@ export function renderAdminPortalHtml() {
 
   const tabs = [
     { id: 'overview', label: '📊 Tổng Quan' },
-    { id: 'crew',     label: '👥 Ekip & Vé' },
-    { id: 'pricing',  label: '💰 Giá & Màu' },
+    { id: 'crew',     label: '👥 Nhân Sự' },
+    { id: 'pricing',  label: '⚙️ Thiết Lập' },
     { id: 'system',   label: '🛡️ Hệ Thống' }
   ];
 
