@@ -1,10 +1,10 @@
 import { state, registerRenderer, triggerRender } from './state/store.js';
 import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin, logoutCurrentUser } from './services/auth.service.js';
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText } from './services/show.service.js';
-import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord } from './services/finance.service.js';
+import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics } from './services/finance.service.js';
 import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
 import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain } from './utils/helpers.js';
-import { exportShowToAppleCalendar, captureElementToPreview, shareOrDownloadPreviewImage } from './utils/export.js';
+import { exportShowToAppleCalendar } from './utils/export.js';
 import { initPullToRefresh } from './utils/pullToRefresh.js';
 
 import { renderHeaderHtml, renderBottomNavHtml } from './ui/header.ui.js';
@@ -13,8 +13,24 @@ import { renderMatrixTabHtml } from './ui/matrix.ui.js';
 import { renderCrewBoardTabHtml } from './ui/crewBoard.ui.js';
 import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
-import { renderPinModalHtml, renderCrewPassModalHtml, renderFormModalHtml, renderToastHtml, renderCtpCustomShowModalHtml, renderHoldBellModalHtml } from './ui/modals.ui.js';
+import { renderPinModalHtml, renderCrewPassModalHtml, renderFormModalHtml, renderToastHtml, renderCtpCustomShowModalHtml, renderHoldComposerModalHtml, renderHoldBellModalHtml } from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
+
+function getBankName(bin) {
+  const map = {
+    '970436': 'Vietcombank',
+    '970415': 'VietinBank',
+    '970418': 'BIDV',
+    '970407': 'Techcombank',
+    '970422': 'MB Bank',
+    '970416': 'ACB',
+    '970432': 'VPBank',
+    '970423': 'TPBank',
+    '970403': 'Sacombank',
+    '970441': 'VIB'
+  };
+  return map[String(bin || '').trim()] || (bin ? `BIN ${bin}` : 'Ngân hàng');
+}
 
 function applyCustomLogoToDom() {
   const customLogo = state.customLogoDataUrl || localStorage.getItem('as_custom_logo_2026') || '';
@@ -22,21 +38,6 @@ function applyCustomLogoToDom() {
   state.customLogoDataUrl = customLogo;
   document.querySelectorAll('img[src*="logo.png"]').forEach(img => {
     img.src = customLogo;
-  });
-}
-
-function syncAvatarsAcrossDom() {
-  const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
-  (state.members || []).forEach(m => {
-    const url = state.memberProfiles?.[m.id]?.avatarUrl || savedAvatars[m.id];
-    if (!url) return;
-    document.querySelectorAll(`[data-member-avatar="${m.id}"]`).forEach(el => {
-      if (el.tagName === 'IMG') {
-        el.src = url;
-      } else {
-        el.innerHTML = `<img src="${url}" alt="${m.name}" class="w-full h-full object-cover" />`;
-      }
-    });
   });
 }
 
@@ -69,6 +70,8 @@ function renderApp() {
   else if (state.activeTab === 'owner_stats') main = renderDebtTabHtml();
 
   const prevCtpScroll = document.getElementById('ctp-shows-scroll-list')?.scrollTop || 0;
+  const prevDebtScroll = document.getElementById('owner-debt-scroll-list')?.scrollTop || 0;
+
   root.innerHTML = `
     ${renderHeaderHtml(0)}
     ${main}
@@ -78,29 +81,33 @@ function renderApp() {
     ${renderCrewPassModalHtml()}
     ${renderCtpBillModalHtml()}
     ${renderCtpCustomShowModalHtml()}
+    ${renderHoldComposerModalHtml()}
     ${renderHoldBellModalHtml()}
     ${renderToastHtml()}
   `;
   applyCustomLogoToDom();
+
   if (prevCtpScroll > 0) {
-  const nextCtpScroll = document.getElementById('ctp-shows-scroll-list');
-  if (nextCtpScroll) nextCtpScroll.scrollTop = prevCtpScroll;
-}
+    const nextCtpScroll = document.getElementById('ctp-shows-scroll-list');
+    if (nextCtpScroll) nextCtpScroll.scrollTop = prevCtpScroll;
+  }
+  if (prevDebtScroll > 0) {
+    const nextDebtScroll = document.getElementById('owner-debt-scroll-list');
+    if (nextDebtScroll) nextDebtScroll.scrollTop = prevDebtScroll;
+  }
 }
 
 registerRenderer(renderApp);
 
-// Gắn các hành động ra window để HTML gọi mượt mà
 window.state = state;
 window.appActions = {
-triggerVipAvatarUpload() {
+  triggerVipAvatarUpload() {
     document.getElementById('vip-avatar-file-input')?.click();
   },
   async handleVipAvatarUpload(inputEl) {
     const file = inputEl?.files?.[0];
     if (!file) return;
     try {
-      // Nén ảnh về 256x256px để lưu Firestore siêu nhẹ & không bao giờ bị lỗi dung lượng
       const cleanUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = reject;
@@ -260,7 +267,6 @@ triggerVipAvatarUpload() {
     renderApp();
   },
 
-  // Auth & VIP Card
   chooseMemberForPin(mid) { state.pinModal = { step: 'pin', selectedId: mid, pinInput: '', error: '', loading: false }; renderApp(); },
   backToSelectMemberPin() { state.pinModal = { step: 'select', selectedId: null, pinInput: '', error: '', loading: false }; renderApp(); },
   async handleNativePinInput(val) {
@@ -335,7 +341,7 @@ window.ctpActions = {
     if (!state.ctpItems[id].tasks) state.ctpItems[id].tasks = {};
     const cur = state.ctpItems[id].tasks[k];
     if (cur !== undefined && cur !== null) {
-      state.ctpItems[id].tasks[k] = null; // Gán null để Firestore merge không tự bật lại
+      state.ctpItems[id].tasks[k] = null;
     } else {
       state.ctpItems[id].tasks[k] = getDefaultRateForTask(k, findAnyCtpShow(id));
     }
@@ -373,16 +379,19 @@ window.ctpActions = {
   },
   _refreshLiveTotals(showId) {
     const it = state.ctpItems[showId] || { tasks: {}, extras: [] };
-    const sub = Object.values(it.tasks || {}).reduce((s, v) => s + (Number(v) || 0), 0)
-      + (it.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+    const taskSum = Object.entries(it.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
+    const extraSum = (it.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+    const sub = taskSum + extraSum;
     const showEl = document.getElementById(`ctp-show-total-${showId}`);
     if (showEl) showEl.textContent = sub.toLocaleString('vi-VN') + 'đ';
 
     let grand = 0;
     getCombinedCtpShows().forEach(sh => {
       const x = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
-      Object.values(x.tasks || {}).forEach(v => grand += (Number(v) || 0));
-      (x.extras || []).forEach(ex => grand += (Number(ex.amount) || 0));
+      Object.entries(x.tasks || {}).forEach(([, v]) => {
+        if (v !== null && v !== undefined) grand += (Number(v) || 0);
+      });
+      (x.extras || []).forEach(ex => { grand += (Number(ex.amount) || 0); });
     });
     const grandEl = document.getElementById('ctp-grand-total-display');
     if (grandEl && !state.hideMoneyMode) grandEl.textContent = grand.toLocaleString('vi-VN') + 'đ';
@@ -415,6 +424,7 @@ window.ctpActions = {
       id: 'ctp_ext_' + Date.now(),
       location,
       partner,
+      hidePartner: Boolean(partner),
       startDate,
       endDate,
       ownerId,
@@ -650,11 +660,127 @@ window.ownerActions = {
   toggleAllMonths() { state.ownerAllMonths = !state.ownerAllMonths; renderApp(); },
   setFilterStatus(s) { state.ownerFilterStatus = s; renderApp(); },
   toggleExpandShow(id) { state.ownerExpandedShowId = state.ownerExpandedShowId === id ? null : id; renderApp(); },
-  setStatus(id, s) { ensureOwnerFinRecord({ id }).status = s; saveOwnerFinanceState(); renderApp(); },
-  setCrewCtpStatus(id, s) { const r = ensureOwnerFinRecord({ id }); r.crewMemberMeta[state.currentUserId].ctpStatus = s; saveOwnerFinanceState(); renderApp(); },
-  handleMoneyInput(id, f, el) { const n = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0; ensureOwnerFinRecord({ id })[f] = n; el.value = n ? n.toLocaleString('vi-VN') : ''; saveOwnerFinanceState(); },
-  handleCrewSelfExpenseInput(id, el) { const n = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0; ensureOwnerFinRecord({ id }).crewMemberMeta[state.currentUserId].selfExpense = n; el.value = n ? n.toLocaleString('vi-VN') : ''; saveOwnerFinanceState(); },
-  saveShowFinanceNow() { saveOwnerFinanceState(true); state.ownerExpandedShowId = null; renderApp(); showToast('💾 Đã lưu Công nợ!'); }
+  setStatus(id, s) { ensureOwnerFinRecord(id).status = s; saveOwnerFinanceState(); renderApp(); },
+  setCrewCtpStatus(id, s) {
+    const r = ensureOwnerFinRecord(id);
+    if (!r.crewMemberMeta[state.currentUserId]) r.crewMemberMeta[state.currentUserId] = { ctpStatus: 'unpaid', selfExpense: 0, selfExpenseNote: '' };
+    r.crewMemberMeta[state.currentUserId].ctpStatus = s;
+    saveOwnerFinanceState();
+    renderApp();
+  },
+  handleMoneyInput(id, f, el) {
+    const n = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+    ensureOwnerFinRecord(id)[f] = n;
+    el.value = n ? n.toLocaleString('vi-VN') : '';
+    saveOwnerFinanceState();
+  },
+  handleCrewSelfExpenseInput(id, el) {
+    const n = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+    const r = ensureOwnerFinRecord(id);
+    if (!r.crewMemberMeta[state.currentUserId]) r.crewMemberMeta[state.currentUserId] = { ctpStatus: 'unpaid', selfExpense: 0, selfExpenseNote: '' };
+    r.crewMemberMeta[state.currentUserId].selfExpense = n;
+    el.value = n ? n.toLocaleString('vi-VN') : '';
+    saveOwnerFinanceState();
+  },
+  handleCrewNoteInput(id, val) {
+    const r = ensureOwnerFinRecord(id);
+    if (!r.crewMemberMeta[state.currentUserId]) r.crewMemberMeta[state.currentUserId] = { ctpStatus: 'unpaid', selfExpense: 0, selfExpenseNote: '' };
+    r.crewMemberMeta[state.currentUserId].selfExpenseNote = val;
+    saveOwnerFinanceState();
+  },
+  _recalcMemberCost(shId, mid) {
+    const rec = ensureOwnerFinRecord(shId);
+    const tMap = rec.crewTasks[mid] || {};
+    const sum = Object.entries(tMap).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
+    rec.crewCosts[mid] = sum;
+  },
+  toggleOwnerCrewTask(shId, mid, taskKey) {
+    const sh = state.shows.find(s => s.id === shId);
+    const rec = ensureOwnerFinRecord(shId);
+    if (!rec.crewTasks[mid]) rec.crewTasks[mid] = {};
+    const cur = rec.crewTasks[mid][taskKey];
+    if (cur !== undefined && cur !== null) {
+      rec.crewTasks[mid][taskKey] = null;
+    } else {
+      rec.crewTasks[mid][taskKey] = getDefaultRateForTask(taskKey, sh);
+    }
+    this._recalcMemberCost(shId, mid);
+    saveOwnerFinanceState();
+    renderApp();
+  },
+  handleOwnerCrewTaskInput(shId, mid, taskKey, el) {
+    const num = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+    const rec = ensureOwnerFinRecord(shId);
+    if (!rec.crewTasks[mid]) rec.crewTasks[mid] = {};
+    rec.crewTasks[mid][taskKey] = num;
+    el.value = num ? num.toLocaleString('vi-VN') : '';
+    this._recalcMemberCost(shId, mid);
+    saveOwnerFinanceState();
+  },
+  addOwnerExpense(shId) {
+    const rec = ensureOwnerFinRecord(shId);
+    rec.otherExpenses.push({ name: '', amount: 0 });
+    saveOwnerFinanceState();
+    renderApp();
+  },
+  saveOwnerExpenseField(shId, idx, field, el) {
+    const rec = ensureOwnerFinRecord(shId);
+    if (!rec.otherExpenses[idx]) return;
+    const val = field === 'amount' ? (parseInt(String(el.value).replace(/\D/g, ''), 10) || 0) : el.value;
+    rec.otherExpenses[idx][field] = val;
+    if (field === 'amount') el.value = val ? val.toLocaleString('vi-VN') : '';
+    saveOwnerFinanceState();
+  },
+  removeOwnerExpense(shId, idx) {
+    const rec = ensureOwnerFinRecord(shId);
+    rec.otherExpenses.splice(idx, 1);
+    saveOwnerFinanceState();
+    renderApp();
+  },
+  saveShowFinanceNow() {
+    saveOwnerFinanceState(true);
+    state.ownerExpandedShowId = null;
+    renderApp();
+    showToast('💾 Đã lưu thông tin Công nợ!');
+  },
+  exportOwnerExcel() {
+    const uid = state.currentUserId;
+    const curMem = getMember(uid);
+    const list = (state.shows || []).filter(sh => {
+      if (!sh || sh.isCancelled || sh.isHold || !sh.startDate) return false;
+      if (sh.ownerId !== uid && !(sh.memberIds || []).includes(uid)) return false;
+      const [y, m] = sh.startDate.split('-').map(Number);
+      if (y !== state.selectedYear) return false;
+      if (!state.ownerAllMonths && m !== state.ownerMonth) return false;
+      return true;
+    });
+    const rowsHtml = list.map((sh, i) => {
+      const isOwner = sh.ownerId === uid;
+      if (isOwner) {
+        const m = calculateOwnerShowMetrics(sh);
+        return `<tr><td>${i + 1}</td><td>${sh.startDate}</td><td>${sh.location}</td><td>Chủ show</td><td>${m.clientPrice}</td><td>${m.totalExpense}</td><td>${m.netProfit}</td></tr>`;
+      }
+      const cm = calculateCrewShowMetrics(sh);
+      return `<tr><td>${i + 1}</td><td>${sh.startDate}</td><td>${sh.location}</td><td>CTP</td><td>${cm.grossCtp}</td><td>${cm.selfExpense}</td><td>${cm.netPocket}</td></tr>`;
+    }).join('');
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+      <head><meta charset="utf-8" /></head>
+      <body>
+        <table border="1">
+          <tr><th colspan="7">CÔNG NỢ ${curMem.name} - NĂM ${state.selectedYear}</th></tr>
+          <tr><th>STT</th><th>NGÀY</th><th>SHOW</th><th>VAI TRÒ</th><th>THU / CTP</th><th>CHI / TỰ TÚC</th><th>RÒNG</th></tr>
+          ${rowsHtml}
+        </table>
+      </body></html>
+    `;
+    const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `CongNo_${curMem.name}_${state.selectedYear}.xls`;
+    a.click();
+    showToast('📊 Đã xuất file Excel Công nợ!');
+  }
 };
 
 window.adminProActions = {
@@ -998,28 +1124,61 @@ window.holdBellActions = {
     state.holdBellModalOpen = false;
     renderApp();
   },
-  async createQuickHold() {
-    const loc = prompt('Nhập tên / địa điểm giữ lịch (VD: Show Đà Lạt):');
-    if (!loc || !loc.trim()) return;
-    const d = prompt('Nhập ngày giữ lịch (YYYY-MM-DD):', getTodayISO()) || getTodayISO();
+  createQuickHold() {
+    const today = getTodayISO();
+    state.holdComposerModal = {
+      startDate: today,
+      endDate: today,
+      ownerId: state.currentUserId,
+      memberIds: [state.currentUserId],
+      note: ''
+    };
+    renderApp();
+  },
+  closeHoldComposer() {
+    state.holdComposerModal = null;
+    renderApp();
+  },
+  toggleHoldMember(mid) {
+    if (!state.holdComposerModal) return;
+    if (!Array.isArray(state.holdComposerModal.memberIds)) state.holdComposerModal.memberIds = [];
+    const idx = state.holdComposerModal.memberIds.indexOf(mid);
+    if (idx >= 0) state.holdComposerModal.memberIds.splice(idx, 1);
+    else state.holdComposerModal.memberIds.push(mid);
+    renderApp();
+  },
+  async submitQuickHold() {
+    const hm = state.holdComposerModal;
+    if (!hm) return;
+    const startDate = document.getElementById('hold-start-date')?.value || getTodayISO();
+    const endDate = document.getElementById('hold-end-date')?.value || startDate;
+    const ownerId = document.getElementById('hold-owner-id')?.value || state.currentUserId;
+    const note = (document.getElementById('hold-note-inp')?.value || '').trim();
+    const memberIds = Array.isArray(hm.memberIds) && hm.memberIds.length ? hm.memberIds : [state.currentUserId];
+    const location = note || `Giữ lịch (${startDate})`;
+
     const newHold = {
       id: 'hold_' + Date.now(),
       stt: Math.max(300, ...state.shows.map(s => Number(s.stt) || 0)) + 1,
-      location: loc.trim(),
-      startDate: d.trim(),
-      endDate: d.trim(),
-      memberIds: [state.currentUserId],
-      ownerId: state.currentUserId,
+      location,
+      note,
+      startDate,
+      endDate,
+      memberIds,
+      ownerId,
       creatorId: state.currentUserId,
       isHold: true,
-      color: resolveDynamicLocationColor(loc.trim(), ''),
+      color: resolveDynamicLocationColor(location, ''),
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
+
     state.shows.push(newHold);
+    state.holdComposerModal = null;
     await syncShowsToCloud();
+    await logStudioActivity(`Giữ lịch: ${location}`);
     renderApp();
-    showToast('⏳ Đã tạo lịch giữ chỗ!');
+    showToast('⏳ Đã lưu giữ lịch & gửi thông báo!');
   },
   async releaseHold(id) {
     const idx = state.shows.findIndex(s => s && s.id === id);
@@ -1031,13 +1190,18 @@ window.holdBellActions = {
     showToast('🗑️ Đã gỡ lịch giữ chỗ!');
   },
   openQuickHoldSheet(dateStr) {
-    state.holdBellModalOpen = true;
-    if (dateStr) this.createQuickHold();
-    else renderApp();
+    const d = dateStr || getTodayISO();
+    state.holdComposerModal = {
+      startDate: d,
+      endDate: d,
+      ownerId: state.currentUserId,
+      memberIds: [state.currentUserId],
+      note: ''
+    };
+    renderApp();
   }
 };
 
-// Khởi chạy hệ thống
 initPullToRefresh();
 initAuthListener(
   () => {
