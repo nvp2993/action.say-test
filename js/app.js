@@ -380,6 +380,23 @@ window.ownerActions = {
 };
 
 window.adminProActions = {
+  updateDefaultColorGroup(defId, field, val, fallbackKw, fallbackColor) {
+    if (!Array.isArray(state.customColorRules)) state.customColorRules = [];
+    let item = state.customColorRules.find(r => r?.id === defId);
+    if (!item) {
+      item = { id: defId, keyword: fallbackKw, color: fallbackColor };
+      state.customColorRules.push(item);
+    }
+    item[field] = val;
+    if (field === 'color') renderApp();
+  },
+  async resetDefaultColorGroup(defId) {
+    if (!Array.isArray(state.customColorRules)) return;
+    state.customColorRules = state.customColorRules.filter(r => r?.id !== defId);
+    await pushAdminConfigToCloud();
+    renderApp();
+    showToast('↩ Đã khôi phục màu mặc định!');
+  },
   toggleAddMemberForm() {
     state.adminAddMemberOpen = !state.adminAddMemberOpen;
     renderApp();
