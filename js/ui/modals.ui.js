@@ -119,7 +119,7 @@ export function renderCrewPassModalHtml() {
               <div class="text-[11px] font-bold text-white/75 uppercase truncate">${escapeHtml(displayName)}</div>
             </div>
 
-            <div class="w-22 h-22 rounded-2xl bg-white p-1.5 shrink-0 flex items-center justify-center overflow-hidden shadow-md">
+            <div class="w-24 h-24 rounded-2xl bg-white p-1.5 shrink-0 flex items-center justify-center overflow-hidden shadow-md">
               ${qrUrl
                 ? `<img src="${escapeHtml(qrUrl)}" alt="VietQR" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" class="w-full h-full object-contain" /><span style="display:none" class="text-[9px] text-slate-500 text-center font-bold px-1 items-center justify-center">Lỗi tải QR</span>`
                 : `<span class="text-[9px] text-slate-400 text-center font-bold px-1">Chưa có STK</span>`
