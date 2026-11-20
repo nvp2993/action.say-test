@@ -16,6 +16,15 @@ import { renderDebtTabHtml } from './ui/debt.ui.js';
 import { renderPinModalHtml, renderCrewPassModalHtml, renderFormModalHtml, renderToastHtml } from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
 
+function applyCustomLogoToDom() {
+  const customLogo = state.customLogoDataUrl || localStorage.getItem('as_custom_logo_2026') || '';
+  if (!customLogo) return;
+  state.customLogoDataUrl = customLogo;
+  document.querySelectorAll('img[src*="logo.png"]').forEach(img => {
+    img.src = customLogo;
+  });
+}
+
 function renderApp() {
   const root = document.getElementById('app');
   if (!root) return;
@@ -27,11 +36,13 @@ function renderApp() {
 
   if (state.isBackendPortal) {
     root.innerHTML = `${renderAdminPortalHtml()}${renderToastHtml()}`;
+    applyCustomLogoToDom();
     return;
   }
 
   if (!state.currentUserId) {
     root.innerHTML = `${renderPinModalHtml()}${renderToastHtml()}`;
+    applyCustomLogoToDom();
     return;
   }
 
@@ -52,6 +63,7 @@ function renderApp() {
     ${renderCtpBillModalHtml()}
     ${renderToastHtml()}
   `;
+  applyCustomLogoToDom();
 }
 
 registerRenderer(renderApp);
@@ -260,7 +272,7 @@ window.ctpActions = {
       const it = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
       const taskBulletsCompact = Object.entries(it.tasks || {}).map(([k, v]) => `- ${k}: ${formatCompactMoneyPlain(v)}`);
       const extraBulletsCompact = (it.extras || []).filter(e => e.amount > 0).map(e => `- ${e.name || 'Phí'}: ${formatCompactMoneyPlain(e.amount)}`);
-      const showSum = Object.values(it.tasks || {}).reduce((s, v) => s + (Number(v) || 0), 0) + (it.extras || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+      const showSum = Object.values(it.tasks || {}).reduce((s, v) => s + (Number(v) || 0), 0) + (it.extras || []).reduce((s, e) => s + (Number(e) || 0), 0);
       total += showSum;
       return { stt: i + 1, dateLabel: formatDayMonth(sh.startDate), location: sh.location, taskBulletsCompact, extraBulletsCompact, showSum };
     });
@@ -290,6 +302,37 @@ window.adminProActions = {
     const inp = document.getElementById('adm-new-col-hex');
     if (inp) inp.value = hex;
     renderApp();
+  },
+  triggerLogoUpload() {
+    document.getElementById('adm-logo-file-input')?.click();
+  },
+  async handleLogoUpload(inputEl) {
+    const file = inputEl?.files?.[0];
+    if (!file) return;
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      state.customLogoDataUrl = String(dataUrl || '');
+      localStorage.setItem('as_custom_logo_2026', state.customLogoDataUrl);
+      await logStudioActivity('Cập nhật Logo Studio mới');
+      renderApp();
+      showToast('🖼️ Đã đổi Logo thành công!');
+    } catch (err) {
+      showToast('Lỗi tải ảnh logo: ' + err.message, 'error');
+    } finally {
+      inputEl.value = '';
+    }
+  },
+  async resetLogoDefault() {
+    state.customLogoDataUrl = '';
+    localStorage.removeItem('as_custom_logo_2026');
+    await logStudioActivity('Khôi phục Logo mặc định');
+    renderApp();
+    showToast('↩ Đã khôi phục Logo mặc định!');
   },
   async setMemberPin(mid) {
     const raw = (document.getElementById(`adm-pin-${mid}`)?.value || '').replace(/\D/g, '').slice(0, 4);
