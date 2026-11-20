@@ -2,7 +2,7 @@ import { state, registerRenderer, triggerRender } from './state/store.js';
 import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin, logoutCurrentUser } from './services/auth.service.js';
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText } from './services/show.service.js';
 import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord } from './services/finance.service.js';
-import { pushAdminConfigToCloud, logStudioActivity, exportFullJsonBackup, saveOfficialLegalName } from './services/admin.service.js';
+import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
 import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain } from './utils/helpers.js';
 import { exportShowToAppleCalendar, captureElementToPreview, shareOrDownloadPreviewImage } from './utils/export.js';
 import { initPullToRefresh } from './utils/pullToRefresh.js';
@@ -670,8 +670,9 @@ window.adminProActions = {
     try {
       localStorage.setItem('as_custom_color_rules_2026', JSON.stringify(state.customColorRules || []));
       await pushAdminConfigToCloud();
+      const updated = await applyColorsToAllShows();
       renderApp();
-      showToast('🎨 Đã lưu & áp dụng bảng màu mới!');
+      showToast(`🎨 Đã lưu màu & cập nhật ${updated} show!`);
     } catch (err) {
       showToast('Lỗi lưu màu: ' + err.message, 'error');
     }
