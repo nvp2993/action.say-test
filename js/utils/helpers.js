@@ -76,21 +76,27 @@ export function resolveDynamicLocationColor(location = '', partner = '') {
   const part = String(partner || '').trim().toLowerCase();
   const combined = `${loc} ${part}`.trim();
 
-  // 1. Ưu tiên màu tùy chỉnh riêng do Admin cài đặt (nếu có)
+  // 1. Ưu tiên màu tùy chỉnh riêng do Admin thêm (nếu có)
   const rules = state.customColorRules || [];
   for (const r of rules) {
     const kw = String(r?.keyword || '').trim().toLowerCase();
     if (kw && combined.includes(kw)) return r.color;
   }
 
-  // 2. Nếu không có cài đặt riêng -> Tự động gán 1 trong 30 màu Pastel theo tên địa điểm
-  const PASTEL_30 = [
-    '#d6e4f0', '#bdd7ee', '#9dc3e6', '#b8d8e8', '#a8d0db', '#c9d6df',
-    '#c4e3d4', '#b7e1cd', '#a9d6be', '#c5dec0', '#a9cfa5', '#d5e09b',
-    '#f5ebc6', '#f2e2b1', '#edd8a0', '#efe5c8', '#e6ddb8', '#e8d5b7',
-    '#efc4a3', '#eab896', '#f0cbb5', '#e8c1b4', '#e6b8af', '#f2d0c9',
-    '#c9bde0', '#d7cde8', '#e0cce0', '#d9c2d0', '#d0d7de', '#dde2e6'
-  ];
+  // 2. Bảng màu chuẩn theo nhóm địa điểm (y hệt bản cũ dịu mắt)
+  if (/(mũi né|mui ne|nha trang|tây ninh|tay ninh)/.test(combined)) return '#f4c29f'; // Cam đất
+  if (/(hồ tràm|ho tram|vũng tàu|vung tau)/.test(combined)) return '#c9b8df';          // Tím khói
+  if (/(ninh chữ|ninh chu|cam ranh|\blk\b)/.test(combined)) return '#9ec999'; // Xanh lá dịu
+  if (/(sg|sài gòn|sai gon|\bsg\b|củ chi|cu chi|tsnhcm|cần giờ|can gio|nhà bè|nha be)/.test(combined)) return '#9ad0f0';    // Xanh dương dịu
+  if (/(cưới|cuoi|PSC)/.test(combined)) return '#bce3cf';           // Xanh bạc hà
+  if (/(cần thơ|can tho|bận|ban)/.test(combined)) return '#f5dc82';                     // Vàng ấm
+  if (/(đà lạt|da lat|\bđl\b|\bdl\b)/.test(combined)) return '#d2e391';                 // Xanh rêu nhạt
+  if (/(kê gà|ke ga|phú quốc|phu quoc)/.test(combined)) return '#faeec7';               // Vàng kem
+  if (/(long an|hà nội|ha noi|đồng nai|dong nai)/.test(combined)) return '#cfd6dc';     // Xám lạnh
+
+  // 3. Các lịch khác (Đi học, Thái Lan, Miền Tây, Madagui, Long Hải...) -> Xanh da trời siêu nhạt
+  return '#dce9fa';
+}
 
   const key = loc || 'default';
   let hash = 0;
