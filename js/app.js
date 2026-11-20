@@ -13,7 +13,7 @@ import { renderMatrixTabHtml } from './ui/matrix.ui.js';
 import { renderCrewBoardTabHtml } from './ui/crewBoard.ui.js';
 import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
-import { renderPinModalHtml, renderCrewPassModalHtml, renderFormModalHtml, renderToastHtml } from './ui/modals.ui.js';
+import { renderPinModalHtml, renderCrewPassModalHtml, renderFormModalHtml, renderToastHtml, renderCtpCustomShowModalHtml, renderHoldBellModalHtml } from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
 
 function applyCustomLogoToDom() {
