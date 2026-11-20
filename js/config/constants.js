@@ -95,10 +95,10 @@ export const BANK_LIST = [
 ];
 
 export const ADMIN_SWATCH_COLORS_30 = [
-  '#dbeafe', '#bfdbfe', '#bae6fd', '#a5f3fc', '#99f6e4',
-  '#a7f3d0', '#bbf7d0', '#d9f99d', '#fef08a', '#fde68a',
-  '#fed7aa', '#fecdd3', '#fbcfe8', '#f5d0fe', '#e9d5ff',
-  '#ddd6fe', '#c7d2fe', '#e2e8f0', '#f1f5f9', '#fef3c7',
-  '#dcfce7', '#e0f2fe', '#ede9fe', '#fce7f3', '#ffedd5',
-  '#ccfbf1', '#ecfccb', '#fae8ff', '#ffe4e6', '#f3e8ff'
+  '#d6e4f0', '#bdd7ee', '#9dc3e6', '#b8d8e8', '#a8d0db', '#c9d6df',
+  '#c4e3d4', '#b7e1cd', '#a9d6be', '#c5dec0', '#a9cfa5', '#d5e09b',
+  '#f5ebc6', '#f2e2b1', '#edd8a0', '#efe5c8', '#e6ddb8', '#e8d5b7',
+  '#efc4a3', '#eab896', '#f0cbb5', '#e8c1b4', '#e6b8af', '#f2d0c9',
+  '#c9bde0', '#d7cde8', '#e0cce0', '#d9c2d0', '#d0d7de', '#dde2e6'
+];
 ];
