@@ -9,8 +9,9 @@ export function renderCrewBoardTabHtml() {
   const busy = members.filter(m => busyMap[m.id]);
 
   const renderAvatar = (m) => {
-    const av = state.memberProfiles?.[m.id]?.avatar;
-    return av ? `<img src="${av}" alt="${escapeHtml(m.name)}" />` : escapeHtml(m.shortLabel.slice(0, 2));
+    const saved = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
+    const av = state.memberProfiles?.[m.id]?.avatarUrl || state.memberProfiles?.[m.id]?.avatar || saved[m.id] || '';
+    return av ? `<img src="${av}" alt="${escapeHtml(m.name)}" class="w-full h-full object-cover" />` : escapeHtml(m.shortLabel.slice(0, 2));
   };
 
   return `
