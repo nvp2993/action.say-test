@@ -43,6 +43,9 @@ export function renderCrewPassModalHtml() {
   if (!state.crewPassModal || !state.currentUserId) return '';
   const m = getMember(state.currentUserId);
   const prof = state.memberProfiles?.[state.currentUserId] || {};
+  const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
+  const avatarSrc = prof.avatarUrl || savedAvatars[state.currentUserId] || '';
+
   const isEditing = !!state.isEditingCrewProfile;
   const hidden = !!state.vipInfoHidden;
 
@@ -61,35 +64,35 @@ export function renderCrewPassModalHtml() {
     '970416': 'ACB', '970423': 'TPBank', '970403': 'Sacombank', '970441': 'VIB'
   };
   const bankLabel = bankNames[bankBin] || 'Ngân hàng';
-  const bankAcc = prof.bankAcc || '';
+  const bankAcc = String(prof.bankAcc || '').replace(/\s+/g, '');
   const qrUrl = bankAcc
-    ? `https://img.vietqr.io/image/${bankBin}-${encodeURIComponent(bankAcc)}-compact2.png?accountName=${encodeURIComponent(displayName)}`
+    ? `https://img.vietqr.io/image/${bankBin}-${encodeURIComponent(bankAcc)}-qr_only.png?accountName=${encodeURIComponent(displayName)}`
     : '';
 
   return `
     <div onclick="appActions.closeCrewPassModal()" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-      <div onclick="event.stopPropagation()" class="w-full max-w-sm bg-[#111317] text-white rounded-[32px] p-4 space-y-3.5 border border-white/10 shadow-2xl max-h-[92dvh] overflow-y-auto custom-scroll">
+      <div onclick="event.stopPropagation()" class="w-full max-w-sm bg-[#111318] text-white rounded-[32px] p-4 space-y-3.5 shadow-2xl max-h-[92dvh] overflow-y-auto custom-scroll">
 
-        <!-- Thẻ VIP Pass trên -->
-        <div class="relative rounded-[26px] p-4 border border-white/20 overflow-hidden bg-gradient-to-br from-[#9eb36b]/85 via-[#252c27] to-[#0f131a] space-y-3.5">
+        <!-- Thẻ VIP Pass sang trọng -->
+        <div class="relative rounded-[26px] p-4 overflow-hidden bg-gradient-to-br from-[#a3b86c]/80 via-[#212723] to-[#0e1218] shadow-lg space-y-3.5">
           <!-- Hàng 1: Badge + Số Shows + Nút đóng -->
           <div class="flex items-center justify-between gap-2">
-            <div class="px-3 py-1 rounded-full bg-black/45 border border-white/10 text-[10px] font-black tracking-wider text-amber-300 flex items-center gap-1">
+            <div class="px-3 py-1 rounded-full bg-black/40 text-[10px] font-black tracking-wider text-amber-300 flex items-center gap-1">
               <span>⚡ ACTION X SAY • VIP PASS</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-              <div class="px-2.5 py-1 rounded-full bg-black/45 border border-white/10 text-[10px] font-black text-amber-300">
+              <div class="px-2.5 py-1 rounded-full bg-black/40 text-[10px] font-black text-amber-300">
                 ${showCount} <span class="text-white/75 font-bold">SHOWS</span>
               </div>
-              <button type="button" onclick="appActions.closeCrewPassModal()" class="w-7 h-7 rounded-full bg-black/50 hover:bg-black/75 text-white/90 font-bold text-xs flex items-center justify-center">✕</button>
+              <button type="button" onclick="appActions.closeCrewPassModal()" class="w-7 h-7 rounded-full bg-black/45 hover:bg-black/70 text-white/90 font-bold text-xs flex items-center justify-center">✕</button>
             </div>
           </div>
 
           <!-- Hàng 2: Avatar + Tên + Chức danh + Biệt danh -->
-          <div class="flex items-center gap-3">
-            <div onclick="appActions.triggerVipAvatarUpload()" title="Chạm để đổi ảnh đại diện" class="relative w-16 h-16 rounded-2xl bg-slate-900/90 border-2 border-white/80 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer group">
-              ${prof.avatarUrl
-                ? `<img src="${escapeHtml(prof.avatarUrl)}" alt="Avatar" class="w-full h-full object-cover" />`
+          <div class="flex items-center gap-3.5">
+            <div onclick="appActions.triggerVipAvatarUpload()" title="Chạm để đổi ảnh đại diện" class="relative w-16 h-16 rounded-2xl bg-slate-900/90 ring-2 ring-white/70 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer">
+              ${avatarSrc
+                ? `<img src="${escapeHtml(avatarSrc)}" alt="Avatar" class="w-full h-full object-cover" />`
                 : `<span class="text-xl font-black text-white">${escapeHtml(m.shortLabel || 'AS')}</span>`
               }
               <span class="absolute bottom-1 right-1 w-4 h-4 rounded-md bg-amber-400 text-slate-950 text-[9px] flex items-center justify-center shadow">📷</span>
@@ -99,28 +102,26 @@ export function renderCrewPassModalHtml() {
             <div class="min-w-0 flex-1">
               <div class="text-base font-black tracking-tight text-white truncate">${escapeHtml(displayName)}</div>
               <div class="text-xs font-extrabold text-amber-300 mt-0.5 truncate">${escapeHtml(displayTitle)}</div>
-              <div class="mt-1.5 inline-block px-2.5 py-0.5 rounded-lg bg-white/15 text-[10px] font-black tracking-wider text-white/90 uppercase">
+              <div class="mt-1.5 inline-block px-2.5 py-0.5 rounded-lg bg-white/15 text-[10px] font-black tracking-wider text-white/95 uppercase">
                 ${escapeHtml(nickLabel)}
               </div>
             </div>
           </div>
 
-          <div class="h-px bg-white/15"></div>
-
-          <!-- Hàng 3: VietQR Nhận CTP -->
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0 flex-1 space-y-0.5">
-              <div class="text-[10px] font-black text-emerald-400 tracking-wider uppercase flex items-center gap-1">
+          <!-- Hàng 3: Khối VietQR & Thông tin ngân hàng gắn kết sang trọng -->
+          <div class="rounded-2xl bg-black/35 p-3 flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1 space-y-1">
+              <div class="text-[10px] font-black text-emerald-400 tracking-wider uppercase flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> VIETQR NHẬN CTP
               </div>
-              <div class="text-sm font-black text-white">${escapeHtml(bankLabel)}</div>
-              <div class="text-sm font-mono font-black text-amber-300 tracking-wide">${escapeHtml(bankAcc || 'Chưa cập nhật STK')}</div>
-              <div class="text-[11px] font-extrabold text-white/80 uppercase truncate">${escapeHtml(displayName)}</div>
+              <div class="text-xs font-extrabold text-white/90">${escapeHtml(bankLabel)}</div>
+              <div class="text-sm font-mono font-black text-amber-300 tracking-wider">${escapeHtml(bankAcc || 'Chưa cập nhật STK')}</div>
+              <div class="text-[11px] font-bold text-white/75 uppercase truncate">${escapeHtml(displayName)}</div>
             </div>
 
-            <div class="w-24 h-24 rounded-2xl bg-white p-1.5 shrink-0 flex items-center justify-center overflow-hidden shadow">
+            <div class="w-22 h-22 rounded-2xl bg-white p-1.5 shrink-0 flex items-center justify-center overflow-hidden shadow-md">
               ${qrUrl
-                ? `<img src="${escapeHtml(qrUrl)}" alt="VietQR" class="w-full h-full object-contain" />`
+                ? `<img src="${escapeHtml(qrUrl)}" alt="VietQR" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" class="w-full h-full object-contain" /><span style="display:none" class="text-[9px] text-slate-500 text-center font-bold px-1 items-center justify-center">Lỗi tải QR</span>`
                 : `<span class="text-[9px] text-slate-400 text-center font-bold px-1">Chưa có STK</span>`
               }
             </div>
@@ -128,7 +129,7 @@ export function renderCrewPassModalHtml() {
         </div>
 
         <!-- Khối INFO / Chỉnh sửa hồ sơ -->
-        <div class="rounded-[24px] bg-[#181b21] border border-white/10 p-3.5 space-y-2.5 text-xs">
+        <div class="rounded-[24px] bg-[#181b22] p-3.5 space-y-2.5 text-xs">
           <div class="flex items-center justify-between gap-1.5">
             <div class="flex items-center gap-1.5">
               <span class="font-black text-amber-400 uppercase tracking-wider text-[11px]">INFO</span>
@@ -147,19 +148,19 @@ export function renderCrewPassModalHtml() {
 
           ${isEditing ? `
             <div class="space-y-2 pt-1 text-[11px]">
-              <div class="flex items-center justify-between p-2 rounded-xl bg-black/30 border border-white/10">
-                <span class="text-slate-300 font-bold">Ảnh đại diện thẻ VIP</span>
+              <div class="flex items-center justify-between p-2 rounded-xl bg-black/30">
+                <span class="text-slate-300 font-bold">Ảnh đại diện (đồng bộ toàn app)</span>
                 <button type="button" onclick="appActions.triggerVipAvatarUpload()" class="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-[10px]">📷 Đổi Ảnh</button>
               </div>
-              <input id="prof-fullname" type="text" value="${escapeHtml(prof.fullName || m.name)}" placeholder="Họ và tên đầy đủ" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-white font-bold" />
-              <input id="prof-title" type="text" value="${escapeHtml(prof.title || '')}" placeholder="Chức danh (VD: Cam.Op, Editor, Flycam...)" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-white font-bold" />
+              <input id="prof-fullname" type="text" value="${escapeHtml(prof.fullName || m.name)}" placeholder="Họ và tên đầy đủ" class="w-full px-3 py-2 rounded-xl bg-black/40 text-white font-bold focus:outline-none" />
+              <input id="prof-title" type="text" value="${escapeHtml(prof.title || '')}" placeholder="Chức danh (VD: Cam.Op, Editor, Flycam...)" class="w-full px-3 py-2 rounded-xl bg-black/40 text-white font-bold focus:outline-none" />
               <div class="grid grid-cols-2 gap-2">
-                <input id="prof-cccd" type="text" value="${escapeHtml(prof.cccd || '')}" placeholder="Số CCCD" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-white font-mono font-bold" />
-                <input id="prof-dob" type="text" value="${escapeHtml(prof.dob || '')}" placeholder="Ngày sinh (DD/MM/YYYY)" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-white font-mono font-bold" />
+                <input id="prof-cccd" type="text" value="${escapeHtml(prof.cccd || '')}" placeholder="Số CCCD" class="w-full px-3 py-2 rounded-xl bg-black/40 text-white font-mono font-bold focus:outline-none" />
+                <input id="prof-dob" type="text" value="${escapeHtml(prof.dob || '')}" placeholder="Ngày sinh (DD/MM/YYYY)" class="w-full px-3 py-2 rounded-xl bg-black/40 text-white font-mono font-bold focus:outline-none" />
               </div>
-              <input id="prof-phone" type="text" value="${escapeHtml(prof.phone || '')}" placeholder="Số điện thoại" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-white font-mono font-bold" />
+              <input id="prof-phone" type="text" value="${escapeHtml(prof.phone || '')}" placeholder="Số điện thoại" class="w-full px-3 py-2 rounded-xl bg-black/40 text-white font-mono font-bold focus:outline-none" />
               <div class="grid grid-cols-2 gap-2">
-                <select id="prof-bank-bin" class="w-full px-2.5 py-2 rounded-xl bg-black/40 border border-white/15 text-white font-bold">
+                <select id="prof-bank-bin" class="w-full px-2.5 py-2 rounded-xl bg-black/40 text-white font-bold focus:outline-none">
                   <option value="970407" ${bankBin === '970407' ? 'selected' : ''}>Techcombank</option>
                   <option value="970436" ${bankBin === '970436' ? 'selected' : ''}>Vietcombank</option>
                   <option value="970422" ${bankBin === '970422' ? 'selected' : ''}>MB Bank</option>
@@ -169,7 +170,7 @@ export function renderCrewPassModalHtml() {
                   <option value="970423" ${bankBin === '970423' ? 'selected' : ''}>TPBank</option>
                   <option value="970432" ${bankBin === '970432' ? 'selected' : ''}>VPBank</option>
                 </select>
-                <input id="prof-bank-acc" type="text" value="${escapeHtml(bankAcc)}" placeholder="Số tài khoản" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-white font-mono font-bold" />
+                <input id="prof-bank-acc" type="text" value="${escapeHtml(bankAcc)}" placeholder="Số tài khoản" class="w-full px-3 py-2 rounded-xl bg-black/40 text-white font-mono font-bold focus:outline-none" />
               </div>
               <button type="button" onclick="appActions.saveMyMemberProfile()" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs">💾 Lưu Hồ Sơ</button>
             </div>
@@ -191,12 +192,12 @@ export function renderCrewPassModalHtml() {
           `}
         </div>
 
-        <!-- Hàng nút dưới cùng: Đổi Nhân Sự + Đăng xuất -->
+        <!-- Hàng nút dưới cùng: Đổi Nhân Sự + Đăng xuất (không viền, sang trọng) -->
         <div class="grid grid-cols-2 gap-2.5 pt-0.5">
-          <button type="button" onclick="appActions.switchMemberFromVipCard()" class="py-3 rounded-2xl bg-[#1c2028] hover:bg-[#252a34] border border-white/10 text-amber-300 font-black text-xs flex items-center justify-center gap-1.5">
+          <button type="button" onclick="appActions.switchMemberFromVipCard()" class="py-3 rounded-2xl bg-[#1c2029] hover:bg-[#252b37] text-amber-300 font-black text-xs flex items-center justify-center gap-1.5 transition-colors">
             <span>🔄 Đổi Nhân Sự</span>
           </button>
-          <button type="button" onclick="appActions.logoutMember()" class="py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs flex items-center justify-center gap-1.5">
+          <button type="button" onclick="appActions.logoutMember()" class="py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-colors">
             <span>🚪 Đăng xuất</span>
           </button>
         </div>
