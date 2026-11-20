@@ -277,3 +277,103 @@ export function renderToastHtml() {
   if (!state.toast) return '';
   return `<div class="fixed top-12 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold text-white bg-slate-900">${escapeHtml(state.toast.message)}</div>`;
 }
+
+export function renderCtpCustomShowModalHtml() {
+  const m = state.ctpCustomShowModal;
+  if (!m) return '';
+  return `
+    <div onclick="ctpActions.closeAddCustomShowModal()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4">
+      <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3.5 text-xs shadow-2xl">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="font-black text-sm text-slate-900">📝 TỰ NOTE SHOW NGOÀI LỊCH</h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">Show sẽ được thêm vào cuối danh sách tính CTP tháng T${state.ctpMonth}</p>
+          </div>
+          <button type="button" onclick="ctpActions.closeAddCustomShowModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+        </div>
+
+        <div class="space-y-2.5">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">📍 Địa điểm / Tên Show (*):</label>
+            <input id="ctp-ext-loc" type="text" value="${escapeHtml(m.location || '')}" placeholder="VD: Tiệc cưới Q7, Event Phú Quốc..." class="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold focus:outline-none focus:border-slate-900" />
+          </div>
+          <div>
+            <label class="block font-bold text-amber-800 mb-1">🛡️ Đối tác / Ghi chú (Tự động ẩn trên lịch chung):</label>
+            <input id="ctp-ext-partner" type="text" value="${escapeHtml(m.partner || '')}" placeholder="VD: PSC, Anh Khoa gọi ngoài..." class="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold focus:outline-none focus:border-slate-900" />
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Từ ngày:</label>
+              <input id="ctp-ext-start" type="date" value="${escapeHtml(m.startDate || '')}" class="w-full px-3 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono font-bold" />
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Đến ngày:</label>
+              <input id="ctp-ext-end" type="date" value="${escapeHtml(m.endDate || '')}" class="w-full px-3 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono font-bold" />
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">📌 Chọn Chủ Show (Người thanh toán CTP):</label>
+            <select id="ctp-ext-owner" class="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">
+              ${(state.members || []).map(mem => `<option value="${mem.id}" ${m.ownerId === mem.id ? 'selected' : ''}>${escapeHtml(mem.name)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <button type="button" onclick="ctpActions.closeAddCustomShowModal()" class="py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs">Huỷ</button>
+          <button type="button" onclick="ctpActions.submitAddCustomShow()" class="py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs">OK • THÊM VÀO CUỐI</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function renderHoldBellModalHtml() {
+  if (!state.holdBellModalOpen) return '';
+  const holds = (state.shows || []).filter(s => s && s.isHold && !s.isCancelled);
+  const myHolds = holds.filter(s => s.ownerId === state.currentUserId || (s.memberIds || []).includes(state.currentUserId));
+
+  return `
+    <div onclick="holdBellActions.closeBellDrawer()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4">
+      <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3.5 text-xs shadow-2xl max-h-[88dvh] overflow-y-auto">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="font-black text-sm text-slate-900">🔔 THÔNG BÁO &amp; GIỮ LỊCH</h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">Vuốt lên xuống để xem tất cả lịch chờ &amp; show mới chốt</p>
+          </div>
+          <button type="button" onclick="holdBellActions.closeBellDrawer()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+        </div>
+
+        <button type="button" onclick="holdBellActions.createQuickHold()" class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wide">
+          + GIỮ LỊCH / NHẮC CHỦ SHOW MỚI
+        </button>
+
+        <div class="space-y-1.5">
+          <div class="text-[10.5px] font-black text-amber-700 uppercase">⏳ CHỜ BẠN CẬP NHẬT / CHỐT SHOW (0)</div>
+          <div class="py-4 px-3 rounded-2xl border border-dashed border-slate-200 text-center text-[11px] text-slate-400">
+            Không có lịch giữ chỗ nào đang chờ bạn chốt.
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="text-[10.5px] font-black text-rose-700 uppercase">📌 LỊCH BẠN ĐƯỢC GIỮ CHỖ — CHỜ CHỦ SHOW (${myHolds.length})</div>
+          ${myHolds.length === 0 ? `
+            <div class="py-3 px-3 rounded-2xl bg-slate-50 text-center text-[11px] text-slate-400">Chưa có lịch giữ chỗ nào.</div>
+          ` : myHolds.map(h => {
+            const owner = getMember(h.ownerId);
+            const crewNames = (h.memberIds || []).map(id => getMember(id).name).join(', ');
+            return `
+              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="font-black text-slate-900 text-xs truncate">🗓️ ${escapeHtml(h.startDate)}${h.endDate && h.endDate !== h.startDate ? ' → ' + escapeHtml(h.endDate) : ''} • ${escapeHtml(h.location || '')}</div>
+                  <div class="text-[10.5px] text-slate-500 mt-0.5 truncate">Chủ show: <b>${escapeHtml(owner.name)}</b> • Giữ bởi: ${escapeHtml(crewNames || owner.name)}</div>
+                </div>
+                <button type="button" onclick="holdBellActions.releaseHold('${escapeHtml(h.id)}')" class="px-3 py-1.5 rounded-xl bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 font-bold text-[11px] shrink-0">Gỡ</button>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
