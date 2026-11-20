@@ -478,7 +478,7 @@ window.adminProActions = {
     showToast('↩ Đã khôi phục Logo mặc định!');
   },
   async setMemberPin(mid) {
-    const raw = (document.getElementById(`adm-pin-${mid}`)?.value || '').replace(/\D/g, '').slice(0, 4);
+    const raw = (document.getElementById(`adm-ed-pin-${mid}`)?.value || '').replace(/\D/g, '').slice(0, 4);
     if (raw.length !== 4) return showToast('Mã PIN phải đủ 4 chữ số!', 'error');
     state.memberPinHints = { ...(state.memberPinHints || {}), [mid]: raw };
     localStorage.setItem('as_member_pin_hints_2026', JSON.stringify(state.memberPinHints));
@@ -487,7 +487,7 @@ window.adminProActions = {
     showToast(`🔐 Đã lưu PIN ${raw} cho ${getMember(mid).name}! Nhớ đổi pass AS2026#${raw} trên Firebase Auth.`);
   },
   async resetMemberPinDefault(mid) {
-    const inp = document.getElementById(`adm-pin-${mid}`);
+    const inp = document.getElementById(`adm-ed-pin-${mid}`);
     if (inp) inp.value = '1234';
     state.memberPinHints = { ...(state.memberPinHints || {}), [mid]: '1234' };
     localStorage.setItem('as_member_pin_hints_2026', JSON.stringify(state.memberPinHints));
@@ -496,7 +496,7 @@ window.adminProActions = {
     showToast(`🔄 Đã đặt lại PIN 1234 cho ${getMember(mid).name}`);
   },
   copyAuthPassForMember(mid) {
-    const pin = (document.getElementById(`adm-pin-${mid}`)?.value || state.memberPinHints?.[mid] || '1234').replace(/\D/g, '').slice(0, 4) || '1234';
+    const pin = (document.getElementById(`adm-ed-pin-${mid}`)?.value || state.memberPinHints?.[mid] || '1234').replace(/\D/g, '').slice(0, 4) || '1234';
     const passStr = `AS2026#${pin}`;
     navigator.clipboard?.writeText(passStr);
     showToast(`📋 Đã copy mật khẩu Auth: ${passStr}`);
