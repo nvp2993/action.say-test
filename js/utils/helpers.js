@@ -71,15 +71,35 @@ export function renderPillHtml(memberId, size = 'xs', extraClasses = '', onClick
   return `<span ${onClickAttr} style="background-color:${m.bg};color:${m.text}" class="inline-flex items-center font-extrabold rounded-full tracking-wide uppercase select-none shadow-2xs ${sizeCls} ${extraClasses}">${escapeHtml(m.shortLabel)}${roleSpan}</span>`;
 }
 
-export function resolveDynamicLocationColor(locationStr = '', partnerStr = '') {
-  const s = `${locationStr} ${partnerStr}`.toLowerCase();
-  const rules = Array.isArray(state.customColorRules) ? state.customColorRules : [];
+export function resolveDynamicLocationColor(location = '', partner = '') {
+  const loc = String(location || '').trim().toLowerCase();
+  const part = String(partner || '').trim().toLowerCase();
+  const combined = `${loc} ${part}`.trim();
+
+  // 1. Ưu tiên màu tùy chỉnh riêng do Admin cài đặt (nếu có)
+  const rules = state.customColorRules || [];
   for (const r of rules) {
-    if (!r || !r.keyword) continue;
-    const kwList = String(r.keyword).split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
-    if (kwList.some(k => s.includes(k))) return r.color || '#dbeafe';
+    const kw = String(r?.keyword || '').trim().toLowerCase();
+    if (kw && combined.includes(kw)) return r.color;
   }
-  return '#dbeafe';
+
+  // 2. Nếu không có cài đặt riêng -> Tự động gán 1 trong 30 màu Pastel theo tên địa điểm
+  const PASTEL_30 = [
+    '#dbeafe', '#bfdbfe', '#bae6fd', '#a5f3fc', '#99f6e4',
+    '#a7f3d0', '#bbf7d0', '#d9f99d', '#fef08a', '#fde68a',
+    '#fed7aa', '#fecdd3', '#fbcfe8', '#f5d0fe', '#e9d5ff',
+    '#ddd6fe', '#c7d2fe', '#e2e8f0', '#fef3c7', '#dcfce7',
+    '#e0f2fe', '#ede9fe', '#fce7f3', '#ffedd5', '#ccfbf1',
+    '#ecfccb', '#fae8ff', '#ffe4e6', '#f3e8ff', '#e0e7ff'
+  ];
+
+  const key = loc || 'default';
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) - hash) + key.charCodeAt(i);
+    hash |= 0;
+  }
+  return PASTEL_30[Math.abs(hash) % PASTEL_30.length];
 }
 
 export function getBankName(bin) {
