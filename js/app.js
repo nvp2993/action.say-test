@@ -14,7 +14,6 @@ import { renderCrewBoardTabHtml } from './ui/crewBoard.ui.js';
 import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
 import {
-  renderWelcomeSplashHtml,
   renderPinModalHtml,
   renderCrewPassModalHtml,
   renderFormModalHtml,
@@ -28,21 +27,6 @@ import {
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
 
 const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
-let welcomeSplashTimer = null;
-
-function triggerWelcomeSplash(durationMs = 1500) {
-  if (welcomeSplashTimer) {
-    clearTimeout(welcomeSplashTimer);
-    welcomeSplashTimer = null;
-  }
-  state.welcomeSplashVisible = true;
-  renderApp();
-  welcomeSplashTimer = setTimeout(() => {
-    state.welcomeSplashVisible = false;
-    welcomeSplashTimer = null;
-    renderApp();
-  }, durationMs);
-}
 
 function getBankName(bin) {
   const map = {
@@ -60,19 +44,29 @@ function getBankName(bin) {
   return map[String(bin || '').trim()] || (bin ? `BIN ${bin}` : 'Ngân hàng');
 }
 
+function getEffectiveLogoSrc() {
+  const custom = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || '';
+  if (custom && (custom.startsWith('data:image/') || custom.startsWith('http://') || custom.startsWith('https://') || custom.startsWith('./') || custom.startsWith('/'))) {
+    return custom;
+  }
+  return FALLBACK_LOGO_SVG;
+}
+
 function applyCustomLogoToDom() {
-  const customLogo = state.customLogoDataUrl || localStorage.getItem('as_custom_logo_2026') || '';
-  if (!customLogo) return;
-  state.customLogoDataUrl = customLogo;
-  document.querySelectorAll('img[data-brand-logo="true"], img[src*="logo.png"]').forEach(img => {
-    if (img.getAttribute('src') !== customLogo) {
-      img.src = customLogo;
+  const logoSrc = getEffectiveLogoSrc();
+  document.querySelectorAll('img[data-brand-logo="true"], img[alt="Action x Say"], img[src*="logo.png"]').forEach(img => {
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = FALLBACK_LOGO_SVG;
+    };
+    if (img.getAttribute('src') !== logoSrc) {
+      img.src = logoSrc;
     }
   });
   const fav = document.getElementById('favicon-link');
   const appleIcon = document.getElementById('apple-touch-icon-link');
-  if (fav && fav.getAttribute('href') !== customLogo) fav.href = customLogo;
-  if (appleIcon && appleIcon.getAttribute('href') !== customLogo) appleIcon.href = customLogo;
+  if (fav && fav.getAttribute('href') !== logoSrc) fav.href = logoSrc;
+  if (appleIcon && appleIcon.getAttribute('href') !== logoSrc) appleIcon.href = logoSrc;
 }
 
 function scrollActiveMonthIntoView() {
@@ -95,31 +89,47 @@ async function loadQrBitmapIfAvailable(prof, fullName) {
   if (!prof?.bankAcc) return null;
   const qrUrl = buildVietQrUrl(prof.bankBin, prof.bankAcc);
   if (!qrUrl) return null;
-  try {
-    const resp = await fetch(qrUrl);
-    if (!resp.ok) return null;
-    const blob = await resp.blob();
-    const objUrl = URL.createObjectURL(blob);
-    return await new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(objUrl);
-        resolve({ img, bankLabel: getBankName(prof.bankBin), acc: prof.bankAcc, holder: (fullName || '').toUpperCase() });
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objUrl);
-        resolve(null);
-      };
-      img.src = objUrl;
-    });
-  } catch {
-    return null;
-  }
+
+  const bankLabel = getBankName(prof.bankBin);
+  const acc = String(prof.bankAcc).trim();
+  const holder = (fullName || '').toUpperCase();
+
+  return await new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const timer = setTimeout(() => {
+      resolve({ img: null, qrUrl, bankLabel, acc, holder });
+    }, 3500);
+
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const testCanvas = document.createElement('canvas');
+        testCanvas.width = 16;
+        testCanvas.height = 16;
+        const tctx = testCanvas.getContext('2d');
+        tctx.drawImage(img, 0, 0, 16, 16);
+        tctx.getImageData(0, 0, 1, 1);
+        resolve({ img, qrUrl, bankLabel, acc, holder });
+      } catch {
+        resolve({ img: null, qrUrl, bankLabel, acc, holder });
+      }
+    };
+
+    img.onerror = () => {
+      clearTimeout(timer);
+      resolve({ img: null, qrUrl, bankLabel, acc, holder });
+    };
+
+    img.src = qrUrl;
+  });
 }
 
 function renderApp() {
   const root = document.getElementById('app');
   if (!root) return;
+
+  state.welcomeSplashVisible = false;
 
   if (!state.authReady) {
     root.innerHTML = `<div class="h-[100dvh] flex items-center justify-center bg-slate-950 text-white text-xs font-bold">⏳ Đang kết nối Action &amp; Say Cloud...</div>`;
@@ -134,12 +144,6 @@ function renderApp() {
 
   if (!state.currentUserId) {
     root.innerHTML = `${renderPinModalHtml()}${renderToastHtml()}`;
-    applyCustomLogoToDom();
-    return;
-  }
-
-  if (state.welcomeSplashVisible) {
-    root.innerHTML = `${renderWelcomeSplashHtml()}${renderToastHtml()}`;
     applyCustomLogoToDom();
     return;
   }
@@ -186,14 +190,6 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
-  dismissWelcomeSplash() {
-    if (welcomeSplashTimer) {
-      clearTimeout(welcomeSplashTimer);
-      welcomeSplashTimer = null;
-    }
-    state.welcomeSplashVisible = false;
-    renderApp();
-  },
   triggerVipAvatarUpload() {
     document.getElementById('vip-avatar-file-input')?.click();
   },
@@ -247,7 +243,7 @@ window.appActions = {
   copyVipInfoText() {
     const prof = state.memberProfiles?.[state.currentUserId] || {};
     const m = getMember(state.currentUserId);
-    const name = (prof.fullName || m.name || '').toUpperCase();
+    const name = (state.officialLegalNames?.[state.currentUserId] || prof.fullName || m.name || '').toUpperCase();
     const lines = [
       `${name} (${m.name})`,
       `CCCD: ${prof.cccd || '-'}`,
@@ -400,7 +396,8 @@ window.appActions = {
       state.pinModal.loading = true; renderApp();
       try {
         await loginMemberWithPin(state.pinModal.selectedId, clean);
-        triggerWelcomeSplash(1500);
+        state.welcomeSplashVisible = false;
+        renderApp();
         showToast(`Xin chào ${getMember(state.pinModal.selectedId).name}!`);
       } catch (err) {
         state.pinModal.pinInput = ''; state.pinModal.loading = false; state.pinModal.error = err.message; renderApp();
@@ -423,9 +420,10 @@ window.appActions = {
   toggleEditCrewProfile(v) { state.isEditingCrewProfile = v; renderApp(); },
   toggleVipInfoHidden() { state.vipInfoHidden = !state.vipInfoHidden; localStorage.setItem('as_vip_info_hidden', state.vipInfoHidden ? '1' : '0'); renderApp(); },
   async saveMyMemberProfile() {
+    const fullName = document.getElementById('prof-fullname')?.value.trim() || '';
     await saveMyProfileToCloud(state.currentUserId, {
       ...state.memberProfiles[state.currentUserId],
-      fullName: document.getElementById('prof-fullname')?.value.trim() || '',
+      fullName,
       cccd: document.getElementById('prof-cccd')?.value.trim() || '',
       dob: document.getElementById('prof-dob')?.value.trim() || '',
       phone: document.getElementById('prof-phone')?.value.trim() || '',
@@ -433,6 +431,10 @@ window.appActions = {
       bankBin: document.getElementById('prof-bank-bin')?.value || '970436',
       bankAcc: (document.getElementById('prof-bank-acc')?.value || '').replace(/\s+/g, '')
     });
+    if (fullName) {
+      state.officialLegalNames = { ...(state.officialLegalNames || {}), [state.currentUserId]: fullName.toUpperCase() };
+      await saveOfficialLegalName(state.currentUserId, fullName.toUpperCase());
+    }
     state.isEditingCrewProfile = false;
     renderApp();
     showToast('✅ Đã lưu Hồ sơ & VietQR lên Cloud!');
@@ -678,13 +680,13 @@ window.ctpActions = {
     const bm = state.ctpBillModal;
     if (!bm) return showToast('Không có dữ liệu Bill để chụp!', 'error');
     const prof = state.memberProfiles?.[state.currentUserId] || {};
-    const fullName = (prof.fullName || bm.memberName || '').trim();
+    const fullName = (state.officialLegalNames?.[state.currentUserId] || prof.fullName || bm.memberName || '').trim().toUpperCase();
     const qrData = await loadQrBitmapIfAvailable(prof, fullName);
 
     const canvas = document.createElement('canvas');
-    const W = 900;
+    const W = 940;
     const rowH = 44;
-    const H = 190 + Math.max(1, bm.rows.length) * rowH + (qrData ? 140 : 24);
+    const H = 190 + Math.max(1, bm.rows.length) * rowH + (qrData ? 144 : 24);
     canvas.width = W * 2;
     canvas.height = H * 2;
     const ctx = canvas.getContext('2d');
@@ -698,10 +700,10 @@ window.ctpActions = {
     ctx.fillText(`BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}`, 28, 42);
     ctx.fillStyle = '#475569';
     ctx.font = '13px sans-serif';
-    ctx.fillText(`Nhân sự: ${fullName}   •   Chủ show: ${bm.ownerTitle}`, 28, 66);
+    ctx.fillText(`Nhân sự: ${fullName}   •   Người phụ trách: ${bm.ownerTitle}`, 28, 66);
 
     const tableX = 28, tableY = 86, tableW = W - 56;
-    const cols = [52, 86, 190, 210, 140, tableW - 52 - 86 - 190 - 210 - 140];
+    const cols = [52, 86, 190, 230, 140, tableW - 52 - 86 - 190 - 230 - 140];
     const headers = ['STT', 'NGÀY', 'SHOW', 'NHIỆM VỤ', 'PHÁT SINH', 'TỔNG'];
 
     ctx.fillStyle = '#107c41';
@@ -710,7 +712,13 @@ window.ctpActions = {
     ctx.font = 'bold 11px sans-serif';
     let cx = tableX;
     headers.forEach((h, idx) => {
-      ctx.fillText(h, cx + 8, tableY + 21);
+      if (idx === 5) {
+        ctx.textAlign = 'right';
+        ctx.fillText(h, cx + cols[idx] - 10, tableY + 21);
+        ctx.textAlign = 'left';
+      } else {
+        ctx.fillText(h, cx + 8, tableY + 21);
+      }
       cx += cols[idx];
     });
 
@@ -731,10 +739,18 @@ window.ctpActions = {
         Number(r.showSum || 0).toLocaleString('vi-VN') + 'đ'
       ];
       cells.forEach((txt, cIdx) => {
-        ctx.fillStyle = cIdx === 5 ? '#047857' : '#0f172a';
-        ctx.font = cIdx === 5 ? 'bold 12px monospace' : '12px sans-serif';
-        const clipped = txt.length > 34 ? txt.slice(0, 32) + '…' : txt;
-        ctx.fillText(clipped, xPos + 8, ry + 26);
+        if (cIdx === 5) {
+          ctx.fillStyle = '#047857';
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
+          ctx.textAlign = 'left';
+        } else {
+          ctx.fillStyle = '#0f172a';
+          ctx.font = cIdx === 2 ? 'bold 12px sans-serif' : '12px sans-serif';
+          const clipped = txt.length > 36 ? txt.slice(0, 34) + '…' : txt;
+          ctx.fillText(clipped, xPos + 8, ry + 27);
+        }
         xPos += cols[cIdx];
       });
       ry += rowH;
@@ -744,23 +760,34 @@ window.ctpActions = {
     ctx.fillRect(tableX, ry, tableW, 38);
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 13px monospace';
-    ctx.fillText('TỔNG CỘNG:', tableX + tableW - cols[5] - 110, ry + 24);
+    ctx.textAlign = 'right';
+    ctx.fillText('TỔNG CỘNG:', tableX + tableW - cols[5] - 12, ry + 24);
     ctx.fillStyle = '#34d399';
-    ctx.fillText(Number(bm.total || 0).toLocaleString('vi-VN') + 'đ', tableX + tableW - cols[5] + 8, ry + 24);
+    ctx.fillText(Number(bm.total || 0).toLocaleString('vi-VN') + 'đ', tableX + tableW - 10, ry + 24);
+    ctx.textAlign = 'left';
 
     if (qrData) {
       ry += 52;
       ctx.fillStyle = '#ecfdf5';
-      ctx.fillRect(tableX, ry, tableW, 108);
+      ctx.fillRect(tableX, ry, tableW, 110);
       ctx.strokeStyle = '#a7f3d0';
-      ctx.strokeRect(tableX, ry, tableW, 108);
+      ctx.strokeRect(tableX, ry, tableW, 110);
       ctx.fillStyle = '#064e3b';
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(`QUÉT MÃ VIETQR THANH TOÁN CTP`, tableX + 14, ry + 24);
+      ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN CTP', tableX + 16, ry + 24);
       ctx.font = '12px sans-serif';
-      ctx.fillText(`Ngân hàng: ${qrData.bankLabel}   •   STK: ${qrData.acc}`, tableX + 14, ry + 48);
-      ctx.fillText(`Chủ TK: ${qrData.holder}`, tableX + 14, ry + 72);
-      ctx.drawImage(qrData.img, tableX + tableW - 102, ry + 9, 90, 90);
+      ctx.fillText(`Ngân hàng: ${qrData.bankLabel}`, tableX + 16, ry + 48);
+      ctx.fillText(`Chủ TK: ${qrData.holder}`, tableX + 16, ry + 70);
+      ctx.fillText(`Số TK: ${qrData.acc}`, tableX + 16, ry + 92);
+      if (qrData.img) {
+        ctx.drawImage(qrData.img, tableX + tableW - 104, ry + 10, 90, 90);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(tableX + tableW - 104, ry + 10, 90, 90);
+        ctx.fillStyle = '#065f46';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText('VIETQR', tableX + tableW - 76, ry + 58);
+      }
     }
 
     const link = document.createElement('a');
@@ -774,7 +801,7 @@ window.ctpActions = {
     if (!bm) return;
     const lines = [
       `BẢNG CTP THÁNG ${bm.month}/${state.selectedYear} - ${bm.memberName.toUpperCase()}`,
-      `Chủ show: ${bm.ownerTitle}`,
+      `Người phụ trách: ${bm.ownerTitle}`,
       '-----------------------'
     ];
     bm.rows.forEach(r => {
@@ -950,7 +977,7 @@ window.ownerActions = {
     renderApp();
     showToast('💾 Đã lưu & đồng bộ thông tin Công nợ + CTP!');
   },
-openClientDebtBill() {
+  openClientDebtBill() {
     const uid = state.currentUserId;
     const curMem = getMember(uid);
     const prof = state.memberProfiles?.[uid] || {};
@@ -1005,17 +1032,6 @@ openClientDebtBill() {
     const rec = ensureOwnerFinRecord(showId);
     rec.debtContent = val;
     saveOwnerFinanceState();
-  },
-    });
-
-    state.clientDebtBillModal = {
-      periodLabel: state.ownerAllMonths ? `Cả năm ${state.selectedYear}` : `Tháng ${state.ownerMonth}/${state.selectedYear}`,
-      ownerName: ownerFullName,
-      clientFilter: 'all',
-      clients: Object.values(clientCounts),
-      rows
-    };
-    renderApp();
   },
   setClientDebtFilter(clientKey) {
     if (!state.clientDebtBillModal) return;
@@ -1181,12 +1197,20 @@ openClientDebtBill() {
       ctx.strokeRect(tableX, ry, tableW, 110);
       ctx.fillStyle = '#0f172a';
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('💳 QUÉT MÃ VIETQR THANH TOÁN', tableX + 16, ry + 24);
+      ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN', tableX + 16, ry + 24);
       ctx.font = '12px sans-serif';
       ctx.fillText(`Ngân hàng: ${qrData.bankLabel}`, tableX + 16, ry + 48);
       ctx.fillText(`Chủ TK: ${qrData.holder}`, tableX + 16, ry + 70);
       ctx.fillText(`Số TK: ${qrData.acc}`, tableX + 16, ry + 92);
-      ctx.drawImage(qrData.img, tableX + tableW - 104, ry + 10, 90, 90);
+      if (qrData.img) {
+        ctx.drawImage(qrData.img, tableX + tableW - 104, ry + 10, 90, 90);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(tableX + tableW - 104, ry + 10, 90, 90);
+        ctx.fillStyle = '#475569';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText('VIETQR', tableX + tableW - 76, ry + 58);
+      }
     }
 
     const a = document.createElement('a');
@@ -1210,7 +1234,7 @@ openClientDebtBill() {
       const isOwner = sh.ownerId === uid;
       if (isOwner) {
         const m = calculateOwnerShowMetrics(sh);
-        return `<tr><td>${i + 1}</td><td>${sh.startDate}</td><td>${sh.location}</td><td>Chủ show</td><td>${m.clientPrice}</td><td>${m.totalExpense}</td><td>${m.netProfit}</td></tr>`;
+        return `<tr><td>${i + 1}</td><td>${sh.startDate}</td><td>${sh.location}</td><td>Người phụ trách</td><td>${m.clientPrice}</td><td>${m.totalExpense}</td><td>${m.netProfit}</td></tr>`;
       }
       const cm = calculateCrewShowMetrics(sh);
       return `<tr><td>${i + 1}</td><td>${sh.startDate}</td><td>${sh.location}</td><td>CTP</td><td>${cm.grossCtp}</td><td>${cm.selfExpense}</td><td>${cm.netPocket}</td></tr>`;
