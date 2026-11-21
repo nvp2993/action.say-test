@@ -143,24 +143,24 @@ export function renderHeaderHtml(totalAlerts = 0) {
 
 export function renderBottomNavHtml() {
   return `
-    <nav style="padding-bottom: max(10px, env(safe-area-inset-bottom));" class="bg-white border-t border-slate-200 px-1.5 pt-1.5 shrink-0 z-30 flex items-center justify-between gap-1">
-      <button type="button" onclick="appActions.setTab('shows')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
-        <i class="fa-solid fa-table-list text-xs"></i><span class="text-[9.5px] leading-tight mt-0.5">SHOW</span>
+    <nav style="padding-bottom: max(10px, env(safe-area-inset-bottom));" class="bg-white border-t border-slate-200 px-1 pt-1.5 shrink-0 z-30 flex items-center justify-between gap-0.5">
+      <button type="button" onclick="appActions.setTab('shows')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-table-list text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">SHOW</span>
       </button>
-      <button type="button" onclick="appActions.setTab('matrix')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
-        <i class="fa-solid fa-calendar-days text-xs"></i><span class="text-[9.5px] leading-tight mt-0.5">CÔNG TÁC T${state.selectedMonth}</span>
+      <button type="button" onclick="appActions.setTab('matrix')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-calendar-days text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">CÔNG TÁC T${state.selectedMonth}</span>
       </button>
-      <button type="button" data-action="open-add-show" onclick="appActions.openAddModal()" class="active:scale-95 text-white font-black px-2.5 py-1.5 rounded-full shadow-sm flex items-center gap-1 text-[10.5px] whitespace-nowrap shrink-0">
-        <i class="fa-solid fa-bolt text-[10px]"></i><span>NỔ SHOW</span>
+      <button type="button" data-action="open-add-show" onclick="appActions.openAddModal()" class="active:scale-95 text-white font-black px-2 py-1 rounded-full shadow-sm flex items-center gap-1 text-[9.5px] whitespace-nowrap shrink-0">
+        <i class="fa-solid fa-bolt text-[9px]"></i><span>NỔ SHOW</span>
       </button>
-      <button type="button" onclick="appActions.setTab('free_finder')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
-        <i class="fa-solid fa-user-check text-xs"></i><span class="text-[9.5px] leading-tight mt-0.5">NS</span>
+      <button type="button" onclick="appActions.setTab('free_finder')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-user-check text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">NS</span>
       </button>
-      <button type="button" onclick="appActions.setTab('ctp')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
-        <i class="fa-solid fa-file-invoice-dollar text-xs"></i><span class="text-[9.5px] leading-tight mt-0.5">CTP</span>
+      <button type="button" onclick="appActions.setTab('ctp')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-file-invoice-dollar text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">CTP</span>
       </button>
-      <button type="button" onclick="appActions.setTab('owner_stats')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
-        <i class="fa-solid fa-wallet text-xs ${state.activeTab === 'owner_stats' ? 'text-amber-500' : ''}"></i><span class="text-[9.5px] leading-tight mt-0.5">CÔNG NỢ</span>
+      <button type="button" onclick="appActions.setTab('owner_stats')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-wallet text-[11px] ${state.activeTab === 'owner_stats' ? 'text-amber-500' : ''}"></i><span class="text-[8px] tracking-tighter leading-none mt-1">CÔNG NỢ</span>
       </button>
     </nav>
   `;
