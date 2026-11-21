@@ -950,9 +950,12 @@ window.ownerActions = {
     renderApp();
     showToast('💾 Đã lưu & đồng bộ thông tin Công nợ + CTP!');
   },
-  openClientDebtBill() {
+openClientDebtBill() {
     const uid = state.currentUserId;
     const curMem = getMember(uid);
+    const prof = state.memberProfiles?.[uid] || {};
+    const ownerFullName = (state.officialLegalNames?.[uid] || prof.fullName || curMem.name || '').trim().toUpperCase();
+
     const ownedShows = (state.shows || []).filter(sh => {
       if (!sh || sh.isCancelled || sh.isHold || !sh.startDate) return false;
       if (sh.ownerId !== uid) return false;
@@ -971,10 +974,14 @@ window.ownerActions = {
       clientCounts[clientKey] = clientCounts[clientKey] || { key: clientKey, label: clientLabel, count: 0 };
       clientCounts[clientKey].count++;
 
+      const defaultContent = m.rec.debtContent || m.rec.note || '';
+
       return {
+        showId: sh.id,
         stt: i + 1,
         dateLabel: formatDayMonth(sh.startDate),
         title: `${sh.location}${rawPartner ? ` (${rawPartner})` : ''}`,
+        content: defaultContent,
         clientKey,
         clientPrice: m.clientPrice,
         depositPaid: m.depositPaid,
@@ -984,7 +991,26 @@ window.ownerActions = {
 
     state.clientDebtBillModal = {
       periodLabel: state.ownerAllMonths ? `Cả năm ${state.selectedYear}` : `Tháng ${state.ownerMonth}/${state.selectedYear}`,
-      ownerName: curMem.name,
+      ownerName: ownerFullName,
+      clientFilter: 'all',
+      clients: Object.values(clientCounts),
+      rows
+    };
+    renderApp();
+  },
+  updateClientDebtRowContent(showId, val) {
+    if (!state.clientDebtBillModal) return;
+    const row = (state.clientDebtBillModal.rows || []).find(r => r.showId === showId);
+    if (row) row.content = val;
+    const rec = ensureOwnerFinRecord(showId);
+    rec.debtContent = val;
+    saveOwnerFinanceState();
+  },
+    });
+
+    state.clientDebtBillModal = {
+      periodLabel: state.ownerAllMonths ? `Cả năm ${state.selectedYear}` : `Tháng ${state.ownerMonth}/${state.selectedYear}`,
+      ownerName: ownerFullName,
       clientFilter: 'all',
       clients: Object.values(clientCounts),
       rows
@@ -1006,7 +1032,7 @@ window.ownerActions = {
     const clientFilter = dbm.clientFilter || 'all';
     const visibleRows = clientFilter === 'all' ? dbm.rows : dbm.rows.filter(r => r.clientKey === clientFilter);
     const chosenObj = (dbm.clients || []).find(c => c.key === clientFilter);
-    const headerClient = clientFilter === 'all' ? 'Tất cả khách' : (chosenObj?.label || clientFilter);
+    const headerClient = clientFilter === 'all' ? 'Tất cả khách hàng' : (chosenObj?.label || clientFilter);
 
     const totalPrice = visibleRows.reduce((s, r) => s + (Number(r.clientPrice) || 0), 0);
     const totalPaid = visibleRows.reduce((s, r) => s + (Number(r.depositPaid) || 0), 0);
@@ -1014,18 +1040,19 @@ window.ownerActions = {
 
     const lines = [
       `BẢNG CÔNG NỢ KHÁCH HÀNG (${dbm.periodLabel}) - ${headerClient.toUpperCase()}`,
-      `Chủ show: ${dbm.ownerName.toUpperCase()}`,
+      `Người phụ trách: ${dbm.ownerName.toUpperCase()}`,
       '-----------------------'
     ];
     visibleRows.forEach((r, idx) => {
-      lines.push(`${idx + 1}. [${r.dateLabel}] ${r.title}: Báo ${Number(r.clientPrice || 0).toLocaleString('vi-VN')}đ | Đã trả ${Number(r.depositPaid || 0).toLocaleString('vi-VN')}đ | Còn nợ ${Number(r.remaining || 0).toLocaleString('vi-VN')}đ`);
+      const desc = r.content ? ` [${r.content}]` : '';
+      lines.push(`${idx + 1}. [${r.dateLabel}] ${r.title}${desc}: Báo ${Number(r.clientPrice || 0).toLocaleString('vi-VN')}đ | Đã trả ${Number(r.depositPaid || 0).toLocaleString('vi-VN')}đ | Còn nợ ${Number(r.remaining || 0).toLocaleString('vi-VN')}đ`);
     });
     lines.push('-----------------------');
     lines.push(`TỔNG BÁO GIÁ: ${totalPrice.toLocaleString('vi-VN')}đ`);
     lines.push(`ĐÃ THU: ${totalPaid.toLocaleString('vi-VN')}đ`);
     lines.push(`CÒN NỢ: ${totalRemaining.toLocaleString('vi-VN')}đ`);
     navigator.clipboard?.writeText(lines.join('\n'))
-      .then(() => showToast('📋 Đã copy bảng công nợ gửi khách!'))
+      .then(() => showToast('📋 Đã copy bảng công nợ gửi khách hàng!'))
       .catch(() => showToast('Không thể copy, vui lòng thử lại!', 'error'));
   },
   async captureClientDebtBill() {
@@ -1034,17 +1061,20 @@ window.ownerActions = {
     const clientFilter = dbm.clientFilter || 'all';
     const visibleRows = clientFilter === 'all' ? dbm.rows : dbm.rows.filter(r => r.clientKey === clientFilter);
     const chosenObj = (dbm.clients || []).find(c => c.key === clientFilter);
-    const headerClient = clientFilter === 'all' ? 'Tất cả khách' : (chosenObj?.label || clientFilter);
+    const headerClient = clientFilter === 'all' ? 'Tất cả khách hàng' : (chosenObj?.label || clientFilter);
+
+    const totalPrice = visibleRows.reduce((s, r) => s + (Number(r.clientPrice) || 0), 0);
+    const totalPaid = visibleRows.reduce((s, r) => s + (Number(r.depositPaid) || 0), 0);
     const totalRemaining = visibleRows.reduce((s, r) => s + (Number(r.remaining) || 0), 0);
 
     const prof = state.memberProfiles?.[state.currentUserId] || {};
-    const ownerFullName = (prof.fullName || dbm.ownerName || '').trim();
+    const ownerFullName = (state.officialLegalNames?.[state.currentUserId] || prof.fullName || dbm.ownerName || '').trim().toUpperCase();
     const qrData = await loadQrBitmapIfAvailable(prof, ownerFullName);
 
     const canvas = document.createElement('canvas');
-    const W = 900;
-    const rowH = 42;
-    const H = 150 + Math.max(1, visibleRows.length) * rowH + (qrData ? 140 : 24);
+    const W = 1080;
+    const rowH = 44;
+    const H = 195 + Math.max(1, visibleRows.length) * rowH + (qrData ? 144 : 28);
     canvas.width = W * 2;
     canvas.height = H * 2;
     const ctx = canvas.getContext('2d');
@@ -1054,47 +1084,116 @@ window.ownerActions = {
     ctx.fillRect(0, 0, W, H);
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.fillText(`BẢNG CÔNG NỢ KHÁCH HÀNG (${dbm.periodLabel})`, 24, 38);
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(`BẢNG CÔNG NỢ KHÁCH HÀNG — ${dbm.periodLabel}`, 28, 42);
     ctx.fillStyle = '#475569';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(`Khách: ${headerClient}   •   Chủ show: ${dbm.ownerName}   •   Còn nợ: ${totalRemaining.toLocaleString('vi-VN')}đ`, 24, 60);
+    ctx.font = '12.5px sans-serif';
+    ctx.fillText(`Khách hàng: ${headerClient}   •   Người phụ trách: ${ownerFullName}   •   Còn thiếu: ${totalRemaining.toLocaleString('vi-VN')}đ`, 28, 66);
 
-    let ry = 82;
+    const tableX = 28, tableY = 86, tableW = W - 56;
+    const cols = [48, 72, 210, 250, 148, 128, tableW - 48 - 72 - 210 - 250 - 148 - 128];
+    const headers = ['STT', 'NGÀY', 'SHOW / KHÁCH HÀNG', 'NỘI DUNG', 'BÁO GIÁ', 'ĐÃ TRẢ', 'CÒN NỢ'];
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(tableX, tableY, tableW, 34);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10.5px sans-serif';
+    let cx = tableX;
+    headers.forEach((h, idx) => {
+      if (idx >= 4) {
+        ctx.textAlign = 'right';
+        ctx.fillText(h, cx + cols[idx] - 10, tableY + 21);
+        ctx.textAlign = 'left';
+      } else {
+        ctx.fillText(h, cx + 8, tableY + 21);
+      }
+      cx += cols[idx];
+    });
+
+    let ry = tableY + 34;
     visibleRows.forEach((r, i) => {
       ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-      ctx.fillRect(24, ry, W - 48, rowH);
+      ctx.fillRect(tableX, ry, tableW, rowH);
       ctx.strokeStyle = '#e2e8f0';
-      ctx.strokeRect(24, ry, W - 48, rowH);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.fillText(`${i + 1}. [${r.dateLabel}] ${r.title}`, 32, ry + 25);
-      ctx.fillStyle = '#dc2626';
-      ctx.font = 'bold 11px monospace';
-      ctx.fillText(`Nợ: ${Number(r.remaining || 0).toLocaleString('vi-VN')}đ`, W - 165, ry + 25);
+      ctx.strokeRect(tableX, ry, tableW, rowH);
+
+      const vals = [
+        String(i + 1),
+        String(r.dateLabel || ''),
+        String(r.title || ''),
+        String(r.content || '-'),
+        Number(r.clientPrice || 0).toLocaleString('vi-VN') + 'đ',
+        Number(r.depositPaid || 0).toLocaleString('vi-VN') + 'đ',
+        Number(r.remaining || 0).toLocaleString('vi-VN') + 'đ'
+      ];
+
+      let xPos = tableX;
+      vals.forEach((txt, cIdx) => {
+        if (cIdx === 6) {
+          ctx.fillStyle = '#dc2626';
+          ctx.font = 'bold 11.5px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
+          ctx.textAlign = 'left';
+        } else if (cIdx === 5) {
+          ctx.fillStyle = '#047857';
+          ctx.font = 'bold 11.5px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
+          ctx.textAlign = 'left';
+        } else if (cIdx === 4) {
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 11.5px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
+          ctx.textAlign = 'left';
+        } else {
+          ctx.fillStyle = cIdx === 2 ? '#0f172a' : '#334155';
+          ctx.font = cIdx === 2 ? 'bold 11.5px sans-serif' : '11.5px sans-serif';
+          const maxLen = cIdx === 3 ? 38 : cIdx === 2 ? 32 : 16;
+          const clipped = txt.length > maxLen ? txt.slice(0, maxLen - 1) + '…' : txt;
+          ctx.fillText(clipped, xPos + 8, ry + 27);
+        }
+        xPos += cols[cIdx];
+      });
       ry += rowH;
     });
 
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(tableX, ry, tableW, 38);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('TỔNG CỘNG:', tableX + cols[0] + cols[1] + cols[2] + cols[3] - 12, ry + 24);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(totalPrice.toLocaleString('vi-VN') + 'đ', tableX + cols[0] + cols[1] + cols[2] + cols[3] + cols[4] - 10, ry + 24);
+    ctx.fillStyle = '#34d399';
+    ctx.fillText(totalPaid.toLocaleString('vi-VN') + 'đ', tableX + cols[0] + cols[1] + cols[2] + cols[3] + cols[4] + cols[5] - 10, ry + 24);
+    ctx.fillStyle = '#fb7185';
+    ctx.fillText(totalRemaining.toLocaleString('vi-VN') + 'đ', tableX + tableW - 10, ry + 24);
+    ctx.textAlign = 'left';
+
     if (qrData) {
-      ry += 16;
+      ry += 52;
       ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(24, ry, W - 48, 108);
+      ctx.fillRect(tableX, ry, tableW, 110);
       ctx.strokeStyle = '#cbd5e1';
-      ctx.strokeRect(24, ry, W - 48, 108);
+      ctx.strokeRect(tableX, ry, tableW, 110);
       ctx.fillStyle = '#0f172a';
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(`THÔNG TIN THANH TOÁN VIETQR`, 38, ry + 24);
+      ctx.fillText('💳 QUÉT MÃ VIETQR THANH TOÁN', tableX + 16, ry + 24);
       ctx.font = '12px sans-serif';
-      ctx.fillText(`Ngân hàng: ${qrData.bankLabel}   •   STK: ${qrData.acc}`, 38, ry + 48);
-      ctx.fillText(`Chủ TK: ${qrData.holder}`, 38, ry + 72);
-      ctx.drawImage(qrData.img, W - 126, ry + 9, 90, 90);
+      ctx.fillText(`Ngân hàng: ${qrData.bankLabel}`, tableX + 16, ry + 48);
+      ctx.fillText(`Chủ TK: ${qrData.holder}`, tableX + 16, ry + 70);
+      ctx.fillText(`Số TK: ${qrData.acc}`, tableX + 16, ry + 92);
+      ctx.drawImage(qrData.img, tableX + tableW - 104, ry + 10, 90, 90);
     }
 
     const a = document.createElement('a');
-    a.download = `CongNo_Khach_${state.selectedYear}.png`;
+    a.download = `CongNo_KhachHang_${state.selectedYear}.png`;
     a.href = canvas.toDataURL('image/png');
     a.click();
-    showToast('✅ Đã xuất ảnh bảng công nợ thành công!');
+    showToast('✅ Đã xuất ảnh bảng công nợ khách hàng!');
   },
   exportOwnerExcel() {
     const uid = state.currentUserId;
