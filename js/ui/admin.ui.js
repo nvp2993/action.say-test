@@ -509,9 +509,10 @@ export function renderAdminPortalHtml() {
             <div class="font-black text-sm uppercase tracking-tight text-slate-900">Studio Control</div>
             <div class="text-[10.5px] text-slate-400 font-medium truncate">${state.shows.length} Shows • Action Media x Say Studios</div>
           </div>
-          <div class="flex gap-1.5 shrink-0">
-            <button type="button" onclick="adminProActions.exportFullJsonBackup()" class="px-3 py-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[11px]">Backup</button>
-            <button type="button" onclick="appActions.exitBackendPortal()" class="px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[11px]">← Về App</button>
+          <div class="flex gap-1.5 shrink-0 flex-wrap justify-end">
+            <button type="button" onclick="adminProActions.exportFullJsonBackup()" class="px-2.5 py-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[10.5px]">Backup</button>
+            <button type="button" onclick="appActions.logoutAdminToNormalUser()" class="px-2.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-[10.5px]">Đăng xuất Admin</button>
+            <button type="button" onclick="appActions.exitBackendPortal()" class="px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[10.5px]">← Về App</button>
           </div>
         </div>
 
@@ -521,7 +522,6 @@ export function renderAdminPortalHtml() {
           `).join('')}
         </div>
       </header>
-
       <div class="flex-1 overflow-y-auto custom-scroll p-3 sm:p-4 max-w-5xl w-full mx-auto text-xs pb-16">
         ${bodyHtml}
       </div>
