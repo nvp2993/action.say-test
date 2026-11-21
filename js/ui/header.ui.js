@@ -83,8 +83,8 @@ export function renderHeaderHtml(totalAlerts = 0) {
   const alertCount = totalAlerts > 0 ? totalAlerts : activeHolds.length;
 
   return `
-    <header style="padding-top: max(18px, env(safe-area-inset-top));" class="bg-slate-900 text-white px-2.5 pb-2 shrink-0 border-b border-slate-800 z-30 space-y-2">
-      <div class="flex items-center justify-between gap-1.5">
+    <header style="padding-top: max(16px, env(safe-area-inset-top));" class="bg-slate-900 text-white px-2.5 pb-2 shrink-0 border-b border-slate-800 z-30 space-y-2">
+      <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 min-w-0">
           <div onclick="appActions.tapLogoSecret()" class="w-8 h-8 rounded-lg bg-black overflow-hidden flex items-center justify-center shrink-0 shadow-sm border border-slate-700 cursor-pointer active:scale-90">
             <img src="${escapeHtml(logoSrc)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Action x Say" class="w-full h-full object-cover" />
@@ -101,9 +101,9 @@ export function renderHeaderHtml(totalAlerts = 0) {
           </div>
         </div>
 
-        <div class="flex items-center gap-1 shrink-0">
+        <div class="flex items-center gap-2 shrink-0">
           ${state.isAdminMode ? `
-            <button type="button" onclick="appActions.enterBackendPortal()" class="px-2 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[9.5px] font-black flex items-center gap-1">
+            <button type="button" onclick="appActions.enterBackendPortal()" class="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black flex items-center gap-1">
               <i class="fa-solid fa-shield-halved text-amber-600"></i><span>ADMIN</span>
             </button>
           ` : ''}
@@ -111,18 +111,11 @@ export function renderHeaderHtml(totalAlerts = 0) {
             <i class="fa-solid fa-bell text-xs"></i>
             ${alertCount > 0 ? `<span id="as-header-bell-badge" style="color: #ffffff !important; background-color: #e11d48 !important;" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-black flex items-center justify-center leading-none shadow">${alertCount}</span>` : ''}
           </button>
-          <button type="button" onclick="appActions.openGuideModal()" title="Hướng dẫn cài App iPhone" class="w-7 h-7 rounded-lg flex items-center justify-center border text-xs bg-slate-800 text-slate-300 border-slate-700">
-            <i class="fa-solid fa-mobile-screen-button"></i>
-          </button>
-          <button type="button" onclick="appActions.toggleZenFullscreen()" class="w-7 h-7 rounded-lg flex items-center justify-center border text-xs bg-slate-800 text-slate-300 border-slate-700">
-            <i class="fa-solid ${state.zenFullscreen ? 'fa-compress' : 'fa-expand'}"></i>
-          </button>
-          <button type="button" onclick="appActions.openCrewPassModal()" title="Thẻ VIP & Hồ sơ" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-0.5 pr-1.5">
+          <button type="button" onclick="appActions.openCrewPassModal()" title="Thẻ VIP & Hồ sơ" class="flex items-center bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-0.5">
             ${avatarSrc
-              ? `<img src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(curMem.name)}" class="w-6 h-6 rounded-full object-cover border border-amber-300/80 shrink-0" />`
-              : `<span style="background-color:${curMem.bg};color:${curMem.text}" class="w-6 h-6 rounded-full text-[9px] font-black uppercase flex items-center justify-center shrink-0">${escapeHtml((curMem.shortLabel || curMem.name || 'AS').slice(0, 2))}</span>`
+              ? `<img src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(curMem.name)}" class="w-7 h-7 rounded-full object-cover border border-amber-300/80 shrink-0" />`
+              : `<span style="background-color:${curMem.bg};color:${curMem.text}" class="w-7 h-7 rounded-full text-[10px] font-black uppercase flex items-center justify-center shrink-0">${escapeHtml((curMem.shortLabel || curMem.name || 'AS').slice(0, 2))}</span>`
             }
-            <i class="fa-solid fa-key text-[9px] text-amber-300"></i>
           </button>
         </div>
       </div>
@@ -149,24 +142,24 @@ export function renderHeaderHtml(totalAlerts = 0) {
 
 export function renderBottomNavHtml() {
   return `
-    <nav style="padding-bottom: max(4px, env(safe-area-inset-bottom));" class="bg-white border-t border-slate-200 px-1 pt-1 shrink-0 z-30 flex items-center justify-around">
-      <button type="button" onclick="appActions.setTab('shows')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
-        <i class="fa-solid fa-table-list text-sm"></i><span class="text-[10px] mt-0.5">Lịch Show</span>
+    <nav style="padding-bottom: max(10px, env(safe-area-inset-bottom));" class="bg-white border-t border-slate-200 px-1.5 pt-1.5 shrink-0 z-30 flex items-center justify-between gap-1">
+      <button type="button" onclick="appActions.setTab('shows')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-table-list text-xs"></i><span class="text-[9.5px] leading-tight mt-0.5 truncate">Lịch Show</span>
       </button>
-      <button type="button" onclick="appActions.setTab('matrix')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
-        <i class="fa-solid fa-calendar-days text-sm"></i><span class="text-[10px] mt-0.5">Công Tác T${state.selectedMonth}</span>
+      <button type="button" onclick="appActions.setTab('matrix')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-calendar-days text-xs"></i><span class="text-[9.5px] leading-tight mt-0.5 truncate">Công tác T${state.selectedMonth}</span>
       </button>
-      <button type="button" data-action="open-add-show" onclick="appActions.openAddModal()" class="active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1 text-xs shrink-0">
-        <i class="fa-solid fa-bolt"></i><span>NỔ SHOW</span>
+      <button type="button" data-action="open-add-show" onclick="appActions.openAddModal()" class="active:scale-95 text-white font-black px-2.5 py-1.5 rounded-full shadow-sm flex items-center gap-1 text-[10.5px] whitespace-nowrap shrink-0">
+        <i class="fa-solid fa-bolt text-[10px]"></i><span>NỔ SHOW</span>
       </button>
-      <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
-        <i class="fa-solid fa-user-check text-sm"></i><span class="text-[10px] mt-0.5">Người Rảnh</span>
+      <button type="button" onclick="appActions.setTab('free_finder')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-user-check text-xs"></i><span class="text-[9.5px] leading-tight mt-0.5 truncate">Người rảnh</span>
       </button>
-      <button type="button" onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
-        <i class="fa-solid fa-file-invoice-dollar text-sm"></i><span class="text-[10px] mt-0.5">Tính CTP</span>
+      <button type="button" onclick="appActions.setTab('ctp')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-file-invoice-dollar text-xs"></i><span class="text-[9.5px] leading-tight mt-0.5 truncate">Tính CTP</span>
       </button>
-      <button type="button" onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-0.5 px-2 rounded-xl ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-400 font-medium'}">
-        <i class="fa-solid fa-wallet text-sm ${state.activeTab === 'owner_stats' ? 'text-amber-500' : ''}"></i><span class="text-[10px] mt-0.5">Công Nợ</span>
+      <button type="button" onclick="appActions.setTab('owner_stats')" class="flex-1 min-w-0 flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <i class="fa-solid fa-wallet text-xs ${state.activeTab === 'owner_stats' ? 'text-amber-500' : ''}"></i><span class="text-[9.5px] leading-tight mt-0.5 truncate">Công nợ</span>
       </button>
     </nav>
   `;
