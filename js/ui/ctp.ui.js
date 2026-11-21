@@ -44,7 +44,7 @@ export function renderCtpTabHtml() {
           <div class="text-center py-12 bg-white rounded-3xl border border-slate-200 mx-auto max-w-sm space-y-3 p-4">
             <div class="text-3xl">📭</div>
             <div class="text-slate-800 font-bold text-xs">Chưa có show nào trong tháng T${state.ctpMonth}</div>
-            <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-full text-xs font-extrabold">+ Tự note thêm show ngoài</button>
+            <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-full text-xs font-extrabold">Tự note thêm show ngoài</button>
           </div>
         ` : filteredShows.map((sh, idx) => {
           const item = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
@@ -88,8 +88,8 @@ export function renderCtpTabHtml() {
                   const val = checked ? item.tasks[t.key] : t.def;
                   return `
                     <div class="inline-flex flex-col items-start">
-                      <button type="button" onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')" class="px-2.5 py-1.5 rounded-full text-[10px] font-extrabold border ${checked ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200'}">
-                        ${t.label} ${checked ? '✓' : '+'}
+                      <button type="button" onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')" class="px-3 py-1.5 rounded-full text-[10.5px] font-extrabold border transition ${checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200'}">
+                        ${t.label}
                       </button>
                       ${checked ? `<input type="tel" inputmode="numeric" value="${Number(val).toLocaleString('vi-VN')}" oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)" class="mt-1 w-24 px-2 py-0.5 bg-indigo-50 border border-indigo-300 rounded-lg text-[10px] font-mono font-black text-right" />` : ''}
                     </div>
@@ -100,7 +100,7 @@ export function renderCtpTabHtml() {
               <div class="space-y-2 pt-1 border-t border-slate-100">
                 <div class="flex items-center justify-between">
                   <span class="text-[10px] font-black text-slate-400 uppercase">Phát Sinh:</span>
-                  <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-slate-100 text-indigo-600 rounded-xl text-[10px] font-black">+ Thêm</button>
+                  <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-slate-100 text-indigo-600 rounded-xl text-[10px] font-black">Thêm phí</button>
                 </div>
                 ${(item.extras || []).map((ex, exIdx) => `
                   <div class="flex items-center gap-1.5">
@@ -116,7 +116,7 @@ export function renderCtpTabHtml() {
 
         ${filteredShows.length > 0 ? `
           <div class="space-y-2 pb-2">
-            <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="w-full py-3 rounded-3xl border-2 border-dashed border-slate-300 bg-white text-slate-700 font-extrabold text-xs">+ Tự note thêm Show ngoài lịch</button>
+            <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="w-full py-3 rounded-3xl border-2 border-dashed border-slate-300 bg-white text-slate-700 font-extrabold text-xs">Tự note thêm Show ngoài lịch</button>
             <button type="button" onclick="ctpActions.autoFillFromRoles()" class="w-full py-2.5 rounded-3xl bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs">⚡ Tự điền nhanh CTP theo vai trò đã gắn</button>
           </div>
         ` : ''}
