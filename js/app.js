@@ -14,6 +14,7 @@ import { renderCrewBoardTabHtml } from './ui/crewBoard.ui.js';
 import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
 import {
+  renderWelcomeSplashHtml,
   renderPinModalHtml,
   renderCrewPassModalHtml,
   renderFormModalHtml,
@@ -25,6 +26,23 @@ import {
   renderClientDebtBillModalHtml
 } from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
+
+const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
+let welcomeSplashTimer = null;
+
+function triggerWelcomeSplash(durationMs = 1500) {
+  if (welcomeSplashTimer) {
+    clearTimeout(welcomeSplashTimer);
+    welcomeSplashTimer = null;
+  }
+  state.welcomeSplashVisible = true;
+  renderApp();
+  welcomeSplashTimer = setTimeout(() => {
+    state.welcomeSplashVisible = false;
+    welcomeSplashTimer = null;
+    renderApp();
+  }, durationMs);
+}
 
 function getBankName(bin) {
   const map = {
@@ -46,13 +64,15 @@ function applyCustomLogoToDom() {
   const customLogo = state.customLogoDataUrl || localStorage.getItem('as_custom_logo_2026') || '';
   if (!customLogo) return;
   state.customLogoDataUrl = customLogo;
-  document.querySelectorAll('img[src*="logo.png"]').forEach(img => {
-    img.src = customLogo;
+  document.querySelectorAll('img[data-brand-logo="true"], img[src*="logo.png"]').forEach(img => {
+    if (img.getAttribute('src') !== customLogo) {
+      img.src = customLogo;
+    }
   });
   const fav = document.getElementById('favicon-link');
   const appleIcon = document.getElementById('apple-touch-icon-link');
-  if (fav) fav.href = customLogo;
-  if (appleIcon) appleIcon.href = customLogo;
+  if (fav && fav.getAttribute('href') !== customLogo) fav.href = customLogo;
+  if (appleIcon && appleIcon.getAttribute('href') !== customLogo) appleIcon.href = customLogo;
 }
 
 function scrollActiveMonthIntoView() {
@@ -118,6 +138,12 @@ function renderApp() {
     return;
   }
 
+  if (state.welcomeSplashVisible) {
+    root.innerHTML = `${renderWelcomeSplashHtml()}${renderToastHtml()}`;
+    applyCustomLogoToDom();
+    return;
+  }
+
   let main = '';
   if (state.activeTab === 'shows') main = renderShowsTabHtml();
   else if (state.activeTab === 'matrix') main = renderMatrixTabHtml();
@@ -160,6 +186,14 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
+  dismissWelcomeSplash() {
+    if (welcomeSplashTimer) {
+      clearTimeout(welcomeSplashTimer);
+      welcomeSplashTimer = null;
+    }
+    state.welcomeSplashVisible = false;
+    renderApp();
+  },
   triggerVipAvatarUpload() {
     document.getElementById('vip-avatar-file-input')?.click();
   },
@@ -192,7 +226,9 @@ window.appActions = {
 
       const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
       savedAvatars[state.currentUserId] = cleanUrl;
-      localStorage.setItem('as_member_avatars_2026', JSON.stringify(savedAvatars));
+      try {
+        localStorage.setItem('as_member_avatars_2026', JSON.stringify(savedAvatars));
+      } catch {}
 
       const cur = state.memberProfiles?.[state.currentUserId] || {};
       await saveMyProfileToCloud(state.currentUserId, {
@@ -224,6 +260,7 @@ window.appActions = {
   },
   async switchMemberFromVipCard() {
     state.crewPassModal = false;
+    state.welcomeSplashVisible = false;
     await logoutCurrentUser();
     state.pinModal = { step: 'select', selectedId: null, pinInput: '', error: '', loading: false };
     renderApp();
@@ -363,13 +400,14 @@ window.appActions = {
       state.pinModal.loading = true; renderApp();
       try {
         await loginMemberWithPin(state.pinModal.selectedId, clean);
+        triggerWelcomeSplash(1500);
         showToast(`Xin chào ${getMember(state.pinModal.selectedId).name}!`);
       } catch (err) {
         state.pinModal.pinInput = ''; state.pinModal.loading = false; state.pinModal.error = err.message; renderApp();
       }
     }
   },
-  async logoutMember() { state.crewPassModal = false; await logoutCurrentUser(); showToast('🔒 Đã đăng xuất!'); },
+  async logoutMember() { state.crewPassModal = false; state.welcomeSplashVisible = false; await logoutCurrentUser(); showToast('🔒 Đã đăng xuất!'); },
   async logoutAdminToNormalUser() {
     state.isAdminMode = false;
     state.isBackendPortal = false;
@@ -1196,7 +1234,9 @@ window.adminProActions = {
         reader.readAsDataURL(file);
       });
       state.customLogoDataUrl = String(dataUrl || '');
-      localStorage.setItem('as_custom_logo_2026', state.customLogoDataUrl);
+      try {
+        localStorage.setItem('as_custom_logo_2026', state.customLogoDataUrl);
+      } catch {}
       await logStudioActivity('Cập nhật Logo Studio mới');
       renderApp();
       showToast('🖼️ Đã đổi Logo thành công!');
@@ -1208,7 +1248,9 @@ window.adminProActions = {
   },
   async resetLogoDefault() {
     state.customLogoDataUrl = '';
-    localStorage.removeItem('as_custom_logo_2026');
+    try {
+      localStorage.removeItem('as_custom_logo_2026');
+    } catch {}
     await logStudioActivity('Khôi phục Logo mặc định');
     renderApp();
     showToast('↩ Đã khôi phục Logo mặc định!');
@@ -1298,14 +1340,25 @@ window.adminProActions = {
     renderApp();
   },
   async toggleLockMonthAdmin(m) {
-    const y = Number(state.adminLockViewYear) || 2026;
-    const key = `${y}-${Number(m)}`;
-    const cur = isYearMonthLocked(y, m);
-    state.lockedMonths[key] = !cur;
-    localStorage.setItem('as_locked_months_2026', JSON.stringify(state.lockedMonths));
-    await pushAdminConfigToCloud();
-    await logStudioActivity(`${!cur ? 'Khóa sổ' : 'Mở khóa'} Tháng ${m}/${y}`);
+    const y = Number(state.adminLockViewYear) || Number(state.selectedYear) || 2026;
+    const monthNum = Number(m);
+    const key = `${y}-${monthNum}`;
+    if (!state.lockedMonths || typeof state.lockedMonths !== 'object') {
+      state.lockedMonths = {};
+    }
+    const nextLocked = !Boolean(state.lockedMonths[key]);
+    state.lockedMonths[key] = nextLocked;
+    try {
+      localStorage.setItem('as_locked_months_2026', JSON.stringify(state.lockedMonths));
+    } catch {}
     renderApp();
+    showToast(nextLocked ? `🔒 Đã khóa sổ Tháng ${monthNum}/${y}` : `🔓 Đã mở khóa Tháng ${monthNum}/${y}`);
+    try {
+      await pushAdminConfigToCloud();
+      await logStudioActivity(`${nextLocked ? 'Khóa sổ' : 'Mở khóa'} Tháng ${monthNum}/${y}`);
+    } catch (err) {
+      showToast(`⚠️ Đã đổi cục bộ, lỗi Cloud: ${err?.message || err}`, 'error');
+    }
   },
   async publishBroadcast() {
     const txt = (document.getElementById('adm-broadcast-inp')?.value || '').trim();
