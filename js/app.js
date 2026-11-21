@@ -1,4 +1,4 @@
-import { state, registerRenderer, triggerRender } from './state/store.js';
+import { state, registerRenderer } from './state/store.js';
 import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin, logoutCurrentUser } from './services/auth.service.js';
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText, cleanupMatchingHoldsForOfficialShow } from './services/show.service.js';
 import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics } from './services/finance.service.js';
@@ -13,7 +13,17 @@ import { renderMatrixTabHtml } from './ui/matrix.ui.js';
 import { renderCrewBoardTabHtml } from './ui/crewBoard.ui.js';
 import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
-import { renderPinModalHtml, renderCrewPassModalHtml, renderFormModalHtml, renderToastHtml, renderCtpCustomShowModalHtml, renderHoldComposerModalHtml, renderHoldBellModalHtml } from './ui/modals.ui.js';
+import {
+  renderPinModalHtml,
+  renderCrewPassModalHtml,
+  renderFormModalHtml,
+  renderToastHtml,
+  renderCtpCustomShowModalHtml,
+  renderHoldComposerModalHtml,
+  renderHoldBellModalHtml,
+  renderCrewManifestModalHtml,
+  renderClientDebtBillModalHtml
+} from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
 
 function getBankName(bin) {
@@ -39,6 +49,17 @@ function applyCustomLogoToDom() {
   document.querySelectorAll('img[src*="logo.png"]').forEach(img => {
     img.src = customLogo;
   });
+  const fav = document.getElementById('favicon-link');
+  const appleIcon = document.getElementById('apple-touch-icon-link');
+  if (fav) fav.href = customLogo;
+  if (appleIcon) appleIcon.href = customLogo;
+}
+
+function scrollActiveMonthIntoView() {
+  const activeBtn = document.querySelector('.as-month-scroller .as-month-btn.active');
+  if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+    activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
 }
 
 function getBellAlertsCount() {
@@ -92,9 +113,12 @@ function renderApp() {
     ${renderCtpCustomShowModalHtml()}
     ${renderHoldComposerModalHtml()}
     ${renderHoldBellModalHtml()}
+    ${renderCrewManifestModalHtml()}
+    ${renderClientDebtBillModalHtml()}
     ${renderToastHtml()}
   `;
   applyCustomLogoToDom();
+  scrollActiveMonthIntoView();
 
   if (prevCtpScroll > 0) {
     const nextCtpScroll = document.getElementById('ctp-shows-scroll-list');
@@ -348,13 +372,25 @@ window.appActions = {
   exportShowToAppleCalendar(id) { exportShowToAppleCalendar(id, getVisiblePartnerText); },
   openCrewManifestModal(id) {
     const sh = state.shows.find(s => s.id === id); if (!sh) return;
+    state.crewManifestShowId = id;
+    renderApp();
+  },
+  closeCrewManifestModal() {
+    state.crewManifestShowId = null;
+    renderApp();
+  },
+  copyCrewManifestText(id) {
+    const sh = state.shows.find(s => s.id === id); if (!sh) return;
     const lines = (sh.memberIds || []).map((mid, i) => {
       const p = state.memberProfiles?.[mid] || {};
       const name = (state.officialLegalNames?.[mid] || p.fullName || getMember(mid).name).toUpperCase();
-      return `${i + 1}. ${name} | CCCD: ${p.cccd || 'Chưa cập nhật'} | SĐT: ${p.phone || '-'}`;
+      return `${i + 1}. ${name} | CCCD: ${p.cccd || 'Chưa cập nhật'} | NS: ${p.dob || '-'} | SĐT: ${p.phone || '-'}`;
+    });
+    (sh.externalCrew || []).forEach((ext, j) => {
+      lines.push(`${(sh.memberIds || []).length + j + 1}. ${String(ext.name || '').toUpperCase()} (Freelancer)`);
     });
     navigator.clipboard?.writeText(lines.join('\n'));
-    showToast('📋 Đã copy Danh sách nhân sự!');
+    showToast('📋 Đã copy Danh sách nhân sự book vé!');
   },
   tapLogoSecret() {
     window._logoTaps = (window._logoTaps || 0) + 1;
@@ -754,6 +790,27 @@ window.ownerActions = {
     this._recalcMemberCost(shId, mid);
     saveOwnerFinanceState();
   },
+  toggleSyncedCtpTask(shId, taskKey) {
+    const sh = findAnyCtpShow(shId);
+    if (!state.ctpItems[shId]) state.ctpItems[shId] = { tasks: {}, extras: [] };
+    if (!state.ctpItems[shId].tasks) state.ctpItems[shId].tasks = {};
+    const cur = state.ctpItems[shId].tasks[taskKey];
+    if (cur !== undefined && cur !== null) {
+      state.ctpItems[shId].tasks[taskKey] = null;
+    } else {
+      state.ctpItems[shId].tasks[taskKey] = getDefaultRateForTask(taskKey, sh);
+    }
+    saveCtpState();
+    renderApp();
+  },
+  handleSyncedCtpTaskInput(shId, taskKey, el) {
+    const num = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+    if (!state.ctpItems[shId]) state.ctpItems[shId] = { tasks: {}, extras: [] };
+    if (!state.ctpItems[shId].tasks) state.ctpItems[shId].tasks = {};
+    state.ctpItems[shId].tasks[taskKey] = num;
+    el.value = num ? num.toLocaleString('vi-VN') : '';
+    saveCtpState();
+  },
   addOwnerExpense(shId) {
     const rec = ensureOwnerFinRecord(shId);
     rec.otherExpenses.push({ name: '', amount: 0 });
@@ -775,10 +832,119 @@ window.ownerActions = {
     renderApp();
   },
   saveShowFinanceNow() {
+    saveCtpState(true);
     saveOwnerFinanceState(true);
     state.ownerExpandedShowId = null;
     renderApp();
-    showToast('💾 Đã lưu thông tin Công nợ!');
+    showToast('💾 Đã lưu & đồng bộ thông tin Công nợ + CTP!');
+  },
+  openClientDebtBill() {
+    const uid = state.currentUserId;
+    const curMem = getMember(uid);
+    const ownedShows = (state.shows || []).filter(sh => {
+      if (!sh || sh.isCancelled || sh.isHold || !sh.startDate) return false;
+      if (sh.ownerId !== uid) return false;
+      const [y, m] = sh.startDate.split('-').map(Number);
+      if (y !== state.selectedYear) return false;
+      if (!state.ownerAllMonths && m !== state.ownerMonth) return false;
+      return true;
+    }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+
+    let totalPrice = 0, totalPaid = 0, totalRemaining = 0;
+    const rows = ownedShows.map((sh, i) => {
+      const m = calculateOwnerShowMetrics(sh);
+      const partner = getVisiblePartnerText(sh);
+      totalPrice += m.clientPrice;
+      totalPaid += m.depositPaid;
+      totalRemaining += m.remainingClientDebt;
+      return {
+        stt: i + 1,
+        dateLabel: formatDayMonth(sh.startDate),
+        title: `${sh.location}${partner ? ` (${partner})` : ''}`,
+        clientPrice: m.clientPrice,
+        depositPaid: m.depositPaid,
+        remaining: m.remainingClientDebt
+      };
+    });
+
+    state.clientDebtBillModal = {
+      periodLabel: state.ownerAllMonths ? `Cả năm ${state.selectedYear}` : `Tháng ${state.ownerMonth}/${state.selectedYear}`,
+      ownerName: curMem.name,
+      rows,
+      totalPrice,
+      totalPaid,
+      totalRemaining
+    };
+    renderApp();
+  },
+  closeClientDebtBill() {
+    state.clientDebtBillModal = null;
+    renderApp();
+  },
+  copyClientDebtText() {
+    const dbm = state.clientDebtBillModal;
+    if (!dbm) return;
+    const lines = [
+      `BẢNG CÔNG NỢ KHÁCH HÀNG (${dbm.periodLabel}) - ${dbm.ownerName.toUpperCase()}`,
+      '-----------------------'
+    ];
+    dbm.rows.forEach(r => {
+      lines.push(`${r.stt}. [${r.dateLabel}] ${r.title}: Báo ${Number(r.clientPrice || 0).toLocaleString('vi-VN')}đ | Đã trả ${Number(r.depositPaid || 0).toLocaleString('vi-VN')}đ | Còn nợ ${Number(r.remaining || 0).toLocaleString('vi-VN')}đ`);
+    });
+    lines.push('-----------------------');
+    lines.push(`TỔNG BÁO GIÁ: ${Number(dbm.totalPrice || 0).toLocaleString('vi-VN')}đ`);
+    lines.push(`ĐÃ THU: ${Number(dbm.totalPaid || 0).toLocaleString('vi-VN')}đ`);
+    lines.push(`CÒN NỢ: ${Number(dbm.totalRemaining || 0).toLocaleString('vi-VN')}đ`);
+    navigator.clipboard?.writeText(lines.join('\n'))
+      .then(() => showToast('📋 Đã copy bảng công nợ gửi khách!'))
+      .catch(() => showToast('Không thể copy, vui lòng thử lại!', 'error'));
+  },
+  captureClientDebtBill() {
+    const dbm = state.clientDebtBillModal;
+    if (!dbm) return;
+    try {
+      const canvas = document.createElement('canvas');
+      const W = 900;
+      const rowH = 42;
+      const H = 200 + Math.max(1, dbm.rows.length) * rowH;
+      canvas.width = W * 2;
+      canvas.height = H * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(`BẢNG CÔNG NỢ KHÁCH HÀNG (${dbm.periodLabel})`, 24, 38);
+      ctx.fillStyle = '#475569';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`Chủ show: ${dbm.ownerName}   •   Còn nợ: ${Number(dbm.totalRemaining || 0).toLocaleString('vi-VN')}đ`, 24, 60);
+
+      let ry = 82;
+      dbm.rows.forEach((r, i) => {
+        ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        ctx.fillRect(24, ry, W - 48, rowH);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.strokeRect(24, ry, W - 48, rowH);
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(`${r.stt}. [${r.dateLabel}] ${r.title}`, 32, ry + 25);
+        ctx.fillStyle = '#dc2626';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(`Nợ: ${Number(r.remaining || 0).toLocaleString('vi-VN')}đ`, W - 165, ry + 25);
+        ry += rowH;
+      });
+
+      const a = document.createElement('a');
+      a.download = `CongNo_Khach_${state.selectedYear}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+      showToast('✅ Đã xuất ảnh bảng công nợ!');
+    } catch (err) {
+      showToast('Lỗi xuất ảnh công nợ: ' + (err?.message || ''), 'error');
+    }
   },
   exportOwnerExcel() {
     const uid = state.currentUserId;
@@ -1163,6 +1329,7 @@ window.holdBellActions = {
   },
   createQuickHold() {
     const today = getTodayISO();
+    state.holdBellModalOpen = false;
     state.holdComposerModal = {
       startDate: today,
       endDate: today,
@@ -1228,6 +1395,7 @@ window.holdBellActions = {
   },
   openQuickHoldSheet(dateStr) {
     const d = dateStr || getTodayISO();
+    state.holdBellModalOpen = false;
     state.holdComposerModal = {
       startDate: d,
       endDate: d,
