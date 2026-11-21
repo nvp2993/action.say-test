@@ -370,6 +370,16 @@ window.appActions = {
     }
   },
   async logoutMember() { state.crewPassModal = false; await logoutCurrentUser(); showToast('🔒 Đã đăng xuất!'); },
+  async logoutAdminToNormalUser() {
+    state.isAdminMode = false;
+    state.isBackendPortal = false;
+    window.location.hash = '';
+    try {
+      await logoutCurrentUser();
+    } catch {}
+    renderApp();
+    showToast('Đã đăng xuất quyền Admin!');
+  },
   openCrewPassModal() { state.crewPassModal = true; state.isEditingCrewProfile = false; renderApp(); },
   closeCrewPassModal() { state.crewPassModal = false; renderApp(); },
   toggleEditCrewProfile(v) { state.isEditingCrewProfile = v; renderApp(); },
@@ -405,6 +415,38 @@ window.appActions = {
     state.crewManifestShowId = null;
     renderApp();
   },
+  async saveCrewManifestEdits(id) {
+    const sh = state.shows.find(s => s.id === id);
+    if (!sh) return;
+    if (!state.memberProfiles) state.memberProfiles = {};
+    if (!state.officialLegalNames) state.officialLegalNames = {};
+
+    for (const mid of (sh.memberIds || [])) {
+      const fullName = (document.getElementById(`manifest-name-${mid}`)?.value || '').trim().toUpperCase();
+      const cccd = (document.getElementById(`manifest-cccd-${mid}`)?.value || '').trim();
+      const dob = (document.getElementById(`manifest-dob-${mid}`)?.value || '').trim();
+      const phone = (document.getElementById(`manifest-phone-${mid}`)?.value || '').trim();
+
+      const curProf = state.memberProfiles[mid] || {};
+      state.memberProfiles[mid] = { ...curProf, fullName, cccd, dob, phone };
+      if (fullName) state.officialLegalNames[mid] = fullName;
+      await saveOfficialLegalName(mid, fullName);
+      if (mid === state.currentUserId) {
+        await saveMyProfileToCloud(mid, state.memberProfiles[mid]);
+      }
+    }
+
+    if (Array.isArray(sh.externalCrew)) {
+      sh.externalCrew = sh.externalCrew.map((ext, idx) => {
+        const val = document.getElementById(`manifest-ext-${idx}`)?.value;
+        return { ...ext, name: val !== undefined ? val.trim() : ext.name };
+      }).filter(ext => ext.name);
+      await syncShowsToCloud();
+    }
+
+    renderApp();
+    showToast('Đã lưu danh sách nhân sự!');
+  },
   copyCrewManifestText(id) {
     const sh = state.shows.find(s => s.id === id); if (!sh) return;
     const lines = (sh.memberIds || []).map((mid, i) => {
@@ -416,7 +458,7 @@ window.appActions = {
       lines.push(`${(sh.memberIds || []).length + j + 1}. ${String(ext.name || '').toUpperCase()} (Freelancer)`);
     });
     navigator.clipboard?.writeText(lines.join('\n'));
-    showToast('📋 Đã copy Danh sách nhân sự book vé!');
+    showToast('📋 Đã copy Danh sách nhân sự!');
   },
   tapLogoSecret() {
     window._logoTaps = (window._logoTaps || 0) + 1;
