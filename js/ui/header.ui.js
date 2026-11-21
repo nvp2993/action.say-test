@@ -157,7 +157,7 @@ export function renderBottomNavHtml() {
         <i class="fa-solid fa-bolt text-[9px]"></i><span>NỔ SHOW</span>
       </button>
 
-      <div class="flex items-center justify-end gap-2 sm:gap-4 pr-1 min-w-0">
+      <div class="flex items-center justify-start gap-2 sm:gap-3.5 pl-1.5 min-w-0">
         <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-user-check text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">NS</span>
         </button>
