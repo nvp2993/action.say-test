@@ -66,10 +66,14 @@ function renderLiveMarqueeHtml() {
   `;
 }
 
+const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
+
 export function renderHeaderHtml(totalAlerts = 0) {
   const curMem = getMember(state.currentUserId);
   const prof = state.memberProfiles?.[state.currentUserId] || {};
-  const logoSrc = state.customLogoUrl || './assets/logo.png';
+  const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
+  const avatarSrc = prof.avatarUrl || prof.avatar || savedAvatars[state.currentUserId] || '';
+  const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || './assets/logo.png';
 
   const uid = state.currentUserId;
   const activeHolds = (state.shows || []).filter(s =>
@@ -80,10 +84,10 @@ export function renderHeaderHtml(totalAlerts = 0) {
 
   return `
     <header style="padding-top: max(18px, env(safe-area-inset-top));" class="bg-slate-900 text-white px-2.5 pb-2 shrink-0 border-b border-slate-800 z-30 space-y-2">
-      <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center justify-between gap-1.5">
         <div class="flex items-center gap-2 min-w-0">
           <div onclick="appActions.tapLogoSecret()" class="w-8 h-8 rounded-lg bg-black overflow-hidden flex items-center justify-center shrink-0 shadow-sm border border-slate-700 cursor-pointer active:scale-90">
-            <img src="${logoSrc}" alt="Action x Say" class="w-full h-full object-cover" />
+            <img src="${escapeHtml(logoSrc)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Action x Say" class="w-full h-full object-cover" />
           </div>
           <div id="as-two-line-brand-title">
             <span class="as-title-top">LỊCH SHOW</span>
@@ -97,7 +101,7 @@ export function renderHeaderHtml(totalAlerts = 0) {
           </div>
         </div>
 
-        <div class="flex items-center gap-1.5 shrink-0">
+        <div class="flex items-center gap-1 shrink-0">
           ${state.isAdminMode ? `
             <button type="button" onclick="appActions.enterBackendPortal()" class="px-2 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[9.5px] font-black flex items-center gap-1">
               <i class="fa-solid fa-shield-halved text-amber-600"></i><span>ADMIN</span>
@@ -113,9 +117,12 @@ export function renderHeaderHtml(totalAlerts = 0) {
           <button type="button" onclick="appActions.toggleZenFullscreen()" class="w-7 h-7 rounded-lg flex items-center justify-center border text-xs bg-slate-800 text-slate-300 border-slate-700">
             <i class="fa-solid ${state.zenFullscreen ? 'fa-compress' : 'fa-expand'}"></i>
           </button>
-          <button type="button" onclick="appActions.openCrewPassModal()" class="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-full pl-1.5 pr-2 py-0.5">
-            ${prof.avatar ? `<img src="${prof.avatar}" class="w-5 h-5 rounded-full object-cover border border-white/60 shrink-0" />` : ''}
-            <span style="background-color:${curMem.bg};color:${curMem.text}" class="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase">${escapeHtml(curMem.shortLabel)}</span>
+          <button type="button" onclick="appActions.openCrewPassModal()" title="Thẻ VIP & Hồ sơ" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-0.5 pr-1.5">
+            ${avatarSrc
+              ? `<img src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(curMem.name)}" class="w-6 h-6 rounded-full object-cover border border-amber-300/80 shrink-0" />`
+              : `<span style="background-color:${curMem.bg};color:${curMem.text}" class="w-6 h-6 rounded-full text-[9px] font-black uppercase flex items-center justify-center shrink-0">${escapeHtml((curMem.shortLabel || curMem.name || 'AS').slice(0, 2))}</span>`
+            }
+            <i class="fa-solid fa-key text-[9px] text-amber-300"></i>
           </button>
         </div>
       </div>
