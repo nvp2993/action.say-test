@@ -1,20 +1,20 @@
 import { state } from '../state/store.js';
 import { ROLE_OPTIONS } from '../config/constants.js';
-import { escapeHtml, getMember, renderPillHtml, normalizeRoleName } from '../utils/helpers.js';
+import { escapeHtml, getMember, renderPillHtml, normalizeRoleName, formatDayMonth, buildVietQrUrl, getBankName } from '../utils/helpers.js';
 import { getBusyMembersMap } from '../services/show.service.js';
 
 export function renderPinModalHtml() {
   const pm = state.pinModal;
   if (!pm) return '';
   const selMem = pm.selectedId ? getMember(pm.selectedId) : null;
-  const logoSrc = state.customLogoUrl || './assets/logo.png';
+  const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || './assets/logo.png';
 
   return `
     <div class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
       <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-3.5 shadow-2xl border">
         <div class="flex flex-col items-center text-center space-y-2 pb-2 border-b">
           <div onclick="appActions.tapLogoSecret()" class="w-14 h-14 rounded-2xl bg-black overflow-hidden shadow-md cursor-pointer">
-            <img src="${logoSrc}" alt="Action x Say" class="w-full h-full object-cover" />
+            <img src="${escapeHtml(logoSrc)}" alt="Action x Say" class="w-full h-full object-cover" />
           </div>
           <h2 class="font-black text-sm text-slate-900 uppercase">LỊCH SHOW ACTION &amp; SAY</h2>
           <p class="text-[11px] text-slate-500">${pm.step === 'select' ? 'Chọn tên của bạn để đăng nhập' : `Nhập mã PIN của ${escapeHtml(selMem?.name || '')}`}</p>
@@ -136,13 +136,13 @@ export function renderCrewPassModalHtml() {
                   : `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`
                 }
               </button>
-              <button type="button" onclick="appActions.copyVipInfoText()" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[10.5px] whitespace-nowrap">📋 Copy</button>
+              <button type="button" onclick="appActions.copyVipInfoText()" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[10.5px] whitespace-nowrap">Copy</button>
             </div>
             <div class="flex items-center gap-1.5">
               <button type="button" onclick="appActions.toggleEditCrewProfile(${!isEditing})" class="px-2.5 py-1 rounded-full bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold text-[10.5px] whitespace-nowrap">
-                ${isEditing ? '✕ Hủy' : '✏️ Sửa'}
+                ${isEditing ? '✕ Hủy' : 'Sửa'}
               </button>
-              <button type="button" onclick="appActions.openSelfChangePinModal()" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[10.5px] whitespace-nowrap">🔑 Đổi PIN</button>
+              <button type="button" onclick="appActions.openSelfChangePinModal()" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[10.5px] whitespace-nowrap">Đổi PIN</button>
             </div>
           </div>
 
@@ -150,7 +150,7 @@ export function renderCrewPassModalHtml() {
             <div class="space-y-2 pt-1 text-[11px]">
               <div class="flex items-center justify-between p-2 rounded-xl bg-black/30">
                 <span class="text-slate-300 font-bold">Ảnh đại diện (đồng bộ toàn app)</span>
-                <button type="button" onclick="appActions.triggerVipAvatarUpload()" class="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-[10px]">📷 Đổi Ảnh</button>
+                <button type="button" onclick="appActions.triggerVipAvatarUpload()" class="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-[10px]">Đổi Ảnh</button>
               </div>
               <input id="prof-fullname" type="text" value="${escapeHtml(prof.fullName || m.name)}" placeholder="Họ và tên đầy đủ" class="w-full px-3 py-2 rounded-xl bg-black/40 text-white font-bold focus:outline-none" />
               <input id="prof-title" type="text" value="${escapeHtml(prof.title || '')}" placeholder="Chức danh (VD: Cam.Op, Editor, Flycam...)" class="w-full px-3 py-2 rounded-xl bg-black/40 text-white font-bold focus:outline-none" />
@@ -250,7 +250,7 @@ export function renderFormModalHtml() {
         <div class="p-3 rounded-2xl border border-dashed border-indigo-400 bg-indigo-50/60 space-y-2">
           <div class="flex items-center justify-between">
             <span class="font-black text-slate-900">🤝 Nhân sự ngoài (Freelancer)</span>
-            <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3 py-1 rounded-full bg-indigo-600 text-white font-bold text-[10px]">+ Thêm người</button>
+            <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3 py-1 rounded-full bg-indigo-600 text-white font-bold text-[10px]">Thêm người</button>
           </div>
           ${(f.externalCrew || []).map((p, idx) => `
             <div class="flex items-center gap-1.5">
@@ -328,7 +328,7 @@ export function renderHoldComposerModalHtml() {
   const selectedIds = Array.isArray(hm.memberIds) ? hm.memberIds : [];
 
   return `
-    <div onclick="holdBellActions.closeHoldComposer()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4">
+    <div onclick="holdBellActions.closeHoldComposer()" class="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
       <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3.5 text-xs shadow-2xl max-h-[90dvh] overflow-y-auto">
         <div class="flex items-start justify-between">
           <div>
@@ -368,10 +368,10 @@ export function renderHoldComposerModalHtml() {
               return `
                 <button type="button" onclick="holdBellActions.toggleHoldMember('${mem.id}')" class="px-3 py-1.5 rounded-full text-[11px] font-bold border transition ${
                   active
-                    ? 'bg-amber-50/90 text-amber-900 border-amber-400 ring-1 ring-amber-400'
+                    ? 'bg-slate-900 text-amber-300 border-slate-900'
                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                 }">
-                  ${active ? '✓' : '+'} ${escapeHtml(mem.name)}
+                  ${escapeHtml(mem.name)}
                 </button>
               `;
             }).join('')}
@@ -408,7 +408,7 @@ export function renderHoldBellModalHtml() {
         </div>
 
         <button type="button" onclick="holdBellActions.createQuickHold()" class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wide">
-          + GIỮ LỊCH / NHẮC CHỦ SHOW MỚI
+          GIỮ LỊCH / NHẮC CHỦ SHOW MỚI
         </button>
 
         <div class="space-y-1.5">
@@ -435,6 +435,150 @@ export function renderHoldBellModalHtml() {
               </div>
             `;
           }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function renderCrewManifestModalHtml() {
+  const showId = state.crewManifestShowId;
+  if (!showId) return '';
+  const sh = (state.shows || []).find(s => s && s.id === showId);
+  if (!sh) return '';
+
+  const rows = (sh.memberIds || []).map((mid, idx) => {
+    const m = getMember(mid);
+    const prof = state.memberProfiles?.[mid] || {};
+    const legalName = (state.officialLegalNames?.[mid] || prof.fullName || m.name || '').toUpperCase();
+    const roles = Array.isArray(sh.roles?.[mid]) ? sh.roles[mid].join(', ') : (sh.roles?.[mid] || '');
+    return {
+      index: idx + 1,
+      nick: m.name,
+      legalName,
+      cccd: prof.cccd || 'Chưa cập nhật',
+      dob: prof.dob || 'Chưa cập nhật',
+      phone: prof.phone || 'Chưa cập nhật',
+      roles
+    };
+  });
+
+  const extRows = (sh.externalCrew || []).map((p, idx) => ({
+    index: rows.length + idx + 1,
+    nick: `${p.name} (Freelancer)`,
+    legalName: String(p.name || '').toUpperCase(),
+    cccd: 'Freelancer',
+    dob: '-',
+    phone: '-',
+    roles: Array.isArray(p.roles) ? p.roles.join(', ') : (p.roles || '')
+  }));
+
+  const all = [...rows, ...extRows];
+
+  return `
+    <div onclick="appActions.closeCrewManifestModal()" class="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3.5 text-xs shadow-2xl max-h-[88dvh] overflow-y-auto">
+        <div class="flex items-start justify-between border-b border-slate-100 pb-2.5">
+          <div>
+            <div class="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Danh Sách Book Vé / Nhân Sự</div>
+            <h3 class="text-sm font-black text-slate-900 mt-0.5">${escapeHtml(sh.location || '')} (${escapeHtml(formatDayMonth(sh.startDate))})</h3>
+          </div>
+          <button type="button" onclick="appActions.closeCrewManifestModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+        </div>
+
+        <div class="divide-y divide-slate-100">
+          ${all.length === 0
+            ? `<div class="py-5 text-center text-slate-400">Chưa có nhân sự nào trong show này.</div>`
+            : all.map(r => `
+              <div class="py-2.5 space-y-1">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-black text-slate-900">${r.index}. ${escapeHtml(r.legalName)} <span class="text-slate-500 font-semibold">(${escapeHtml(r.nick)})</span></span>
+                  ${r.roles ? `<span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-extrabold">${escapeHtml(r.roles)}</span>` : ''}
+                </div>
+                <div class="text-[11px] font-mono text-slate-600">CCCD: <b>${escapeHtml(r.cccd)}</b> • NS: <b>${escapeHtml(r.dob)}</b> • SĐT: <b>${escapeHtml(r.phone)}</b></div>
+              </div>
+            `).join('')
+          }
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button type="button" onclick="appActions.copyCrewManifestText('${escapeHtml(sh.id)}')" class="py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black">Copy Book Vé</button>
+          <button type="button" onclick="appActions.closeCrewManifestModal()" class="py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold">Đóng</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function renderClientDebtBillModalHtml() {
+  const dbm = state.clientDebtBillModal;
+  if (!dbm) return '';
+  const prof = state.memberProfiles?.[state.currentUserId] || {};
+  const ownerName = (prof.fullName || dbm.ownerName || '').trim();
+  const qrUrl = prof.bankAcc ? buildVietQrUrl(prof.bankBin, prof.bankAcc) : '';
+
+  return `
+    <div onclick="ownerActions.closeClientDebtBill()" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2.5 sm:p-4">
+      <div onclick="event.stopPropagation()" id="client-debt-bill-capture-area" class="bg-white w-full max-w-2xl rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl flex flex-col max-h-[90dvh]">
+        <div class="flex justify-between items-center border-b pb-2 shrink-0">
+          <div>
+            <h3 class="font-black text-sm text-slate-900">BẢNG CÔNG NỢ KHÁCH HÀNG — ${escapeHtml(dbm.periodLabel)}</h3>
+            <p class="text-[11px] text-slate-500">Chủ show: <b class="text-slate-800">${escapeHtml(ownerName)}</b> • Tổng còn thiếu: <b class="text-rose-600 font-mono">${Number(dbm.totalRemaining || 0).toLocaleString('vi-VN')}đ</b></p>
+          </div>
+          <button type="button" onclick="ownerActions.closeClientDebtBill()" class="w-8 h-8 rounded-full bg-slate-100">✕</button>
+        </div>
+
+        <div class="flex-1 min-h-0 overflow-auto border border-slate-200 rounded-2xl">
+          <table class="w-full border-collapse text-[11px]">
+            <thead class="sticky top-0 bg-slate-900 text-white font-extrabold text-[10px] uppercase">
+              <tr>
+                <th class="py-2 px-1.5 border">STT</th>
+                <th class="py-2 px-1.5 border">NGÀY</th>
+                <th class="py-2 px-2 border text-left">SHOW / ĐỐI TÁC</th>
+                <th class="py-2 px-1.5 border text-right">BÁO GIÁ</th>
+                <th class="py-2 px-1.5 border text-right">ĐÃ TRẢ</th>
+                <th class="py-2 px-1.5 border text-right">CÒN NỢ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              ${dbm.rows.map(r => `
+                <tr>
+                  <td class="py-1.5 px-1.5 border text-center">${r.stt}</td>
+                  <td class="py-1.5 px-1.5 border text-center font-mono">${escapeHtml(r.dateLabel)}</td>
+                  <td class="py-1.5 px-2 border font-bold">${escapeHtml(r.title)}</td>
+                  <td class="py-1.5 px-1.5 border text-right font-mono">${Number(r.clientPrice || 0).toLocaleString('vi-VN')}đ</td>
+                  <td class="py-1.5 px-1.5 border text-right font-mono text-emerald-700">${Number(r.depositPaid || 0).toLocaleString('vi-VN')}đ</td>
+                  <td class="py-1.5 px-1.5 border text-right font-mono font-black text-rose-600">${Number(r.remaining || 0).toLocaleString('vi-VN')}đ</td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot>
+              <tr class="bg-slate-900 text-white font-mono font-black">
+                <td colspan="3" class="py-2 px-2 text-right text-amber-300">TỔNG CỘNG:</td>
+                <td class="py-2 px-1.5 text-right">${Number(dbm.totalPrice || 0).toLocaleString('vi-VN')}đ</td>
+                <td class="py-2 px-1.5 text-right text-emerald-400">${Number(dbm.totalPaid || 0).toLocaleString('vi-VN')}đ</td>
+                <td class="py-2 px-1.5 text-right text-rose-400">${Number(dbm.totalRemaining || 0).toLocaleString('vi-VN')}đ</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        ${qrUrl ? `
+          <div class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
+            <div class="text-[11px] space-y-0.5">
+              <div class="font-black text-slate-900 uppercase">💳 THÔNG TIN THANH TOÁN</div>
+              <div>Ngân hàng: <b>${escapeHtml(getBankName(prof.bankBin))}</b></div>
+              <div>Chủ TK: <b class="uppercase">${escapeHtml(ownerName)}</b></div>
+              <div>Số TK: <b class="font-mono text-indigo-700">${escapeHtml(prof.bankAcc)}</b></div>
+            </div>
+            <img src="${qrUrl}" alt="VietQR" class="w-20 h-20 object-contain bg-white p-1 rounded-xl border shrink-0" />
+          </div>
+        ` : ''}
+
+        <div class="grid grid-cols-3 gap-2 shrink-0">
+          <button type="button" onclick="ownerActions.captureClientDebtBill()" class="bg-amber-400 text-slate-950 font-black py-2.5 rounded-full text-[11px]">📸 Chụp Ảnh</button>
+          <button type="button" onclick="ownerActions.copyClientDebtText()" class="bg-emerald-600 text-white font-black py-2.5 rounded-full text-[11px]">Copy Zalo</button>
+          <button type="button" onclick="ownerActions.exportOwnerExcel()" class="bg-slate-900 text-white font-black py-2.5 rounded-full text-[11px]">Tải .XLSX</button>
         </div>
       </div>
     </div>
