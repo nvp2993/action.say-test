@@ -89,6 +89,13 @@ export function renderDebtTabHtml() {
       { label: '🎥 ĐÃ NHẬN CTP', val: `${settledCrewPaidSum.toLocaleString('vi-VN')}đ`, cls: 'text-indigo-700' },
       { label: '🏁 SỐ SHOW HOÀN TẤT', val: `${settledCount} show`, cls: 'text-slate-800' }
     ];
+  } else if (filterMode === 'unsettled') {
+    statCards = [
+      { label: '⏳ TỔNG CÔNG NỢ', val: `${totalUncollectedToWallet.toLocaleString('vi-VN')}đ`, cls: 'text-rose-600' },
+      { label: '👑 CÔNG NỢ KHÁCH HÀNG', val: `${unsettledClientDebtSum.toLocaleString('vi-VN')}đ`, cls: 'text-slate-900' },
+      { label: '🎥 CÔNG NỢ CTP', val: `${unsettledCrewDebtSum.toLocaleString('vi-VN')}đ`, cls: 'text-slate-900' },
+      { label: '📌 SỐ SHOW CHƯA XONG', val: `${unsettledCount} show`, cls: 'text-slate-800' }
+    ];
   } else {
     statCards = [
       { label: '💎 TỔNG THU NHẬP', val: `${totalIncomeAll >= 0 ? '+' : ''}${totalIncomeAll.toLocaleString('vi-VN')}đ`, cls: 'text-emerald-700' },
