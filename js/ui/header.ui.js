@@ -143,12 +143,12 @@ export function renderHeaderHtml(totalAlerts = 0) {
 
 export function renderBottomNavHtml() {
   return `
-    <nav style="padding-bottom: max(10px, env(safe-area-inset-bottom));" class="bg-white border-t border-slate-200 px-2 pt-1.5 shrink-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+    <nav style="padding-bottom: max(4px, env(safe-area-inset-bottom));" class="bg-white border-t border-slate-200 px-2 pt-1 shrink-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
       <div class="flex items-center justify-around gap-0.5 min-w-0">
-        <button type="button" onclick="appActions.setTab('shows')" class="flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <button type="button" onclick="appActions.setTab('shows')" class="flex flex-col items-center py-0.5 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-table-list text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">SHOW</span>
         </button>
-        <button type="button" onclick="appActions.setTab('matrix')" class="flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <button type="button" onclick="appActions.setTab('matrix')" class="flex flex-col items-center py-0.5 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-calendar-days text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">CÔNG TÁC T${state.selectedMonth}</span>
         </button>
       </div>
@@ -158,13 +158,13 @@ export function renderBottomNavHtml() {
       </button>
 
       <div class="flex items-center justify-between pl-1.5 pr-1 min-w-0">
-        <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-0.5 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-user-check text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">NS</span>
         </button>
-        <button type="button" onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <button type="button" onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-0.5 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-file-invoice-dollar text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">CTP</span>
         </button>
-        <button type="button" onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <button type="button" onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-0.5 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-wallet text-[11px] ${state.activeTab === 'owner_stats' ? 'text-amber-500' : ''}"></i><span class="text-[8px] tracking-tighter leading-none mt-1">CÔNG NỢ</span>
         </button>
       </div>
