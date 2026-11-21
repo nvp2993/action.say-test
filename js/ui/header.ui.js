@@ -50,15 +50,16 @@ function renderLiveMarqueeHtml() {
 
   return `
     <div class="as-live-banner-upgraded">
-      <div class="as-ticker-wrap">
-        <div class="as-fixed-badge ${isFree ? 'free-mode' : ''}">
+      <div class="as-ticker-wrap flex items-center w-full">
+        <div class="as-fixed-badge shrink-0 ${isFree ? 'free-mode' : ''}">
           <span class="${isFree ? 'as-green-pulse-dot' : 'as-red-pulse-dot'}"></span>
           <span>${badge}</span>
         </div>
-        <div class="as-marquee-viewport">
-          <div class="as-marquee-track">
-            <div class="as-marquee-item">${sentence}</div>
-            <div class="as-marquee-item">${sentence}</div>
+        <div class="as-marquee-viewport flex-1 min-w-0 overflow-hidden">
+          <div class="as-marquee-track flex items-center w-max">
+            <div class="as-marquee-item whitespace-nowrap shrink-0 pr-8">${sentence}</div>
+            <div class="as-marquee-item whitespace-nowrap shrink-0 pr-8">${sentence}</div>
+            <div class="as-marquee-item whitespace-nowrap shrink-0 pr-8">${sentence}</div>
           </div>
         </div>
       </div>
@@ -129,9 +130,9 @@ export function renderHeaderHtml(totalAlerts = 0) {
       ` : ''}
 
       ${(state.studioBroadcast?.enabled && state.studioBroadcast?.text) ? `
-        <div class="bg-rose-50 border border-rose-300 text-rose-700 rounded-xl px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-2">
+        <div class="bg-amber-50 border border-amber-300 text-slate-950 rounded-xl px-3 py-1.5 text-[11px] font-black flex items-center gap-2 shadow-2xs">
           <span class="bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shrink-0">📢 THÔNG BÁO</span>
-          <span class="flex-1">${escapeHtml(state.studioBroadcast.text)}</span>
+          <span class="flex-1 text-slate-950 font-black">${escapeHtml(state.studioBroadcast.text)}</span>
         </div>
       ` : ''}
 
