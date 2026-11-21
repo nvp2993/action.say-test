@@ -157,17 +157,18 @@ export function renderBottomNavHtml() {
         <i class="fa-solid fa-bolt text-[9px]"></i><span>NỔ SHOW</span>
       </button>
 
-      <div class="flex items-center justify-start gap-2 sm:gap-3.5 pl-1.5 min-w-0">
-        <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+      <div class="flex items-center justify-between pl-1.5 pr-1 min-w-0">
+        <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-user-check text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">NS</span>
         </button>
-        <button type="button" onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <button type="button" onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-file-invoice-dollar text-[11px]"></i><span class="text-[8px] tracking-tighter leading-none mt-1">CTP</span>
         </button>
-        <button type="button" onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-1 px-1 rounded-xl whitespace-nowrap ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
+        <button type="button" onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-1 px-0.5 rounded-xl whitespace-nowrap ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 font-medium'}">
           <i class="fa-solid fa-wallet text-[11px] ${state.activeTab === 'owner_stats' ? 'text-amber-500' : ''}"></i><span class="text-[8px] tracking-tighter leading-none mt-1">CÔNG NỢ</span>
         </button>
       </div>
     </nav>
   `;
+}
 }
