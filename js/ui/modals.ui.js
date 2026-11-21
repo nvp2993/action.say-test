@@ -247,18 +247,18 @@ export function renderFormModalHtml() {
           }).join('')}
         </div>
 
-        <div class="p-3 rounded-2xl border border-dashed border-indigo-400 bg-indigo-50/60 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-black text-slate-900">🤝 Nhân sự ngoài (Freelancer)</span>
-            <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3 py-1 rounded-full bg-indigo-600 text-white font-bold text-[10px]">Thêm người</button>
-          </div>
-          ${(f.externalCrew || []).map((p, idx) => `
-            <div class="flex items-center gap-1.5">
-              <input type="text" value="${escapeHtml(p.name)}" oninput="appActions.updateExternalCrewName(${idx}, this.value)" placeholder="Tên freelancer..." class="flex-1 px-2.5 py-1.5 bg-white border rounded-xl font-bold" />
-              <button type="button" onclick="appActions.removeExternalCrewDraft(${idx})" class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600">✕</button>
-            </div>
-          `).join('')}
+              <div class="p-3 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-black text-slate-900 text-xs">🤝 Nhân sự ngoài (Freelancer)</span>
+          <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3.5 py-1.5 rounded-full bg-slate-950 hover:bg-slate-800 text-white font-bold text-[11px]">Thêm người</button>
         </div>
+        ${(f.externalCrew || []).map((p, idx) => `
+          <div class="flex items-center gap-2 pt-1">
+            <input type="text" value="${escapeHtml(p.name)}" oninput="appActions.updateExternalCrewName(${idx}, this.value)" placeholder="Tên freelancer..." class="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-xs focus:outline-none focus:border-slate-400" />
+            <button type="button" onclick="appActions.removeExternalCrewDraft(${idx})" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 font-bold flex items-center justify-center shrink-0">✕</button>
+          </div>
+        `).join('')}
+      </div>
 
         ${f.error ? `<div class="text-rose-600 font-bold">${escapeHtml(f.error)}</div>` : ''}
         <button type="button" onclick="appActions.saveShowForm()" class="w-full bg-indigo-600 text-white font-black py-2.5 rounded-xl uppercase">${f.mode === 'edit' ? '💾 LƯU CHỈNH SỬA' : '⚡ NỔ SHOW'}</button>
