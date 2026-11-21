@@ -7,21 +7,29 @@ export function renderShowsTabHtml() {
   const filtered = getFilteredShows();
   return `
     <div class="flex-1 flex flex-col min-h-0 bg-white">
-      ${state.zenFullscreen ? '' : `
+      ${state.zenFullscreen ? `
+        <div class="bg-slate-900 text-white px-2.5 py-1 flex items-center justify-between border-b border-slate-800 shrink-0 text-[10px] font-bold">
+          <span>🖥️ Đang mở rộng bảng Lịch Show</span>
+          <button type="button" onclick="appActions.toggleZenFullscreen()" class="px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-extrabold">Thu nhỏ</button>
+        </div>
+      ` : `
         <div class="bg-slate-100 px-2.5 py-1.5 border-b border-slate-200 shrink-0 space-y-1.5">
           <div class="flex items-center gap-1.5">
-            <div class="relative flex-1">
+            <div class="relative flex-1 min-w-0">
               <i class="fa-solid fa-magnifying-glass text-slate-400 text-[11px] absolute left-2.5 top-1/2 -translate-y-1/2"></i>
               <input id="search-input-box" type="text" value="${escapeHtml(state.searchQuery)}" oninput="appActions.onSearchInput(this.value)"
-                placeholder="Tìm Hồ Tràm, Đà Nẵng, Phú Quốc, Golf..." class="w-full pl-7 pr-6 py-1 bg-white border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:border-indigo-500" />
+                placeholder="Tìm Hồ Tràm, Đà Nẵng, Phú Quốc, Golf..." class="w-full pl-7 pr-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:border-indigo-500" />
             </div>
-            <button onclick="appActions.openZaloTomorrowModal()" class="px-2 py-1 rounded-lg text-[10px] font-extrabold bg-emerald-600 text-white shrink-0">📋 Điểm danh Mai</button>
-            <button onclick="appActions.toggleAllMonths()" class="px-2 py-1 rounded-lg text-[10px] font-bold border shrink-0 ${state.filterAllMonthsInList ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200'}">
+            <button type="button" onclick="appActions.openZaloTomorrowModal()" class="px-2 py-1 rounded-lg text-[10px] font-extrabold bg-emerald-600 text-white shrink-0">📋 Điểm danh Mai</button>
+            <button type="button" onclick="appActions.toggleAllMonths()" class="px-2 py-1 rounded-lg text-[10px] font-bold border shrink-0 ${state.filterAllMonthsInList ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200'}">
               ${state.filterAllMonthsInList ? `Tất cả (${state.shows.length})` : `T${state.selectedMonth} (${filtered.length})`}
+            </button>
+            <button type="button" onclick="appActions.toggleZenFullscreen()" title="Mở rộng / Thu nhỏ bảng" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-white text-slate-700 border border-slate-200 shrink-0">
+              <i class="fa-solid ${state.zenFullscreen ? 'fa-compress' : 'fa-expand'}"></i>
             </button>
           </div>
           <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-            <button onclick="appActions.setFilterMember('all')" class="px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 border ${state.filterMemberId === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}">
+            <button type="button" onclick="appActions.setFilterMember('all')" class="px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 border ${state.filterMemberId === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}">
               Tất cả (${state.members.length})
             </button>
             ${[...state.members].sort((a,b) => (a.id === state.currentUserId ? -1 : b.id === state.currentUserId ? 1 : 0))
@@ -34,7 +42,7 @@ export function renderShowsTabHtml() {
         <div class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-slate-50/60 space-y-3">
           <div class="w-12 h-12 rounded-2xl bg-slate-200/80 text-slate-500 flex items-center justify-center text-xl"><i class="fa-regular fa-calendar-xmark"></i></div>
           <div class="text-sm font-black text-slate-500 uppercase">CHƯA CÓ DỮ LIỆU</div>
-          <button onclick="appActions.openAddModal('${state.selectedYear}-${String(state.selectedMonth).padStart(2,'0')}-01')" class="px-4 py-2 rounded-full bg-indigo-600 text-white text-xs font-extrabold inline-flex items-center gap-1.5">
+          <button type="button" onclick="appActions.openAddModal('${state.selectedYear}-${String(state.selectedMonth).padStart(2,'0')}-01')" class="px-4 py-2 rounded-full bg-indigo-600 text-white text-xs font-extrabold inline-flex items-center gap-1.5">
             <i class="fa-solid fa-bolt"></i><span>Nổ Show Mới</span>
           </button>
         </div>
@@ -112,7 +120,7 @@ export function renderDetailModalHtml() {
             <h3 class="text-base font-black text-slate-900 mt-1">${escapeHtml(sh.location)}</h3>
             ${getVisiblePartnerText(sh) ? `<p class="text-xs text-slate-500">Đối tác: <b>${escapeHtml(getVisiblePartnerText(sh))}</b></p>` : ''}
           </div>
-          <button onclick="appActions.closeShowDetail()" class="w-7 h-7 rounded-full bg-slate-100"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" onclick="appActions.closeShowDetail()" class="w-7 h-7 rounded-full bg-slate-100"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
         ${sh.isCancelled ? `
@@ -145,15 +153,15 @@ export function renderDetailModalHtml() {
           <div class="text-[10px] font-black text-slate-500 uppercase">📦 Tiến độ Hậu kỳ:</div>
           <div class="grid grid-cols-3 gap-1.5">
             ${POST_STATUS_OPTIONS.map(st => `
-              <button onclick="appActions.updatePostStatus('${sh.id}', '${st.id}')" class="py-1.5 px-1 rounded-xl text-[10px] font-extrabold border ${curPost === st.id ? st.cls + ' ring-2 ring-indigo-500' : 'bg-slate-50 text-slate-400 border-slate-200'}">${st.label}</button>
+              <button type="button" onclick="appActions.updatePostStatus('${sh.id}', '${st.id}')" class="py-1.5 px-1 rounded-xl text-[10px] font-extrabold border ${curPost === st.id ? st.cls + ' ring-2 ring-indigo-500' : 'bg-slate-50 text-slate-400 border-slate-200'}">${st.label}</button>
             `).join('')}
           </div>
         </div>
 
-        <button onclick="appActions.exportShowToAppleCalendar('${sh.id}')" class="w-full py-2 px-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5">
+        <button type="button" onclick="appActions.exportShowToAppleCalendar('${sh.id}')" class="w-full py-2 px-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5">
           <i class="fa-regular fa-calendar-plus"></i><span>Lưu vào Lịch iPhone (.ics)</span>
         </button>
-        <button onclick="appActions.openCrewManifestModal('${sh.id}')" class="w-full py-2.5 px-3 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5">
+        <button type="button" onclick="appActions.openCrewManifestModal('${sh.id}')" class="w-full py-2.5 px-3 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5">
           <i class="fa-solid fa-users-viewfinder"></i><span>DANH SÁCH NHÂN SỰ (CCCD / SĐT)</span>
         </button>
 
@@ -164,9 +172,9 @@ export function renderDetailModalHtml() {
 
         ${editable ? `
           <div class="flex gap-2">
-            <button onclick="appActions.openEditModal('${sh.id}')" class="flex-1 bg-indigo-600 text-white font-extrabold py-2.5 rounded-xl text-xs">Chỉnh sửa</button>
-            <button onclick="appActions.toggleCancelShow('${sh.id}')" class="px-3 py-2.5 rounded-xl text-xs font-extrabold ${sh.isCancelled ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-900 border border-amber-300'}">${sh.isCancelled ? 'Khôi phục' : 'Báo Hủy'}</button>
-            <button onclick="appActions.deleteShow('${sh.id}')" class="px-3.5 py-2.5 bg-rose-50 text-rose-600 rounded-xl text-xs"><i class="fa-solid fa-trash-can"></i></button>
+            <button type="button" onclick="appActions.openEditModal('${sh.id}')" class="flex-1 bg-indigo-600 text-white font-extrabold py-2.5 rounded-xl text-xs">Chỉnh sửa</button>
+            <button type="button" onclick="appActions.toggleCancelShow('${sh.id}')" class="px-3 py-2.5 rounded-xl text-xs font-extrabold ${sh.isCancelled ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-900 border border-amber-300'}">${sh.isCancelled ? 'Khôi phục' : 'Báo Hủy'}</button>
+            <button type="button" onclick="appActions.deleteShow('${sh.id}')" class="px-3.5 py-2.5 bg-rose-50 text-rose-600 rounded-xl text-xs"><i class="fa-solid fa-trash-can"></i></button>
           </div>
         ` : `<div class="bg-slate-100 p-2 rounded-xl text-center text-xs font-bold text-slate-600">🔒 Chỉ Người tạo (${escapeHtml(creator.name)}) hoặc Admin mới được sửa</div>`}
       </div>
