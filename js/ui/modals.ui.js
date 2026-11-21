@@ -3,18 +3,39 @@ import { ROLE_OPTIONS } from '../config/constants.js';
 import { escapeHtml, getMember, renderPillHtml, normalizeRoleName, formatDayMonth, buildVietQrUrl, getBankName } from '../utils/helpers.js';
 import { getBusyMembersMap } from '../services/show.service.js';
 
+const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
+
+export function renderWelcomeSplashHtml() {
+  if (!state.welcomeSplashVisible || !state.currentUserId) return '';
+  const m = getMember(state.currentUserId);
+  const prof = state.memberProfiles?.[state.currentUserId] || {};
+  const displayName = (prof.fullName || m?.name || 'CREW').toUpperCase();
+  const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || FALLBACK_LOGO_SVG;
+
+  return `
+    <div onclick="appActions.dismissWelcomeSplash()" class="fixed inset-0 z-[70] bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-white cursor-pointer select-none">
+      <div class="w-24 h-24 rounded-3xl bg-slate-900 border border-amber-400/40 shadow-2xl overflow-hidden flex items-center justify-center mb-4">
+        <img src="${escapeHtml(logoSrc)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Action x Say" class="w-full h-full object-cover" />
+      </div>
+      <div class="text-[10px] font-black tracking-[0.25em] text-amber-400 uppercase">ACTION MEDIA × SAY STUDIOS</div>
+      <div class="text-lg font-black text-white mt-1.5">Xin chào, ${escapeHtml(displayName)}</div>
+      <div class="text-[11px] text-slate-400 mt-1">Chạm vào màn hình để vào lịch ngay</div>
+    </div>
+  `;
+}
+
 export function renderPinModalHtml() {
   const pm = state.pinModal;
   if (!pm) return '';
   const selMem = pm.selectedId ? getMember(pm.selectedId) : null;
-  const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || './assets/logo.png';
+  const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || FALLBACK_LOGO_SVG;
 
   return `
     <div class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
       <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-3.5 shadow-2xl border">
         <div class="flex flex-col items-center text-center space-y-2 pb-2 border-b">
           <div onclick="appActions.tapLogoSecret()" class="w-14 h-14 rounded-2xl bg-black overflow-hidden shadow-md cursor-pointer">
-            <img src="${escapeHtml(logoSrc)}" alt="Action x Say" class="w-full h-full object-cover" />
+            <img src="${escapeHtml(logoSrc)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Action x Say" class="w-full h-full object-cover" />
           </div>
           <h2 class="font-black text-sm text-slate-900 uppercase">LỊCH SHOW ACTION &amp; SAY</h2>
           <p class="text-[11px] text-slate-500">${pm.step === 'select' ? 'Chọn tên của bạn để đăng nhập' : `Nhập mã PIN của ${escapeHtml(selMem?.name || '')}`}</p>
@@ -247,18 +268,18 @@ export function renderFormModalHtml() {
           }).join('')}
         </div>
 
-              <div class="p-3 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-2">
-        <div class="flex items-center justify-between gap-2">
-          <span class="font-black text-slate-900 text-xs">🤝 Nhân sự ngoài (Freelancer)</span>
-          <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3.5 py-1.5 rounded-full bg-slate-950 hover:bg-slate-800 text-white font-bold text-[11px]">Thêm người</button>
-        </div>
-        ${(f.externalCrew || []).map((p, idx) => `
-          <div class="flex items-center gap-2 pt-1">
-            <input type="text" value="${escapeHtml(p.name)}" oninput="appActions.updateExternalCrewName(${idx}, this.value)" placeholder="Tên freelancer..." class="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-xs focus:outline-none focus:border-slate-400" />
-            <button type="button" onclick="appActions.removeExternalCrewDraft(${idx})" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 font-bold flex items-center justify-center shrink-0">✕</button>
+        <div class="p-3 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-black text-slate-900 text-xs">🤝 Nhân sự ngoài (Freelancer)</span>
+            <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3.5 py-1.5 rounded-full bg-slate-950 hover:bg-slate-800 text-white font-bold text-[11px]">Thêm người</button>
           </div>
-        `).join('')}
-      </div>
+          ${(f.externalCrew || []).map((p, idx) => `
+            <div class="flex items-center gap-2 pt-1">
+              <input type="text" value="${escapeHtml(p.name)}" oninput="appActions.updateExternalCrewName(${idx}, this.value)" placeholder="Tên freelancer..." class="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-xs focus:outline-none focus:border-slate-400" />
+              <button type="button" onclick="appActions.removeExternalCrewDraft(${idx})" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 font-bold flex items-center justify-center shrink-0">✕</button>
+            </div>
+          `).join('')}
+        </div>
 
         ${f.error ? `<div class="text-rose-600 font-bold">${escapeHtml(f.error)}</div>` : ''}
         <button type="button" onclick="appActions.saveShowForm()" class="w-full bg-indigo-600 text-white font-black py-2.5 rounded-xl uppercase">${f.mode === 'edit' ? '💾 LƯU CHỈNH SỬA' : '⚡ NỔ SHOW'}</button>
@@ -475,9 +496,9 @@ export function renderCrewManifestModalHtml() {
                 </div>
                 <input id="manifest-name-${escapeHtml(mid)}" type="text" value="${escapeHtml(legalName)}" placeholder="Họ tên đầy đủ" class="w-full px-2.5 py-1.5 rounded-xl bg-white border text-xs font-bold uppercase" />
                 <div class="grid grid-cols-3 gap-1.5">
-                  <input id="manifest-cccd-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.cccd || '')}" placeholder="CCCD" class="px-2 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
-                  <input id="manifest-dob-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.dob || '')}" placeholder="Ngày sinh" class="px-2 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
-                  <input id="manifest-phone-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.phone || '')}" placeholder="SĐT" class="px-2 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
+                  <input id="manifest-cccd-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.cccd || '')}" placeholder="CCCD" class="px-2.5 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
+                  <input id="manifest-dob-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.dob || '')}" placeholder="Ngày sinh" class="px-2.5 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
+                  <input id="manifest-phone-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.phone || '')}" placeholder="SĐT" class="px-2.5 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
                 </div>
               </div>
             `;
