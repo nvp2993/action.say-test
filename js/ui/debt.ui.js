@@ -50,7 +50,10 @@ export function renderDebtTabHtml() {
       <div class="bg-white px-3 py-2.5 border-b border-slate-200 shrink-0 space-y-2">
         <div class="flex items-center justify-between gap-2">
           <span class="font-black text-xs text-slate-900 uppercase">👑 CÔNG NỢ: ${escapeHtml(curMem.name)}</span>
-          <button type="button" onclick="ownerActions.exportOwnerExcel()" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold">.XLSX</button>
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="ownerActions.openClientDebtBill()" class="px-2.5 py-1 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-extrabold">📤 Gửi Công Nợ</button>
+            <button type="button" onclick="ownerActions.exportOwnerExcel()" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold">.XLSX</button>
+          </div>
         </div>
         ${renderUnifiedDateBarHtml('owner')}
         <div class="as-ios-seg-bar">
@@ -78,7 +81,7 @@ export function renderDebtTabHtml() {
             <div class="text-slate-800 font-bold text-xs">Chưa có show nào trong danh mục lọc này</div>
             <div class="flex items-center justify-center gap-2">
               <button type="button" onclick="appActions.openAddModal()" class="px-4 py-2 rounded-full bg-slate-950 text-white font-extrabold text-xs">⚡ Nổ Show Lịch Chung</button>
-              <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2 rounded-full bg-white text-slate-800 border border-slate-300 font-extrabold text-xs">+ Note Show Ngoài</button>
+              <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2 rounded-full bg-white text-slate-800 border border-slate-300 font-extrabold text-xs">Note Show Ngoài</button>
             </div>
           </div>
         ` : filtered.map((sh, idx) => {
@@ -113,9 +116,9 @@ export function renderDebtTabHtml() {
 
                 ${expanded ? `
                   <div class="pt-2.5 border-t border-slate-100 space-y-3">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                      <span class="text-[10px] font-black text-slate-400 uppercase">TÌNH TRẠNG THANH LÝ KHÁCH:</span>
-                      <div class="flex items-center gap-1 flex-wrap">
+                    <div class="space-y-1.5">
+                      <span class="text-[10px] font-black text-slate-400 uppercase block">TÌNH TRẠNG THANH LÝ KHÁCH:</span>
+                      <div class="flex items-center gap-1.5 flex-wrap">
                         ${OWNER_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setStatus('${sh.id}', '${s.id}')" class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${m.rec.status === s.id ? s.badgeCls : 'bg-slate-50 text-slate-600'}">${s.label}</button>`).join('')}
                       </div>
                     </div>
@@ -126,18 +129,18 @@ export function renderDebtTabHtml() {
                         <input type="tel" inputmode="numeric" value="${m.clientPrice ? m.clientPrice.toLocaleString('vi-VN') : ''}" oninput="ownerActions.handleMoneyInput('${sh.id}', 'clientPrice', this)" placeholder="Nhập giá báo khách..." class="w-full px-3 py-2 border rounded-xl font-mono font-bold text-xs" />
                       </div>
                       <div>
-                        <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center justify-between gap-1 mb-1">
                           <label class="text-[10px] font-black text-slate-500 uppercase">💵 KHÁCH ĐÃ CỌC / ĐÃ TRẢ:</label>
-                          ${missingClient > 0 ? `<span class="text-[10px] font-bold text-amber-700">Khách còn thiếu: ${missingClient.toLocaleString('vi-VN')}đ</span>` : ''}
+                          ${missingClient > 0 ? `<span class="text-[10px] font-bold text-amber-700">Thiếu: ${missingClient.toLocaleString('vi-VN')}đ</span>` : ''}
                         </div>
                         <input type="tel" inputmode="numeric" value="${m.depositPaid ? m.depositPaid.toLocaleString('vi-VN') : ''}" oninput="ownerActions.handleMoneyInput('${sh.id}', 'depositPaid', this)" placeholder="Số tiền khách đã chuyển..." class="w-full px-3 py-2 border rounded-xl font-mono font-bold text-xs text-emerald-700" />
                       </div>
                     </div>
 
                     <div class="space-y-2">
-                      <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-black text-slate-500 uppercase">👥 DỰ KIẾN CHI CTP ANH EM THAM GIA (${crewMembers.length} NGƯỜI):</span>
-                        <span class="text-[10px] font-semibold text-slate-400">Chạm thẻ nhiệm vụ để cộng tiền</span>
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-[10px] font-black text-slate-500 uppercase">👥 DỰ KIẾN CHI CTP ANH EM (${crewMembers.length})</span>
+                        <span class="text-[10px] font-semibold text-slate-400">Chạm thẻ để chọn</span>
                       </div>
                       ${crewMembers.length === 0 ? `
                         <div class="p-2.5 rounded-2xl bg-slate-50 text-[11px] text-slate-400">Show này không có nhân sự CTP đi cùng.</div>
@@ -156,16 +159,16 @@ export function renderDebtTabHtml() {
                               <span class="font-mono font-black text-xs text-slate-900">${memCost.toLocaleString('vi-VN')}đ</span>
                             </div>
 
-                            <div class="flex flex-wrap gap-1.5">
+                            <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                               ${taskKeys.map(tk => {
                                 const active = memTasks[tk] !== undefined && memTasks[tk] !== null;
                                 const tVal = active ? memTasks[tk] : getDefaultRateForTask(tk, sh);
                                 return `
-                                  <div class="inline-flex flex-col items-start">
-                                    <button type="button" onclick="ownerActions.toggleOwnerCrewTask('${sh.id}', '${mid}', '${tk}')" class="px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200'}">
-                                      ${taskLabels[tk]} ${active ? '✓' : '+'}
+                                  <div class="flex flex-col">
+                                    <button type="button" onclick="ownerActions.toggleOwnerCrewTask('${sh.id}', '${mid}', '${tk}')" class="w-full py-1.5 px-2 rounded-xl text-[10.5px] font-extrabold border transition text-center ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200'}">
+                                      ${taskLabels[tk]}
                                     </button>
-                                    ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleOwnerCrewTaskInput('${sh.id}', '${mid}', '${tk}', this)" class="mt-1 w-24 px-2 py-0.5 bg-white border border-slate-300 rounded-lg text-[10px] font-mono font-black text-right" />` : ''}
+                                    ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleOwnerCrewTaskInput('${sh.id}', '${mid}', '${tk}', this)" class="mt-1 w-full px-1.5 py-1 bg-white border border-slate-300 rounded-lg text-[10px] font-mono font-black text-right" />` : ''}
                                   </div>
                                 `;
                               }).join('')}
@@ -177,8 +180,8 @@ export function renderDebtTabHtml() {
 
                     <div class="space-y-2">
                       <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-black text-slate-500 uppercase">🚌 CHI PHÍ KHÁC (XE, KHÁCH SẠN, ĂN UỐNG, THUÊ ĐỒ...):</span>
-                        <button type="button" onclick="ownerActions.addOwnerExpense('${sh.id}')" class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px]">+ Thêm khoản chi</button>
+                        <span class="text-[10px] font-black text-slate-500 uppercase">🚌 CHI PHÍ KHÁC (XE, KS, ĂN, ĐỒ):</span>
+                        <button type="button" onclick="ownerActions.addOwnerExpense('${sh.id}')" class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px]">Thêm chi</button>
                       </div>
                       ${(m.rec.otherExpenses || []).map((ex, exIdx) => `
                         <div class="flex items-center gap-1.5">
@@ -212,6 +215,7 @@ export function renderDebtTabHtml() {
             const cm = calculateCrewShowMetrics(sh);
             const stObj = CREW_CTP_STATUS_OPTIONS.find(o => o.id === cm.meta.ctpStatus) || CREW_CTP_STATUS_OPTIONS[0];
             const owner = getMember(sh.ownerId);
+            const linkedTasks = state.ctpItems?.[sh.id]?.tasks || {};
 
             return `
               <div class="bg-white rounded-3xl border border-slate-200 p-3.5 space-y-3">
@@ -233,10 +237,31 @@ export function renderDebtTabHtml() {
 
                 ${expanded ? `
                   <div class="pt-2.5 border-t border-slate-100 space-y-3">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                      <span class="text-[10px] font-black text-slate-500 uppercase">CHỦ SHOW (${escapeHtml(owner.name.toUpperCase())}) THANH TOÁN:</span>
-                      <div class="flex items-center gap-1 flex-wrap">
+                    <div class="space-y-1.5">
+                      <span class="text-[10px] font-black text-slate-500 uppercase block">CHỦ SHOW (${escapeHtml(owner.name.toUpperCase())}) THANH TOÁN:</span>
+                      <div class="flex items-center gap-1.5 flex-wrap">
                         ${CREW_CTP_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setCrewCtpStatus('${sh.id}', '${s.id}')" class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${cm.meta.ctpStatus === s.id ? s.badgeCls : 'bg-slate-50 text-slate-600'}">${s.label}</button>`).join('')}
+                      </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-[10px] font-black text-slate-500 uppercase">🎬 NHIỆM VỤ CTP (ĐỒNG BỘ TAB TÍNH CTP)</span>
+                        <span class="text-[10px] font-semibold text-slate-400">Chạm để chọn</span>
+                      </div>
+                      <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                        ${taskKeys.map(tk => {
+                          const active = linkedTasks[tk] !== undefined && linkedTasks[tk] !== null;
+                          const tVal = active ? linkedTasks[tk] : getDefaultRateForTask(tk, sh);
+                          return `
+                            <div class="flex flex-col">
+                              <button type="button" onclick="ownerActions.toggleSyncedCtpTask('${sh.id}', '${tk}')" class="w-full py-1.5 px-2 rounded-xl text-[10.5px] font-extrabold border transition text-center ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200'}">
+                                ${taskLabels[tk]}
+                              </button>
+                              ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleSyncedCtpTaskInput('${sh.id}', '${tk}', this)" class="mt-1 w-full px-1.5 py-1 bg-indigo-50 border border-indigo-300 rounded-lg text-[10px] font-mono font-black text-right" />` : ''}
+                            </div>
+                          `;
+                        }).join('')}
                       </div>
                     </div>
 
@@ -264,7 +289,7 @@ export function renderDebtTabHtml() {
 
                     <div class="flex items-center gap-2">
                       <button type="button" onclick="ownerActions.toggleExpandShow('${sh.id}')" class="px-3.5 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs">Thu gọn ▲</button>
-                      <button type="button" onclick="ownerActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs">💾 LƯU THÔNG TIN CTP</button>
+                      <button type="button" onclick="ownerActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs">💾 LƯU THÔNG TIN</button>
                     </div>
                   </div>
                 ` : ''}
