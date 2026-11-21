@@ -44,7 +44,7 @@ function renderAdminInspectModalHtml() {
             <div class="text-[10px] font-black text-emerald-700 uppercase tracking-wider">Chi Tiết Show</div>
             <h3 class="text-base font-black text-slate-900 mt-0.5">${escapeHtml(sh.location || '')} ${sh.partner ? `<span class="text-slate-400 font-semibold">(${escapeHtml(sh.partner)})</span>` : ''}</h3>
           </div>
-          <button onclick="adminProActions.closeInspectShow()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+          <button type="button" onclick="adminProActions.closeInspectShow()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
         </div>
 
         <div class="divide-y divide-slate-100">
@@ -61,8 +61,8 @@ function renderAdminInspectModalHtml() {
         ${sh.note ? `<div class="p-3 rounded-2xl bg-slate-50 text-slate-700"><b>Ghi chú:</b> ${escapeHtml(sh.note)}</div>` : ''}
 
         <div class="grid grid-cols-2 gap-2 pt-2">
-          <button onclick="adminProActions.deleteShowFromAdmin('${escapeHtml(sh.id)}')" class="py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold">🗑️ Xóa Show</button>
-          <button onclick="adminProActions.closeInspectShow()" class="py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold">Đóng</button>
+          <button type="button" onclick="adminProActions.deleteShowFromAdmin('${escapeHtml(sh.id)}')" class="py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold">🗑️ Xóa Show</button>
+          <button type="button" onclick="adminProActions.closeInspectShow()" class="py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold">Đóng</button>
         </div>
       </div>
     </div>
@@ -168,8 +168,8 @@ function renderCrewTabHtml(membersSorted) {
             <div class="font-black text-xs uppercase tracking-wide text-slate-900">👥 Danh Sách Nhân Sự (${membersSorted.length})</div>
             <div class="text-[10.5px] text-slate-400">Bấm Sửa để chỉnh Tên, Màu, Cột, Mã PIN và Họ tên book vé</div>
           </div>
-          <button onclick="adminProActions.toggleAddMemberForm()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs shrink-0">
-            ${isAdding ? '✕ Đóng' : '+ Thêm Nhân Sự'}
+          <button type="button" onclick="adminProActions.toggleAddMemberForm()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs shrink-0">
+            ${isAdding ? '✕ Đóng' : 'Thêm Nhân Sự'}
           </button>
         </div>
 
@@ -182,7 +182,7 @@ function renderCrewTabHtml(membersSorted) {
               <div class="flex items-center gap-2">
                 <input id="adm-add-color" type="color" value="#334155" class="w-9 h-9 rounded-xl border cursor-pointer shrink-0" />
                 <input id="adm-add-order" type="number" min="1" max="50" value="${membersSorted.length + 1}" placeholder="Cột" class="w-16 px-2 py-2 rounded-xl bg-white border text-xs font-mono font-bold text-center" />
-                <button onclick="adminProActions.addNewMember()" class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">Lưu Mới</button>
+                <button type="button" onclick="adminProActions.addNewMember()" class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">Lưu Mới</button>
               </div>
             </div>
           </div>
@@ -207,10 +207,10 @@ function renderCrewTabHtml(membersSorted) {
                     </div>
                   </div>
                   <div class="flex items-center gap-1.5 shrink-0">
-                    <button onclick="adminProActions.toggleEditMember('${escapeHtml(m.id)}')" class="px-3 py-1.5 rounded-xl font-bold text-[11px] ${isEd ? 'bg-slate-900 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
+                    <button type="button" onclick="adminProActions.toggleEditMember('${escapeHtml(m.id)}')" class="px-3 py-1.5 rounded-xl font-bold text-[11px] ${isEd ? 'bg-slate-900 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
                       ${isEd ? 'Đóng' : '✏️ Sửa'}
                     </button>
-                    <button onclick="adminProActions.deleteMemberFromAdmin('${escapeHtml(m.id)}')" title="Xóa nhân sự" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold flex items-center justify-center">🗑️</button>
+                    <button type="button" onclick="adminProActions.deleteMemberFromAdmin('${escapeHtml(m.id)}')" title="Xóa nhân sự" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold flex items-center justify-center">🗑️</button>
                   </div>
                 </div>
 
@@ -288,7 +288,7 @@ function renderPricingAndColorsTabHtml() {
             <div class="font-black text-xs uppercase tracking-wide text-slate-900">💰 Đơn Giá CTP Mặc Định</div>
             <div class="text-[10.5px] text-slate-400">Áp dụng khi bật nhiệm vụ ở tab Tính CTP</div>
           </div>
-          <button onclick="adminProActions.saveCtpRates()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu Giá</button>
+          <button type="button" onclick="adminProActions.saveCtpRates()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu Giá</button>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
           <div><b>🎥 Quay 1n:</b><input id="adm-r-quay1" type="text" value="${Number(rates.quay1Day || 1500000).toLocaleString('vi-VN')}" class="w-full mt-1 px-2.5 py-1.5 border rounded-xl font-mono font-bold bg-slate-50" /></div>
@@ -308,14 +308,14 @@ function renderPricingAndColorsTabHtml() {
             <div class="font-black text-xs uppercase tracking-wide text-slate-900">🎨 Màu Địa Điểm Trên Bảng Công Tác</div>
             <div class="text-[10.5px] text-slate-400">Chỉnh xong bấm "Lưu & Áp Dụng" để cập nhật toàn bộ bảng lịch.</div>
           </div>
-          <button onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu &amp; Áp Dụng</button>
+          <button type="button" onclick="adminProActions.saveAndApplyColors()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">💾 Lưu &amp; Áp Dụng</button>
         </div>
 
         <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2.5">
           <div class="flex gap-2">
             <input id="adm-new-col-kw" type="text" placeholder="Thêm địa điểm mới (VD: Đi ăn đám cưới, Măng Đen...)" class="flex-1 px-3 py-2 border rounded-xl font-bold bg-white text-xs" />
             <input id="adm-new-col-hex" type="color" value="${pickedNewHex}" onchange="adminProActions.pickNewColorSwatch(this.value)" class="w-9 h-9 rounded-xl border cursor-pointer shrink-0 bg-white p-0.5" />
-            <button onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black text-xs shrink-0">+ Thêm</button>
+            <button type="button" onclick="adminProActions.addColorRule()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black text-xs shrink-0">Thêm</button>
           </div>
 
           <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
@@ -336,7 +336,7 @@ function renderPricingAndColorsTabHtml() {
                 <div style="background:${r.color}" class="px-2.5 py-1.5 rounded-2xl border border-black/10 flex items-center gap-2">
                   <input type="color" value="${r.color}" onchange="adminProActions.updateColorRule(${r._idx}, 'color', this.value)" class="w-6 h-6 rounded-full border cursor-pointer shrink-0 bg-transparent" />
                   <input type="text" value="${escapeHtml(r.keyword || '')}" oninput="adminProActions.updateColorRule(${r._idx}, 'keyword', this.value)" class="flex-1 min-w-0 px-2 py-1 rounded-xl bg-white/85 font-bold text-slate-900 text-[11px]" />
-                  <button onclick="adminProActions.removeColorRule(${r._idx})" class="w-6 h-6 rounded-full bg-white/85 hover:bg-white text-rose-600 font-black text-[10px] shrink-0">✕</button>
+                  <button type="button" onclick="adminProActions.removeColorRule(${r._idx})" class="w-6 h-6 rounded-full bg-white/85 hover:bg-white text-rose-600 font-black text-[10px] shrink-0">✕</button>
                 </div>
               `).join('')}
             </div>
@@ -385,8 +385,8 @@ function renderSystemTabHtml() {
           <div class="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
             <img src="${escapeHtml(curLogo)}" alt="Logo" class="w-full h-full object-contain" />
           </div>
-          <button onclick="adminProActions.triggerLogoUpload()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black text-xs">📤 Chọn Ảnh Logo Mới</button>
-          ${state.customLogoDataUrl ? `<button onclick="adminProActions.resetLogoDefault()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">↩ Dùng Logo Mặc Định</button>` : ''}
+          <button type="button" onclick="adminProActions.triggerLogoUpload()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black text-xs">📤 Chọn Ảnh Logo Mới</button>
+          ${state.customLogoDataUrl ? `<button type="button" onclick="adminProActions.resetLogoDefault()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">↩ Dùng Logo Mặc Định</button>` : ''}
           <input id="adm-logo-file-input" type="file" accept="image/*" onchange="adminProActions.handleLogoUpload(this)" class="hidden" />
         </div>
       </div>
@@ -397,9 +397,9 @@ function renderSystemTabHtml() {
           <div class="text-[10.5px] text-slate-400 mt-0.5">Tải file backup toàn bộ shows, cấu hình, PIN &amp; màu sắc về máy hoặc nạp lại từ file .JSON</div>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button onclick="adminProActions.exportFullJsonBackup()" class="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs">⬇️ Tải File Backup (.JSON)</button>
-          <button onclick="adminProActions.triggerRestoreJsonFile()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">⬆️ Khôi Phục Từ File (.JSON)</button>
-          <button onclick="adminProActions.copyFullJsonToClipboard()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs">📋 Copy JSON</button>
+          <button type="button" onclick="adminProActions.exportFullJsonBackup()" class="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs">⬇️ Tải File Backup (.JSON)</button>
+          <button type="button" onclick="adminProActions.triggerRestoreJsonFile()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">⬆️ Khôi Phục Từ File (.JSON)</button>
+          <button type="button" onclick="adminProActions.copyFullJsonToClipboard()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs">Copy JSON</button>
           <input id="adm-restore-json-input" type="file" accept=".json,application/json" onchange="adminProActions.handleRestoreJsonFile(this)" class="hidden" />
         </div>
       </div>
@@ -408,7 +408,7 @@ function renderSystemTabHtml() {
         <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-2.5">
           <div class="font-black text-xs uppercase tracking-wide text-slate-900">🛡️ Khóa Bảo Trì (Maintenance Mode)</div>
           <p class="text-[11px] text-slate-500">Bật khi cần khóa tạm quyền Nổ Show / sửa / xóa của thành viên để đối soát.</p>
-          <button onclick="adminProActions.toggleMaintenanceMode()" class="px-4 py-2 rounded-xl font-black text-white ${state.readonlyMaintenanceMode ? 'bg-emerald-600' : 'bg-rose-600'}">
+          <button type="button" onclick="adminProActions.toggleMaintenanceMode()" class="px-4 py-2 rounded-xl font-black text-white ${state.readonlyMaintenanceMode ? 'bg-emerald-600' : 'bg-rose-600'}">
             ${state.readonlyMaintenanceMode ? '🔓 Tắt Khóa Bảo Trì' : '🛡️ Bật Khóa Bảo Trì'}
           </button>
         </div>
@@ -417,7 +417,7 @@ function renderSystemTabHtml() {
           <div class="font-black text-xs uppercase tracking-wide text-slate-900">📅 Bật / Ẩn Năm Hiển Thị</div>
           <p class="text-[11px] text-slate-500">Chọn các năm xuất hiện trên thanh chọn đầu ứng dụng.</p>
           <div class="flex flex-wrap gap-1.5">
-            ${ALL_YEARS.map(yr => `<button onclick="adminProActions.toggleYear(${yr})" class="px-3 py-1 rounded-full font-black border ${state.visibleYears.includes(yr) ? 'bg-slate-900 text-amber-400' : 'bg-slate-50 text-slate-500'}">${yr}</button>`).join('')}
+            ${ALL_YEARS.map(yr => `<button type="button" onclick="adminProActions.toggleYear(${yr})" class="px-3 py-1 rounded-full font-black border ${state.visibleYears.includes(yr) ? 'bg-slate-900 text-amber-400' : 'bg-slate-50 text-slate-500'}">${yr}</button>`).join('')}
           </div>
         </div>
       </div>
@@ -427,13 +427,13 @@ function renderSystemTabHtml() {
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="font-black text-xs uppercase tracking-wide text-slate-900">🔒 Khóa Sổ Tháng (${lockYear})</div>
             <div class="flex gap-1 bg-slate-100 p-0.5 rounded-full">
-              ${ALL_YEARS.map(yr => `<button onclick="adminProActions.setLockViewYear(${yr})" class="px-2.5 py-0.5 rounded-full text-[10px] font-black ${lockYear === yr ? 'bg-slate-900 text-amber-400' : 'text-slate-600'}">${yr}</button>`).join('')}
+              ${ALL_YEARS.map(yr => `<button type="button" onclick="adminProActions.setLockViewYear(${yr})" class="px-2.5 py-0.5 rounded-full text-[10px] font-black ${lockYear === yr ? 'bg-slate-900 text-amber-400' : 'text-slate-600'}">${yr}</button>`).join('')}
             </div>
           </div>
           <div class="grid grid-cols-6 gap-1.5">
             ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
               const locked = isYearMonthLocked(lockYear, m);
-              return `<button onclick="adminProActions.toggleLockMonthAdmin(${m})" class="py-1.5 rounded-xl font-extrabold text-[10.5px] border ${locked ? 'bg-rose-50 text-rose-600 border-rose-300' : 'bg-slate-50 text-slate-700 border-slate-200'}">${locked ? '🔒' : '🔓'} T${m}</button>`;
+              return `<button type="button" onclick="adminProActions.toggleLockMonthAdmin(${m})" class="py-1.5 rounded-xl font-extrabold text-[10.5px] border ${locked ? 'bg-rose-50 text-rose-600 border-rose-300' : 'bg-slate-50 text-slate-700 border-slate-200'}">${locked ? '🔒' : '🔓'} T${m}</button>`;
             }).join('')}
           </div>
         </div>
@@ -445,8 +445,8 @@ function renderSystemTabHtml() {
           </div>
           <input id="adm-broadcast-inp" type="text" value="${escapeHtml(bc.text || '')}" placeholder="VD: Chốt bill CTP tháng trước ngày 03..." class="w-full px-3 py-2 rounded-xl bg-slate-50 border font-bold" />
           <div class="flex gap-2">
-            <button onclick="adminProActions.publishBroadcast()" class="flex-1 py-2 rounded-xl bg-rose-600 text-white font-black">📢 Lưu &amp; Phát Ngay</button>
-            ${bc.enabled ? `<button onclick="adminProActions.disableBroadcast()" class="px-3 py-2 rounded-xl bg-slate-200 text-slate-800 font-bold">🔕 Tắt</button>` : ''}
+            <button type="button" onclick="adminProActions.publishBroadcast()" class="flex-1 py-2 rounded-xl bg-rose-600 text-white font-black">📢 Lưu &amp; Phát Ngay</button>
+            ${bc.enabled ? `<button type="button" onclick="adminProActions.disableBroadcast()" class="px-3 py-2 rounded-xl bg-slate-200 text-slate-800 font-bold">🔕 Tắt</button>` : ''}
           </div>
         </div>
       </div>
@@ -459,7 +459,7 @@ function renderSystemTabHtml() {
             : trash.map(sh => `
                 <div class="p-2.5 rounded-xl bg-slate-50 border flex items-center justify-between gap-2">
                   <span class="font-bold truncate">📍 ${escapeHtml(sh.location)} (${escapeHtml(formatDayMonth(sh.startDate))})</span>
-                  <button onclick="adminProActions.restoreDeletedShow('${escapeHtml(sh.id)}')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-black text-[10.5px] shrink-0">↩ Khôi phục</button>
+                  <button type="button" onclick="adminProActions.restoreDeletedShow('${escapeHtml(sh.id)}')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-black text-[10.5px] shrink-0">↩ Khôi phục</button>
                 </div>
               `).join('')}
         </div>
@@ -471,14 +471,14 @@ function renderSystemTabHtml() {
 export function renderAdminPortalHtml() {
   if (!state.isAdminMode) {
     return `
-      <div class="w-full h-[100dvh] bg-slate-950 text-white flex items-center justify-center p-4">
+      <div style="padding-top: max(18px, env(safe-area-inset-top));" class="w-full h-[100dvh] bg-slate-950 text-white flex items-center justify-center p-4">
         <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4">
           <h2 class="font-black text-sm text-amber-400 uppercase">Đăng Nhập Studio Control (Admin)</h2>
           ${state.adminLoginInput.error ? `<div class="text-rose-400 text-xs font-bold">${escapeHtml(state.adminLoginInput.error)}</div>` : ''}
           <input type="email" value="${escapeHtml(state.adminLoginInput.email)}" placeholder="Email Admin" oninput="state.adminLoginInput.email = this.value" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white" />
           <input type="password" value="${escapeHtml(state.adminLoginInput.password)}" placeholder="Mật khẩu Firebase Auth" oninput="state.adminLoginInput.password = this.value" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white" />
-          <button onclick="appActions.submitBackendAdminLogin()" class="w-full bg-amber-400 text-slate-950 font-black py-2.5 rounded-xl text-xs">Đăng Nhập Quản Trị</button>
-          <button onclick="appActions.exitBackendPortal()" class="w-full text-slate-400 text-xs py-1">← Quay lại Lịch Show</button>
+          <button type="button" onclick="appActions.submitBackendAdminLogin()" class="w-full bg-amber-400 text-slate-950 font-black py-2.5 rounded-xl text-xs">Đăng Nhập Quản Trị</button>
+          <button type="button" onclick="appActions.exitBackendPortal()" class="w-full text-slate-400 text-xs py-1">← Quay lại Lịch Show</button>
         </div>
       </div>
     `;
@@ -503,26 +503,26 @@ export function renderAdminPortalHtml() {
 
   return `
     <div class="w-full h-[100dvh] bg-[#f4f5f7] text-slate-900 flex flex-col overflow-hidden">
-      <header class="bg-white border-b border-slate-200 px-4 py-3 shrink-0 space-y-2.5">
+      <header style="padding-top: max(18px, env(safe-area-inset-top));" class="bg-white border-b border-slate-200 px-3 sm:px-4 pb-2.5 shrink-0 space-y-2">
         <div class="max-w-5xl w-full mx-auto flex items-center justify-between gap-2">
-          <div>
+          <div class="min-w-0">
             <div class="font-black text-sm uppercase tracking-tight text-slate-900">Studio Control</div>
-            <div class="text-[11px] text-slate-400 font-medium">${state.shows.length} Shows • Action Media x Say Studios</div>
+            <div class="text-[10.5px] text-slate-400 font-medium truncate">${state.shows.length} Shows • Action Media x Say Studios</div>
           </div>
-          <div class="flex gap-2">
-            <button onclick="adminProActions.exportFullJsonBackup()" class="px-3 py-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs">💾 Backup</button>
-            <button onclick="appActions.exitBackendPortal()" class="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs">← Về App</button>
+          <div class="flex gap-1.5 shrink-0">
+            <button type="button" onclick="adminProActions.exportFullJsonBackup()" class="px-3 py-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[11px]">Backup</button>
+            <button type="button" onclick="appActions.exitBackendPortal()" class="px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[11px]">← Về App</button>
           </div>
         </div>
 
-        <div class="max-w-5xl w-full mx-auto bg-slate-100 p-1 rounded-2xl grid grid-cols-4 gap-1 text-xs">
+        <div class="max-w-5xl w-full mx-auto bg-slate-100 p-1 rounded-2xl grid grid-cols-4 gap-1 text-[10.5px] sm:text-xs">
           ${tabs.map(t => `
-            <button onclick="adminProActions.setAdminTab('${t.id}')" class="py-2 px-2 rounded-xl font-extrabold truncate transition-all ${curAdminTab === t.id ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'}">${t.label}</button>
+            <button type="button" onclick="adminProActions.setAdminTab('${t.id}')" class="py-2 px-1.5 rounded-xl font-extrabold leading-tight text-center transition-all ${curAdminTab === t.id ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'}">${t.label}</button>
           `).join('')}
         </div>
       </header>
 
-      <div class="flex-1 overflow-y-auto custom-scroll p-4 max-w-5xl w-full mx-auto text-xs pb-16">
+      <div class="flex-1 overflow-y-auto custom-scroll p-3 sm:p-4 max-w-5xl w-full mx-auto text-xs pb-16">
         ${bodyHtml}
       </div>
 
