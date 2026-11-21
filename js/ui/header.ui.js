@@ -128,7 +128,6 @@ export function renderHeaderHtml(totalAlerts = 0) {
       </div>
 
       ${renderLiveMarqueeHtml()}
-      ${(state.activeTab === 'shows' || state.activeTab === 'matrix') ? renderUnifiedDateBarHtml(state.activeTab) : ''}
 
       ${state.readonlyMaintenanceMode ? `
         <div class="bg-amber-100 border border-amber-400 text-amber-900 rounded-xl px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-1.5">
@@ -142,6 +141,8 @@ export function renderHeaderHtml(totalAlerts = 0) {
           <span class="flex-1">${escapeHtml(state.studioBroadcast.text)}</span>
         </div>
       ` : ''}
+
+      ${(state.activeTab === 'shows' || state.activeTab === 'matrix') ? renderUnifiedDateBarHtml(state.activeTab) : ''}
     </header>
   `;
 }
