@@ -447,63 +447,56 @@ export function renderCrewManifestModalHtml() {
   const sh = (state.shows || []).find(s => s && s.id === showId);
   if (!sh) return '';
 
-  const rows = (sh.memberIds || []).map((mid, idx) => {
-    const m = getMember(mid);
-    const prof = state.memberProfiles?.[mid] || {};
-    const legalName = (state.officialLegalNames?.[mid] || prof.fullName || m.name || '').toUpperCase();
-    const roles = Array.isArray(sh.roles?.[mid]) ? sh.roles[mid].join(', ') : (sh.roles?.[mid] || '');
-    return {
-      index: idx + 1,
-      nick: m.name,
-      legalName,
-      cccd: prof.cccd || 'Chưa cập nhật',
-      dob: prof.dob || 'Chưa cập nhật',
-      phone: prof.phone || 'Chưa cập nhật',
-      roles
-    };
-  });
-
-  const extRows = (sh.externalCrew || []).map((p, idx) => ({
-    index: rows.length + idx + 1,
-    nick: `${p.name} (Freelancer)`,
-    legalName: String(p.name || '').toUpperCase(),
-    cccd: 'Freelancer',
-    dob: '-',
-    phone: '-',
-    roles: Array.isArray(p.roles) ? p.roles.join(', ') : (p.roles || '')
-  }));
-
-  const all = [...rows, ...extRows];
+  const crewIds = Array.isArray(sh.memberIds) ? sh.memberIds : [];
+  const extList = Array.isArray(sh.externalCrew) ? sh.externalCrew : [];
 
   return `
     <div onclick="appActions.closeCrewManifestModal()" class="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
       <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3.5 text-xs shadow-2xl max-h-[88dvh] overflow-y-auto">
         <div class="flex items-start justify-between border-b border-slate-100 pb-2.5">
           <div>
-            <div class="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Danh Sách Book Vé / Nhân Sự</div>
+            <div class="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Danh Sách Nhân Sự</div>
             <h3 class="text-sm font-black text-slate-900 mt-0.5">${escapeHtml(sh.location || '')} (${escapeHtml(formatDayMonth(sh.startDate))})</h3>
           </div>
           <button type="button" onclick="appActions.closeCrewManifestModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
         </div>
 
-        <div class="divide-y divide-slate-100">
-          ${all.length === 0
-            ? `<div class="py-5 text-center text-slate-400">Chưa có nhân sự nào trong show này.</div>`
-            : all.map(r => `
-              <div class="py-2.5 space-y-1">
+        <div class="space-y-2.5">
+          ${crewIds.map((mid, idx) => {
+            const m = getMember(mid);
+            const prof = state.memberProfiles?.[mid] || {};
+            const legalName = (state.officialLegalNames?.[mid] || prof.fullName || m.name || '').toUpperCase();
+            const roles = Array.isArray(sh.roles?.[mid]) ? sh.roles[mid].join(', ') : (sh.roles?.[mid] || '');
+            return `
+              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="font-black text-slate-900">${r.index}. ${escapeHtml(r.legalName)} <span class="text-slate-500 font-semibold">(${escapeHtml(r.nick)})</span></span>
-                  ${r.roles ? `<span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-extrabold">${escapeHtml(r.roles)}</span>` : ''}
+                  <span class="font-black text-slate-900">${idx + 1}. ${escapeHtml(m.name)}</span>
+                  ${roles ? `<span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-extrabold">${escapeHtml(roles)}</span>` : ''}
                 </div>
-                <div class="text-[11px] font-mono text-slate-600">CCCD: <b>${escapeHtml(r.cccd)}</b> • NS: <b>${escapeHtml(r.dob)}</b> • SĐT: <b>${escapeHtml(r.phone)}</b></div>
+                <input id="manifest-name-${escapeHtml(mid)}" type="text" value="${escapeHtml(legalName)}" placeholder="Họ tên đầy đủ" class="w-full px-2.5 py-1.5 rounded-xl bg-white border text-xs font-bold uppercase" />
+                <div class="grid grid-cols-3 gap-1.5">
+                  <input id="manifest-cccd-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.cccd || '')}" placeholder="CCCD" class="px-2 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
+                  <input id="manifest-dob-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.dob || '')}" placeholder="Ngày sinh" class="px-2 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
+                  <input id="manifest-phone-${escapeHtml(mid)}" type="text" value="${escapeHtml(prof.phone || '')}" placeholder="SĐT" class="px-2 py-1.5 rounded-xl bg-white border text-[11px] font-mono font-bold" />
+                </div>
               </div>
-            `).join('')
-          }
+            `;
+          }).join('')}
+
+          ${extList.map((ext, eIdx) => `
+            <div class="p-3 rounded-2xl bg-indigo-50/50 border border-indigo-200/70 space-y-1.5">
+              <div class="font-black text-indigo-900 text-[11px]">${crewIds.length + eIdx + 1}. Freelancer</div>
+              <input id="manifest-ext-${eIdx}" type="text" value="${escapeHtml(ext.name || '')}" placeholder="Tên nhân sự ngoài..." class="w-full px-2.5 py-1.5 rounded-xl bg-white border text-xs font-bold" />
+            </div>
+          `).join('')}
+
+          ${crewIds.length === 0 && extList.length === 0 ? `<div class="py-5 text-center text-slate-400">Chưa có nhân sự nào trong show này.</div>` : ''}
         </div>
 
-        <div class="grid grid-cols-2 gap-2 pt-1">
-          <button type="button" onclick="appActions.copyCrewManifestText('${escapeHtml(sh.id)}')" class="py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black">Copy Book Vé</button>
-          <button type="button" onclick="appActions.closeCrewManifestModal()" class="py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold">Đóng</button>
+        <div class="grid grid-cols-3 gap-2 pt-1">
+          <button type="button" onclick="appActions.saveCrewManifestEdits('${escapeHtml(sh.id)}')" class="py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px]">Lưu</button>
+          <button type="button" onclick="appActions.copyCrewManifestText('${escapeHtml(sh.id)}')" class="py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px]">COPY DANH SÁCH</button>
+          <button type="button" onclick="appActions.closeCrewManifestModal()" class="py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[11px]">Đóng</button>
         </div>
       </div>
     </div>
