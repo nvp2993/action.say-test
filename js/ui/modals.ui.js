@@ -142,7 +142,7 @@ export function renderCrewPassModalHtml() {
               <button type="button" onclick="appActions.toggleEditCrewProfile(${!isEditing})" class="px-2.5 py-1 rounded-full bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold text-[10.5px] whitespace-nowrap">
                 ${isEditing ? '✕ Hủy' : 'Sửa'}
               </button>
-              <button type="button" onclick="appActions.openSelfChangePinModal()" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[10.5px] whitespace-nowrap">Đổi PIN</button>
+              <button type="button" onclick="appActions.openSelfChangePinModal()" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[10.5px] whitespace-nowrap">🔑 Đổi PIN</button>
             </div>
           </div>
 
@@ -516,16 +516,33 @@ export function renderClientDebtBillModalHtml() {
   const prof = state.memberProfiles?.[state.currentUserId] || {};
   const ownerName = (prof.fullName || dbm.ownerName || '').trim();
   const qrUrl = prof.bankAcc ? buildVietQrUrl(prof.bankBin, prof.bankAcc) : '';
+  const clientFilter = dbm.clientFilter || 'all';
+  const clientOptions = Array.isArray(dbm.clients) ? dbm.clients : [];
+  const visibleRows = clientFilter === 'all'
+    ? dbm.rows
+    : dbm.rows.filter(r => r.clientKey === clientFilter);
+
+  const totalPrice = visibleRows.reduce((s, r) => s + (Number(r.clientPrice) || 0), 0);
+  const totalPaid = visibleRows.reduce((s, r) => s + (Number(r.depositPaid) || 0), 0);
+  const totalRemaining = visibleRows.reduce((s, r) => s + (Number(r.remaining) || 0), 0);
 
   return `
     <div onclick="ownerActions.closeClientDebtBill()" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2.5 sm:p-4">
       <div onclick="event.stopPropagation()" id="client-debt-bill-capture-area" class="bg-white w-full max-w-2xl rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl flex flex-col max-h-[90dvh]">
-        <div class="flex justify-between items-center border-b pb-2 shrink-0">
-          <div>
+        <div class="flex justify-between items-center border-b pb-2 shrink-0 gap-2">
+          <div class="min-w-0">
             <h3 class="font-black text-sm text-slate-900">BẢNG CÔNG NỢ KHÁCH HÀNG — ${escapeHtml(dbm.periodLabel)}</h3>
-            <p class="text-[11px] text-slate-500">Chủ show: <b class="text-slate-800">${escapeHtml(ownerName)}</b> • Tổng còn thiếu: <b class="text-rose-600 font-mono">${Number(dbm.totalRemaining || 0).toLocaleString('vi-VN')}đ</b></p>
+            <p class="text-[11px] text-slate-500 truncate">Chủ show: <b class="text-slate-800">${escapeHtml(ownerName)}</b> • Còn thiếu: <b class="text-rose-600 font-mono">${totalRemaining.toLocaleString('vi-VN')}đ</b></p>
           </div>
-          <button type="button" onclick="ownerActions.closeClientDebtBill()" class="w-8 h-8 rounded-full bg-slate-100">✕</button>
+          <button type="button" data-html2canvas-ignore="true" onclick="ownerActions.closeClientDebtBill()" class="w-8 h-8 rounded-full bg-slate-100 shrink-0">✕</button>
+        </div>
+
+        <div data-html2canvas-ignore="true" class="flex items-center gap-2 shrink-0">
+          <span class="text-[10.5px] font-black text-slate-500 uppercase shrink-0">Lọc khách:</span>
+          <select onchange="ownerActions.setClientDebtFilter(this.value)" class="flex-1 min-w-0 px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold">
+            <option value="all" ${clientFilter === 'all' ? 'selected' : ''}>Tất cả khách / đối tác (${dbm.rows.length} show)</option>
+            ${clientOptions.map(c => `<option value="${escapeHtml(c.key)}" ${clientFilter === c.key ? 'selected' : ''}>${escapeHtml(c.label)} (${c.count} show)</option>`).join('')}
+          </select>
         </div>
 
         <div class="flex-1 min-h-0 overflow-auto border border-slate-200 rounded-2xl">
@@ -534,16 +551,16 @@ export function renderClientDebtBillModalHtml() {
               <tr>
                 <th class="py-2 px-1.5 border">STT</th>
                 <th class="py-2 px-1.5 border">NGÀY</th>
-                <th class="py-2 px-2 border text-left">SHOW / ĐỐI TÁC</th>
+                <th class="py-2 px-2 border text-left">SHOW / KHÁCH</th>
                 <th class="py-2 px-1.5 border text-right">BÁO GIÁ</th>
                 <th class="py-2 px-1.5 border text-right">ĐÃ TRẢ</th>
                 <th class="py-2 px-1.5 border text-right">CÒN NỢ</th>
               </tr>
             </thead>
             <tbody class="divide-y">
-              ${dbm.rows.map(r => `
+              ${visibleRows.map((r, i) => `
                 <tr>
-                  <td class="py-1.5 px-1.5 border text-center">${r.stt}</td>
+                  <td class="py-1.5 px-1.5 border text-center">${i + 1}</td>
                   <td class="py-1.5 px-1.5 border text-center font-mono">${escapeHtml(r.dateLabel)}</td>
                   <td class="py-1.5 px-2 border font-bold">${escapeHtml(r.title)}</td>
                   <td class="py-1.5 px-1.5 border text-right font-mono">${Number(r.clientPrice || 0).toLocaleString('vi-VN')}đ</td>
@@ -555,9 +572,9 @@ export function renderClientDebtBillModalHtml() {
             <tfoot>
               <tr class="bg-slate-900 text-white font-mono font-black">
                 <td colspan="3" class="py-2 px-2 text-right text-amber-300">TỔNG CỘNG:</td>
-                <td class="py-2 px-1.5 text-right">${Number(dbm.totalPrice || 0).toLocaleString('vi-VN')}đ</td>
-                <td class="py-2 px-1.5 text-right text-emerald-400">${Number(dbm.totalPaid || 0).toLocaleString('vi-VN')}đ</td>
-                <td class="py-2 px-1.5 text-right text-rose-400">${Number(dbm.totalRemaining || 0).toLocaleString('vi-VN')}đ</td>
+                <td class="py-2 px-1.5 text-right">${totalPrice.toLocaleString('vi-VN')}đ</td>
+                <td class="py-2 px-1.5 text-right text-emerald-400">${totalPaid.toLocaleString('vi-VN')}đ</td>
+                <td class="py-2 px-1.5 text-right text-rose-400">${totalRemaining.toLocaleString('vi-VN')}đ</td>
               </tr>
             </tfoot>
           </table>
@@ -566,16 +583,16 @@ export function renderClientDebtBillModalHtml() {
         ${qrUrl ? `
           <div class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
             <div class="text-[11px] space-y-0.5">
-              <div class="font-black text-slate-900 uppercase">💳 THÔNG TIN THANH TOÁN</div>
+              <div class="font-black text-slate-900 uppercase">💳 QUÉT MÃ VIETQR THANH TOÁN</div>
               <div>Ngân hàng: <b>${escapeHtml(getBankName(prof.bankBin))}</b></div>
               <div>Chủ TK: <b class="uppercase">${escapeHtml(ownerName)}</b></div>
               <div>Số TK: <b class="font-mono text-indigo-700">${escapeHtml(prof.bankAcc)}</b></div>
             </div>
-            <img src="${qrUrl}" alt="VietQR" class="w-20 h-20 object-contain bg-white p-1 rounded-xl border shrink-0" />
+            <img src="${qrUrl}" alt="VietQR" class="vietqr-img-el w-20 h-20 object-contain bg-white p-1 rounded-xl border shrink-0" />
           </div>
         ` : ''}
 
-        <div class="grid grid-cols-3 gap-2 shrink-0">
+        <div data-html2canvas-ignore="true" class="grid grid-cols-3 gap-2 shrink-0">
           <button type="button" onclick="ownerActions.captureClientDebtBill()" class="bg-amber-400 text-slate-950 font-black py-2.5 rounded-full text-[11px]">📸 Chụp Ảnh</button>
           <button type="button" onclick="ownerActions.copyClientDebtText()" class="bg-emerald-600 text-white font-black py-2.5 rounded-full text-[11px]">Copy Zalo</button>
           <button type="button" onclick="ownerActions.exportOwnerExcel()" class="bg-slate-900 text-white font-black py-2.5 rounded-full text-[11px]">Tải .XLSX</button>
