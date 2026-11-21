@@ -18,11 +18,10 @@ export function renderDebtTabHtml() {
     return true;
   }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
 
-  // Thống kê theo từng vai trò / trạng thái đúng 4 ảnh bản cũ
   let ownerPriceSum = 0, ownerExpSum = 0, ownerProfitSum = 0, ownerUnpaidSum = 0;
   let crewBillSum = 0, crewSelfExpSum = 0, crewPocketSum = 0, crewUnpaidSum = 0;
   let settledNetSum = 0, settledClientPaidSum = 0, settledCrewPaidSum = 0, settledCount = 0;
-  let unsettledNetSum = 0, unsettledClientDebtSum = 0, unsettledCrewDebtSum = 0, unsettledCount = 0;
+  let unsettledClientDebtSum = 0, unsettledCrewDebtSum = 0, unsettledCount = 0;
   let cOwner = 0, cCrew = 0;
 
   allInvolved.forEach(sh => {
@@ -42,7 +41,6 @@ export function renderDebtTabHtml() {
         settledClientPaidSum += m.clientPrice;
       } else {
         unsettledCount++;
-        unsettledNetSum += m.netProfit;
         unsettledClientDebtSum += m.remainingClientDebt;
       }
     } else {
@@ -60,13 +58,15 @@ export function renderDebtTabHtml() {
         settledCrewPaidSum += cm.grossCtp;
       } else {
         unsettledCount++;
-        unsettledNetSum += cm.netPocket;
         unsettledCrewDebtSum += cm.pendingCtpDebt;
       }
     }
   });
 
   const filterMode = state.ownerFilterStatus || 'all';
+  const totalIncomeAll = ownerProfitSum + crewPocketSum;
+  const totalUncollectedToWallet = unsettledClientDebtSum + unsettledCrewDebtSum;
+
   let statCards = [];
   if (filterMode === 'role_owner') {
     statCards = [
@@ -90,12 +90,11 @@ export function renderDebtTabHtml() {
       { label: '🏁 SỐ SHOW HOÀN TẤT', val: `${settledCount} show`, cls: 'text-slate-800' }
     ];
   } else {
-    const totalDebt = unsettledClientDebtSum + unsettledCrewDebtSum;
     statCards = [
-      { label: '⏳ TỔNG CÔNG NỢ', val: `${totalDebt.toLocaleString('vi-VN')}đ`, cls: 'text-rose-600' },
-      { label: '👑 CÔNG NỢ KHÁCH HÀNG', val: `${unsettledClientDebtSum.toLocaleString('vi-VN')}đ`, cls: 'text-slate-900' },
-      { label: '🎥 CÔNG NỢ CTP', val: `${unsettledCrewDebtSum.toLocaleString('vi-VN')}đ`, cls: 'text-slate-900' },
-      { label: '📌 SỐ SHOW CHƯA XONG', val: `${unsettledCount} show`, cls: 'text-slate-800' }
+      { label: '💎 TỔNG THU NHẬP', val: `${totalIncomeAll >= 0 ? '+' : ''}${totalIncomeAll.toLocaleString('vi-VN')}đ`, cls: 'text-emerald-700' },
+      { label: '👑 TỔNG LÃI SHOW NHẬN KHÁCH', val: `${ownerProfitSum >= 0 ? '+' : ''}${ownerProfitSum.toLocaleString('vi-VN')}đ`, cls: 'text-slate-900' },
+      { label: '🎥 CTP ĐI LÀM', val: `${crewPocketSum >= 0 ? '+' : ''}${crewPocketSum.toLocaleString('vi-VN')}đ`, cls: 'text-indigo-700' },
+      { label: '⏳ CHƯA THU VỀ VÍ', val: `${totalUncollectedToWallet.toLocaleString('vi-VN')}đ`, cls: 'text-rose-600' }
     ];
   }
 
@@ -122,15 +121,16 @@ export function renderDebtTabHtml() {
             <button type="button" onclick="ownerActions.exportOwnerExcel()" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold">.XLSX</button>
           </div>
         </div>
-        ${renderUnifiedDateBarHtml('owner')}
         <div class="as-ios-seg-bar">
           ${[
             { id: 'all', label: `ALL (${allInvolved.length})` },
-            { id: 'role_owner', label: `Chủ (${cOwner})` }, { id: 'role_crew', label: `CTP (${cCrew})` },
+            { id: 'role_owner', label: `Chủ (${cOwner})` },
+            { id: 'role_crew', label: `CTP (${cCrew})` },
             { id: 'unsettled', label: 'Chưa thu' },
             { id: 'settled', label: 'Đã xong' }
           ].map(f => `<button type="button" onclick="ownerActions.setFilterStatus('${f.id}')" class="as-ios-seg-item ${filterMode === f.id ? 'active' : ''}">${f.label}</button>`).join('')}
         </div>
+        ${renderUnifiedDateBarHtml('owner')}
       </div>
 
       <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 space-y-2.5">
@@ -146,7 +146,7 @@ export function renderDebtTabHtml() {
         ${filtered.length === 0 ? `
           <div class="text-center py-10 bg-white rounded-3xl border border-slate-200 mx-auto max-w-sm space-y-3 p-4">
             <div class="text-3xl">📭</div>
-            <div class="text-slate-800 font-bold text-xs">Chưa có show nào trong danh mục lọc này</div>
+            <div class="text-slate-800 font-bold text-xs">Chưa có show nào trong danh mục lọc này (${unsettledCount} show chờ xử lý)</div>
             <div class="flex items-center justify-center gap-2">
               <button type="button" onclick="appActions.openAddModal()" class="px-4 py-2 rounded-full bg-slate-950 text-white font-extrabold text-xs">⚡ Nổ Show Lịch Chung</button>
               <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2 rounded-full bg-white text-slate-800 border border-slate-300 font-extrabold text-xs">Note Show Ngoài</button>
@@ -174,7 +174,7 @@ export function renderDebtTabHtml() {
                       <span class="font-mono text-[10px] font-bold text-slate-600">${formatDayMonth(sh.startDate)} (${days}n)</span>
                       <span class="px-2 py-0.5 rounded-full border text-[9.5px] font-bold ${stObj.badgeCls}">${stObj.label}</span>
                     </div>
-                    <div class="font-black text-slate-900 text-sm mt-1">📍 ${escapeHtml(sh.location)}${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
+                    <div class="font-black text-slate-900 text-sm mt-1">📍 ${escapeHtml(sh.location)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
                   </div>
                   <div class="text-right shrink-0 space-y-0.5">
                     <div class="text-[10px] font-mono text-slate-500">Thu: <b>${formatCompactMoneyPlain(m.clientPrice)}</b> • Chi: <b class="text-rose-600">${formatCompactMoneyPlain(m.totalExpense)}</b></div>
@@ -221,7 +221,8 @@ export function renderDebtTabHtml() {
                           <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
                             <div class="flex items-center justify-between gap-2">
                               <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="px-2 py-0.5 rounded-lg bg-slate-900 text-white text-[10px] font-black uppercase">${escapeHtml(mem.name)}</span>${roleHint ? `<span class="text-[10px] font-bold text-slate-500">• ${escapeHtml(roleHint)}</span>` : ''}
+                                <span class="px-2 py-0.5 rounded-lg bg-slate-900 text-white text-[10px] font-black uppercase">${escapeHtml(mem.name)}</span>
+                                ${roleHint ? `<span class="text-[10px] font-bold text-slate-500">• ${escapeHtml(roleHint)}</span>` : ''}
                               </div>
                               <span class="font-mono font-black text-xs text-slate-900">${memCost.toLocaleString('vi-VN')}đ</span>
                             </div>
@@ -252,9 +253,9 @@ export function renderDebtTabHtml() {
                       </div>
                       ${(m.rec.otherExpenses || []).map((ex, exIdx) => `
                         <div class="flex items-center gap-1.5">
-                          <input type="text" value="${escapeHtml(ex.name || '')}" oninput="ownerActions.saveOwnerExpenseField('${sh.id}',${exIdx}, 'name', this)" placeholder="Tên khoản chi..." class="flex-1 min-w-0 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-bold" />
-                          <input type="tel" inputmode="numeric" value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}" oninput="ownerActions.saveOwnerExpenseField('${sh.id}',${exIdx}, 'amount', this)" placeholder="Số tiền" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-mono font-black text-right text-rose-600 shrink-0" />
-                          <button type="button" onclick="ownerActions.removeOwnerExpense('${sh.id}',${exIdx})" class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600 font-bold shrink-0">✕</button>
+                          <input type="text" value="${escapeHtml(ex.name || '')}" oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'name', this)" placeholder="Tên khoản chi..." class="flex-1 min-w-0 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-bold" />
+                          <input type="tel" inputmode="numeric" value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}" oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'amount', this)" placeholder="Số tiền" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-mono font-black text-right text-rose-600 shrink-0" />
+                          <button type="button" onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx})" class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600 font-bold shrink-0">✕</button>
                         </div>
                       `).join('')}
                     </div>
@@ -294,7 +295,7 @@ export function renderDebtTabHtml() {
                       <span class="font-mono text-[10px] font-bold text-slate-600">${formatDayMonth(sh.startDate)} (${days}n)</span>
                       <span class="px-2 py-0.5 rounded-full border text-[9.5px] font-bold ${stObj.badgeCls}">${stObj.label}</span>
                     </div>
-                    <div class="font-black text-slate-900 text-sm mt-1">📍 ${escapeHtml(sh.location)}${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
+                    <div class="font-black text-slate-900 text-sm mt-1">📍 ${escapeHtml(sh.location)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
                   </div>
                   <div class="text-right shrink-0 space-y-0.5">
                     <div class="text-[10px] font-mono text-slate-500">CTP: <b>${formatCompactMoneyPlain(cm.grossCtp)}</b> • Tự chi: <b class="text-rose-600">${cm.selfExpense ? formatCompactMoneyPlain(cm.selfExpense) : '-'}</b></div>
