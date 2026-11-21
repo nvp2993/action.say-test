@@ -81,7 +81,7 @@ export function findAnyCtpShow(showId) {
 
 export function getCombinedCtpShows() {
   const regular = (state.shows || []).filter(sh => {
-    if (!sh || sh.isCancelled || !sh.startDate) return false;
+    if (!sh || sh.isCancelled || sh.isHold || !sh.startDate) return false;
     const [y, m] = sh.startDate.split('-').map(Number);
     if (y !== state.selectedYear || m !== state.ctpMonth) return false;
     if (!(sh.memberIds || []).includes(state.currentUserId)) return false;
@@ -91,6 +91,7 @@ export function getCombinedCtpShows() {
   }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
 
   const custom = (state.ctpCustomShows || []).filter(sh => {
+    if (!sh || sh.isCancelled || sh.isHold) return false;
     const m = sh.startDate ? parseInt(sh.startDate.split('-')[1], 10) : Number(sh.ctpMonth);
     if (m !== state.ctpMonth) return false;
     if (state.ctpOwnerId !== 'all' && sh.ownerId !== state.ctpOwnerId) return false;
