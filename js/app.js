@@ -3,7 +3,7 @@ import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin,
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText, cleanupMatchingHoldsForOfficialShow } from './services/show.service.js';
 import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics } from './services/finance.service.js';
 import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
-import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain } from './utils/helpers.js';
+import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain, buildVietQrUrl } from './utils/helpers.js';
 import { exportShowToAppleCalendar } from './utils/export.js';
 import { initPullToRefresh } from './utils/pullToRefresh.js';
 
@@ -25,6 +25,22 @@ import {
   renderClientDebtBillModalHtml
 } from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
+
+function getBankName(bin) {
+  const map = {
+    '970436': 'Vietcombank',
+    '970415': 'VietinBank',
+    '970418': 'BIDV',
+    '970407': 'Techcombank',
+    '970422': 'MB Bank',
+    '970416': 'ACB',
+    '970432': 'VPBank',
+    '970423': 'TPBank',
+    '970403': 'Sacombank',
+    '970441': 'VIB'
+  };
+  return map[String(bin || '').trim()] || (bin ? `BIN ${bin}` : 'Ngân hàng');
+}
 
 function applyCustomLogoToDom() {
   const customLogo = state.customLogoDataUrl || localStorage.getItem('as_custom_logo_2026') || '';
@@ -55,48 +71,29 @@ function getBellAlertsCount() {
   ).length;
 }
 
-async function captureDomCardAsPng(elementId, filename, successMsg) {
-  const el = document.getElementById(elementId);
-  if (!el) return showToast('Không tìm thấy khung Bill để chụp!', 'error');
-  if (typeof window.html2canvas !== 'function') {
-    return showToast('Chưa tải được thư viện chụp ảnh (html2canvas)!', 'error');
-  }
+async function loadQrBitmapIfAvailable(prof, fullName) {
+  if (!prof?.bankAcc) return null;
+  const qrUrl = buildVietQrUrl(prof.bankBin, prof.bankAcc);
+  if (!qrUrl) return null;
   try {
-    showToast('📸 Đang chụp ảnh...');
-    const canvas = await window.html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      onclone: (clonedDoc) => {
-        const clonedEl = clonedDoc.getElementById(elementId);
-        if (clonedEl) {
-          clonedEl.style.maxHeight = 'none';
-          clonedEl.style.height = 'auto';
-          clonedEl.style.overflow = 'visible';
-        }
-        clonedDoc.querySelectorAll('*').forEach((node) => {
-          const cs = clonedDoc.defaultView?.getComputedStyle(node);
-          if (!cs) return;
-          if (cs.backgroundColor && (cs.backgroundColor.includes('oklch') || cs.backgroundColor.includes('oklab') || cs.backgroundColor.includes('color('))) {
-            node.style.backgroundColor = '#ffffff';
-          }
-          if (cs.color && (cs.color.includes('oklch') || cs.color.includes('oklab') || cs.color.includes('color('))) {
-            node.style.color = '#0f172a';
-          }
-          if (cs.borderColor && (cs.borderColor.includes('oklch') || cs.borderColor.includes('oklab') || cs.borderColor.includes('color('))) {
-            node.style.borderColor = '#cbd5e1';
-          }
-        });
-      }
+    const resp = await fetch(qrUrl);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    const objUrl = URL.createObjectURL(blob);
+    return await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        resolve({ img, bankLabel: getBankName(prof.bankBin), acc: prof.bankAcc, holder: (fullName || '').toUpperCase() });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+        resolve(null);
+      };
+      img.src = objUrl;
     });
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    showToast(successMsg || '✅ Đã tải ảnh về máy!');
-  } catch (err) {
-    showToast('Lỗi chụp ảnh: ' + (err?.message || 'Không xuất được ảnh'), 'error');
+  } catch {
+    return null;
   }
 }
 
@@ -598,11 +595,99 @@ window.ctpActions = {
   },
   closeBillModal() { state.ctpBillModal = null; renderApp(); },
   async captureBillImage() {
-    await captureDomCardAsPng(
-      'ctp-bill-capture-area',
-      `CTP_T${state.ctpMonth}_${state.selectedYear}.png`,
-      '✅ Đã xuất ảnh Bill CTP (.PNG) kèm VietQR!'
-    );
+    const bm = state.ctpBillModal;
+    if (!bm) return showToast('Không có dữ liệu Bill để chụp!', 'error');
+    const prof = state.memberProfiles?.[state.currentUserId] || {};
+    const fullName = (prof.fullName || bm.memberName || '').trim();
+    const qrData = await loadQrBitmapIfAvailable(prof, fullName);
+
+    const canvas = document.createElement('canvas');
+    const W = 900;
+    const rowH = 44;
+    const H = 190 + Math.max(1, bm.rows.length) * rowH + (qrData ? 140 : 24);
+    canvas.width = W * 2;
+    canvas.height = H * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(`BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}`, 28, 42);
+    ctx.fillStyle = '#475569';
+    ctx.font = '13px sans-serif';
+    ctx.fillText(`Nhân sự: ${fullName}   •   Chủ show: ${bm.ownerTitle}`, 28, 66);
+
+    const tableX = 28, tableY = 86, tableW = W - 56;
+    const cols = [52, 86, 190, 210, 140, tableW - 52 - 86 - 190 - 210 - 140];
+    const headers = ['STT', 'NGÀY', 'SHOW', 'NHIỆM VỤ', 'PHÁT SINH', 'TỔNG'];
+
+    ctx.fillStyle = '#107c41';
+    ctx.fillRect(tableX, tableY, tableW, 34);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px sans-serif';
+    let cx = tableX;
+    headers.forEach((h, idx) => {
+      ctx.fillText(h, cx + 8, tableY + 21);
+      cx += cols[idx];
+    });
+
+    let ry = tableY + 34;
+    bm.rows.forEach((r, i) => {
+      ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+      ctx.fillRect(tableX, ry, tableW, rowH);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(tableX, ry, tableW, rowH);
+
+      let xPos = tableX;
+      const cells = [
+        String(r.stt),
+        String(r.dateLabel || ''),
+        String(r.location || ''),
+        (r.taskBulletsCompact || []).join(', ') || '-',
+        (r.extraBulletsCompact || []).join(', ') || '-',
+        Number(r.showSum || 0).toLocaleString('vi-VN') + 'đ'
+      ];
+      cells.forEach((txt, cIdx) => {
+        ctx.fillStyle = cIdx === 5 ? '#047857' : '#0f172a';
+        ctx.font = cIdx === 5 ? 'bold 12px monospace' : '12px sans-serif';
+        const clipped = txt.length > 34 ? txt.slice(0, 32) + '…' : txt;
+        ctx.fillText(clipped, xPos + 8, ry + 26);
+        xPos += cols[cIdx];
+      });
+      ry += rowH;
+    });
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(tableX, ry, tableW, 38);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText('TỔNG CỘNG:', tableX + tableW - cols[5] - 110, ry + 24);
+    ctx.fillStyle = '#34d399';
+    ctx.fillText(Number(bm.total || 0).toLocaleString('vi-VN') + 'đ', tableX + tableW - cols[5] + 8, ry + 24);
+
+    if (qrData) {
+      ry += 52;
+      ctx.fillStyle = '#ecfdf5';
+      ctx.fillRect(tableX, ry, tableW, 108);
+      ctx.strokeStyle = '#a7f3d0';
+      ctx.strokeRect(tableX, ry, tableW, 108);
+      ctx.fillStyle = '#064e3b';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(`QUÉT MÃ VIETQR THANH TOÁN CTP`, tableX + 14, ry + 24);
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`Ngân hàng: ${qrData.bankLabel}   •   STK: ${qrData.acc}`, tableX + 14, ry + 48);
+      ctx.fillText(`Chủ TK: ${qrData.holder}`, tableX + 14, ry + 72);
+      ctx.drawImage(qrData.img, tableX + tableW - 102, ry + 9, 90, 90);
+    }
+
+    const link = document.createElement('a');
+    link.download = `CTP_T${state.ctpMonth}_${state.selectedYear}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('✅ Đã xuất ảnh Bill CTP (.PNG) thành công!');
   },
   copyBillText() {
     const bm = state.ctpBillModal;
@@ -864,11 +949,72 @@ window.ownerActions = {
       .catch(() => showToast('Không thể copy, vui lòng thử lại!', 'error'));
   },
   async captureClientDebtBill() {
-    await captureDomCardAsPng(
-      'client-debt-bill-capture-area',
-      `CongNo_Khach_${state.selectedYear}.png`,
-      '✅ Đã xuất ảnh bảng công nợ kèm VietQR!'
-    );
+    const dbm = state.clientDebtBillModal;
+    if (!dbm) return;
+    const clientFilter = dbm.clientFilter || 'all';
+    const visibleRows = clientFilter === 'all' ? dbm.rows : dbm.rows.filter(r => r.clientKey === clientFilter);
+    const chosenObj = (dbm.clients || []).find(c => c.key === clientFilter);
+    const headerClient = clientFilter === 'all' ? 'Tất cả khách' : (chosenObj?.label || clientFilter);
+    const totalRemaining = visibleRows.reduce((s, r) => s + (Number(r.remaining) || 0), 0);
+
+    const prof = state.memberProfiles?.[state.currentUserId] || {};
+    const ownerFullName = (prof.fullName || dbm.ownerName || '').trim();
+    const qrData = await loadQrBitmapIfAvailable(prof, ownerFullName);
+
+    const canvas = document.createElement('canvas');
+    const W = 900;
+    const rowH = 42;
+    const H = 150 + Math.max(1, visibleRows.length) * rowH + (qrData ? 140 : 24);
+    canvas.width = W * 2;
+    canvas.height = H * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(`BẢNG CÔNG NỢ KHÁCH HÀNG (${dbm.periodLabel})`, 24, 38);
+    ctx.fillStyle = '#475569';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`Khách: ${headerClient}   •   Chủ show: ${dbm.ownerName}   •   Còn nợ: ${totalRemaining.toLocaleString('vi-VN')}đ`, 24, 60);
+
+    let ry = 82;
+    visibleRows.forEach((r, i) => {
+      ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+      ctx.fillRect(24, ry, W - 48, rowH);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(24, ry, W - 48, rowH);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(`${i + 1}. [${r.dateLabel}] ${r.title}`, 32, ry + 25);
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(`Nợ: ${Number(r.remaining || 0).toLocaleString('vi-VN')}đ`, W - 165, ry + 25);
+      ry += rowH;
+    });
+
+    if (qrData) {
+      ry += 16;
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(24, ry, W - 48, 108);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.strokeRect(24, ry, W - 48, 108);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(`THÔNG TIN THANH TOÁN VIETQR`, 38, ry + 24);
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`Ngân hàng: ${qrData.bankLabel}   •   STK: ${qrData.acc}`, 38, ry + 48);
+      ctx.fillText(`Chủ TK: ${qrData.holder}`, 38, ry + 72);
+      ctx.drawImage(qrData.img, W - 126, ry + 9, 90, 90);
+    }
+
+    const a = document.createElement('a');
+    a.download = `CongNo_Khach_${state.selectedYear}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    showToast('✅ Đã xuất ảnh bảng công nợ thành công!');
   },
   exportOwnerExcel() {
     const uid = state.currentUserId;
