@@ -3,11 +3,51 @@ import { ALL_YEARS, ADMIN_SWATCH_COLORS_30 } from '../config/constants.js';
 import { escapeHtml, getMember, getSortedMembers, formatDayMonth } from '../utils/helpers.js';
 import { isYearMonthLocked } from '../services/show.service.js';
 
+function getShowCreatedTimestamp(sh) {
+  const raw = sh?.createdAt ?? sh?.updatedAt ?? 0;
+  if (typeof raw === 'number') return raw;
+  if (raw && typeof raw.toMillis === 'function') return raw.toMillis();
+  if (raw && typeof raw.seconds === 'number') return raw.seconds * 1000;
+  const parsed = Date.parse(String(raw || ''));
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getLocalDateKey(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getCreatedDayKey(ts) {
+  const d = ts ? new Date(ts) : new Date();
+  if (Number.isNaN(d.getTime())) return 'unknown';
+  return getLocalDateKey(d);
+}
+
+function formatCreatedDayHeader(dayKey) {
+  if (!dayKey || dayKey === 'unknown') return { label: 'KHÔNG RÕ NGÀY NHẬP', isToday: false };
+  const now = new Date();
+  const todayKey = getLocalDateKey(now);
+  const [y, m, d] = dayKey.split('-');
+  if (dayKey === todayKey) {
+    return { label: `HÔM NAY • ${Number(d)}/${Number(m)}`, isToday: true };
+  }
+  return { label: `${d}/${m}/${y}`, isToday: false };
+}
+
+function formatCreatedTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 function getFilteredAdminShows() {
   const q = String(state.adminSearch || '').trim().toLowerCase();
   const list = [...(state.shows || [])].sort((a, b) => {
-    const ta = Number(a?.createdAt || a?.updatedAt || 0);
-    const tb = Number(b?.createdAt || b?.updatedAt || 0);
+    const ta = getShowCreatedTimestamp(a);
+    const tb = getShowCreatedTimestamp(b);
     if (tb !== ta) return tb - ta;
     return String(b?.id || '').localeCompare(String(a?.id || ''));
   });
@@ -16,8 +56,10 @@ function getFilteredAdminShows() {
   return list.filter(sh => {
     if (!sh) return false;
     const crew = (sh.memberIds || []).map(id => getMember(id).name).join(' ');
+    const ext = (sh.externalCrew || []).map(p => p?.name || '').join(' ');
     const owner = sh.ownerId ? getMember(sh.ownerId).name : '';
-    const hay = `${sh.location || ''} ${sh.partner || ''} ${owner} ${crew} ${sh.startDate || ''}`.toLowerCase();
+    const creator = (sh.creatorId || sh.createdBy) ? getMember(sh.creatorId || sh.createdBy).name : '';
+    const hay = `${sh.location || ''} ${sh.partner || ''} ${owner} ${creator} ${crew} ${ext} ${sh.startDate || ''}`.toLowerCase();
     return hay.includes(q);
   });
 }
@@ -34,7 +76,16 @@ function renderAdminInspectModalHtml() {
     const m = getMember(mid);
     const r = Array.isArray(sh.roles?.[mid]) ? sh.roles[mid].join(', ') : (sh.roles?.[mid] || 'Tham gia');
     return `<div class="py-2 flex items-center justify-between text-xs"><span class="font-bold text-slate-900">${escapeHtml(m.name)}</span><span class="text-emerald-700 font-semibold">${escapeHtml(r)}</span></div>`;
-  }).join('') || '<div class="py-2 text-slate-400">Chưa gán nhân sự</div>';
+  }).join('');
+
+  const extList = (sh.externalCrew || []).map((ext, idx) => {
+    const label = String(ext?.name || '').trim() || `NS ${idx + 1}`;
+    const r = Array.isArray(ext?.roles) && ext.roles.length ? ext.roles.join(', ') : 'Freelancer';
+    return `<div class="py-2 flex items-center justify-between text-xs"><span class="font-bold text-indigo-900">🤝 ${escapeHtml(label)}</span><span class="text-indigo-700 font-semibold">${escapeHtml(r)}</span></div>`;
+  }).join('');
+
+  const combinedCrewHtml = (crewList + extList) || '<div class="py-2 text-slate-400">Chưa gán nhân sự</div>';
+  const totalCrewCount = (sh.memberIds || []).length + (sh.externalCrew || []).length;
 
   return `
     <div onclick="adminProActions.closeInspectShow()" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -54,8 +105,8 @@ function renderAdminInspectModalHtml() {
         </div>
 
         <div>
-          <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Ekip (${(sh.memberIds || []).length} người)</div>
-          <div class="divide-y divide-slate-100">${crewList}</div>
+          <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Ekip (${totalCrewCount} người)</div>
+          <div class="divide-y divide-slate-100">${combinedCrewHtml}</div>
         </div>
 
         ${sh.note ? `<div class="p-3 rounded-2xl bg-slate-50 text-slate-700"><b>Ghi chú:</b> ${escapeHtml(sh.note)}</div>` : ''}
@@ -69,24 +120,129 @@ function renderAdminInspectModalHtml() {
   `;
 }
 
+function renderGroupedShowsByCreatedDayHtml(filteredShows) {
+  if (!filteredShows.length) {
+    return `<div class="py-7 text-center text-slate-400">Chưa có dữ liệu show phù hợp</div>`;
+  }
+
+  const groups = [];
+  const groupMap = new Map();
+
+  filteredShows.forEach((sh) => {
+    const ts = getShowCreatedTimestamp(sh);
+    const dayKey = getCreatedDayKey(ts);
+    if (!groupMap.has(dayKey)) {
+      const grp = { dayKey, items: [] };
+      groupMap.set(dayKey, grp);
+      groups.push(grp);
+    }
+    groupMap.get(dayKey).items.push(sh);
+  });
+
+  let runningIdx = 0;
+
+  return groups.map((grp) => {
+    const hdr = formatCreatedDayHeader(grp.dayKey);
+    const headerCls = hdr.isToday
+      ? 'bg-emerald-50/90 text-emerald-700 border border-emerald-200/70'
+      : 'bg-slate-100/90 text-slate-600 border border-slate-200/60';
+
+    const rowsHtml = grp.items.map((sh) => {
+      runningIdx += 1;
+      const ts = getShowCreatedTimestamp(sh);
+      const timeStr = formatCreatedTime(ts);
+      const creatorId = sh.creatorId || sh.createdBy || sh.ownerId;
+      const creatorName = creatorId ? getMember(creatorId).name : 'Hệ thống';
+
+      const internalCrew = (sh.memberIds || []).map(id => getMember(id).name);
+      const externalCrew = (sh.externalCrew || []).map((p, idx) => String(p?.name || '').trim() || `NS ${idx + 1}`);
+      const crewStr = [...internalCrew, ...externalCrew].join(', ') || 'Trống';
+
+      const startFmt = formatDayMonth(sh.startDate);
+      const endFmt = sh.endDate && sh.endDate !== sh.startDate ? formatDayMonth(sh.endDate) : '';
+      const dateRangeHtml = endFmt
+        ? `<span class="font-mono font-bold text-emerald-700 shrink-0">${escapeHtml(startFmt)}→${escapeHtml(endFmt)}</span>`
+        : `<span class="font-mono font-bold text-emerald-700 shrink-0">${escapeHtml(startFmt)}</span>`;
+
+      return `
+        <div onclick="adminProActions.openInspectShow('${escapeHtml(sh.id)}')" class="py-2.5 px-2.5 flex items-center justify-between gap-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="text-[10.5px] font-mono text-slate-400 shrink-0">#${runningIdx}</span>
+              ${dateRangeHtml}
+              <span class="font-extrabold text-slate-900 truncate ${sh.isCancelled ? 'line-through text-rose-600' : ''}">${escapeHtml(sh.location || '')}</span>
+              ${sh.partner ? `<span class="text-slate-400 font-semibold text-[11px] truncate">(${escapeHtml(sh.partner)})</span>` : ''}
+            </div>
+            <div class="text-[11px] text-slate-500 truncate mt-0.5 pl-4">
+              ${timeStr ? `<span class="font-mono text-slate-400">${escapeHtml(timeStr)}</span> • ` : ''}Nhập: <b class="text-emerald-700 font-bold">${escapeHtml(creatorName)}</b> • Ekip: <span class="text-slate-700 font-medium">${escapeHtml(crewStr)}</span>
+            </div>
+          </div>
+          <span class="text-slate-400 font-bold text-sm shrink-0">›</span>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="space-y-1 pt-1">
+        <div class="px-3 py-1.5 rounded-xl flex items-center justify-between text-[11px] font-black uppercase tracking-wide ${headerCls}">
+          <span class="inline-flex items-center gap-1.5">
+            ${hdr.isToday ? `<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>` : ''}
+            <span>${escapeHtml(hdr.label)}</span>
+          </span>
+          <span class="font-mono font-bold text-slate-500">${grp.items.length}</span>
+        </div>
+        <div class="divide-y divide-slate-100">
+          ${rowsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderOverviewTabHtml(membersSorted, filteredShows) {
-  const activeShowsCount = (state.shows || []).filter(s => s && !s.isCancelled).length;
-  const cancelledCount = (state.shows || []).filter(s => s && s.isCancelled).length;
+  const validShows = (state.shows || []).filter(s => s && !s.isCancelled && !s.isHold);
+  const totalShowsCount = validShows.length;
+
+  const now = new Date();
+  const todayKey = getLocalDateKey(now);
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth() + 1;
+  const monthPrefix = `${curYear}-${String(curMonth).padStart(2, '0')}-`;
+
+  const addedTodayCount = validShows.filter(s => getCreatedDayKey(getShowCreatedTimestamp(s)) === todayKey).length;
+
+  const completedThisMonthCount = validShows.filter(s => {
+    const start = String(s.startDate || '');
+    const end = String(s.endDate || s.startDate || '');
+    const inCurMonth = start.startsWith(monthPrefix) || end.startsWith(monthPrefix);
+    return inCurMonth && end && end < todayKey;
+  }).length;
+
+  const runningThisMonthCount = validShows.filter(s => {
+    const start = String(s.startDate || '');
+    const end = String(s.endDate || s.startDate || '');
+    const inCurMonth = start.startsWith(monthPrefix) || end.startsWith(monthPrefix);
+    return inCurMonth && end && end >= todayKey;
+  }).length;
 
   return `
     <div class="space-y-4">
-      <div class="grid grid-cols-3 gap-2.5">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80">
-          <div class="text-[10px] font-bold text-slate-400 uppercase">Tổng Show</div>
-          <div class="text-xl sm:text-2xl font-black font-mono text-slate-900 mt-1">${state.shows.length}</div>
+          <div class="text-[10px] font-bold text-slate-400 uppercase">TỔNG SHOW</div>
+          <div class="text-xl sm:text-2xl font-black font-mono text-slate-900 mt-1">${totalShowsCount}</div>
         </div>
         <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80">
-          <div class="text-[10px] font-bold text-slate-400 uppercase">Đang Chạy</div>
-          <div class="text-xl sm:text-2xl font-black font-mono text-emerald-600 mt-1">${activeShowsCount}</div>
+          <div class="text-[10px] font-bold text-slate-400 uppercase">ĐÃ NHẬP HÔM NAY</div>
+          <div class="text-xl sm:text-2xl font-black font-mono text-indigo-600 mt-1">${addedTodayCount}</div>
         </div>
         <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80">
-          <div class="text-[10px] font-bold text-slate-400 uppercase">Đã Hủy</div>
-          <div class="text-xl sm:text-2xl font-black font-mono text-rose-600 mt-1">${cancelledCount}</div>
+          <div class="text-[10px] font-bold text-slate-400 uppercase">ĐÃ CHẠY THÁNG NÀY</div>
+          <div class="text-xl sm:text-2xl font-black font-mono text-amber-600 mt-1">${completedThisMonthCount}</div>
+        </div>
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80">
+          <div class="text-[10px] font-bold text-slate-400 uppercase">ĐANG CHẠY THÁNG NÀY</div>
+          <div class="text-xl sm:text-2xl font-black font-mono text-emerald-600 mt-1">${runningThisMonthCount}</div>
         </div>
       </div>
 
@@ -111,31 +267,14 @@ function renderOverviewTabHtml(membersSorted, filteredShows) {
       <div class="bg-white rounded-3xl p-4 border border-slate-200/80 space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <div class="font-black text-xs uppercase tracking-wide text-slate-900">📋 Danh Sách Show (${filteredShows.length})</div>
-            <div class="text-[10.5px] text-slate-400">Bấm vào từng show để xem chi tiết hoặc xóa</div>
+            <div class="font-black text-xs uppercase tracking-wide text-slate-900">SHOW MỚI NHẬP <span class="text-emerald-600 font-mono">(${filteredShows.length})</span></div>
+            <div class="text-[10.5px] text-slate-400">Phân nhóm theo ngày • Bấm vào show để xem chi tiết</div>
           </div>
           <input type="text" value="${escapeHtml(state.adminSearch)}" oninput="adminProActions.setAdminSearch(this.value)"
-            placeholder="Tìm địa điểm, đối tác, ekip..." class="w-full sm:w-64 px-3.5 py-2 rounded-2xl bg-slate-100 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
+            placeholder="Tìm địa điểm, chủ show, ekip..." class="w-full sm:w-64 px-3.5 py-2 rounded-2xl bg-slate-100 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
         </div>
-        <div class="max-h-72 overflow-y-auto custom-scroll divide-y divide-slate-100">
-          ${filteredShows.length === 0
-            ? `<div class="py-7 text-center text-slate-400">Chưa có dữ liệu show phù hợp</div>`
-            : filteredShows.map((sh, i) => {
-                const crew = (sh.memberIds || []).map(id => getMember(id).name).join(', ');
-                return `
-                  <div onclick="adminProActions.openInspectShow('${escapeHtml(sh.id)}')" class="py-2.5 px-2.5 flex items-center justify-between gap-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-2 truncate">
-                        <span class="text-[10px] font-mono text-slate-400">#${i + 1}</span>
-                        <span class="font-mono font-bold text-emerald-700">${escapeHtml(formatDayMonth(sh.startDate))}</span>
-                        <span class="font-bold text-slate-900 truncate ${sh.isCancelled ? 'line-through text-rose-600' : ''}">${escapeHtml(sh.location || '')}</span>
-                      </div>
-                      <div class="text-[11px] text-slate-500 truncate mt-0.5">Ekip: ${escapeHtml(crew || 'Trống')}</div>
-                    </div>
-                    <span class="text-slate-400 font-bold text-sm">›</span>
-                  </div>
-                `;
-              }).join('')}
+        <div class="max-h-96 overflow-y-auto custom-scroll space-y-2 pr-0.5">
+          ${renderGroupedShowsByCreatedDayHtml(filteredShows)}
         </div>
       </div>
 
