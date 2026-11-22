@@ -3,7 +3,7 @@ import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin,
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText, cleanupMatchingHoldsForOfficialShow } from './services/show.service.js';
 import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics } from './services/finance.service.js';
 import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
-import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain, buildVietQrUrl } from './utils/helpers.js';
+import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain, buildVietQrUrl, escapeHtml } from './utils/helpers.js';
 import { exportShowToAppleCalendar } from './utils/export.js';
 import { initPullToRefresh } from './utils/pullToRefresh.js';
 
@@ -27,6 +27,80 @@ import {
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
 
 const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
+
+function getTomorrowISO() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function buildZaloTomorrowText() {
+  const tomorrowIso = getTomorrowISO();
+  const activeShows = (state.shows || []).filter(s =>
+    s && !s.isCancelled && !s.isHold &&
+    s.startDate && s.startDate <= tomorrowIso && (s.endDate || s.startDate) >= tomorrowIso
+  );
+
+  const lines = [
+    `📋 ĐIỂM DANH NGÀY MAI (${formatDayMonth(tomorrowIso)} - ${tomorrowIso})`,
+    '-----------------------------------'
+  ];
+
+  if (!activeShows.length) {
+    lines.push('Chưa có show chính thức nào cho ngày mai.');
+    return lines.join('\n');
+  }
+
+  activeShows.forEach((sh, idx) => {
+    const partner = getVisiblePartnerText(sh);
+    const owner = getMember(sh.ownerId);
+    const crewText = (sh.memberIds || []).map(mid => {
+      const m = getMember(mid);
+      const roles = Array.isArray(sh.roles?.[mid]) ? sh.roles[mid].filter(Boolean).join(', ') : '';
+      return roles ? `${m.name} (${roles})` : m.name;
+    });
+    (sh.externalCrew || []).forEach((p, eIdx) => {
+      const label = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
+      const roles = Array.isArray(p?.roles) ? p.roles.filter(Boolean).join(', ') : '';
+      crewText.push(roles ? `🤝 ${label} (${roles})` : `🤝 ${label}`);
+    });
+
+    lines.push(`${idx + 1}. 📍 ${sh.location}${partner ? ` (${partner})` : ''} • Chủ: ${owner.name}`);
+    lines.push(`   NS: ${crewText.length ? crewText.join(', ') : 'Chưa gán'}`);
+  });
+
+  return lines.join('\n');
+}
+
+function renderZaloTomorrowModalHtml() {
+  if (!state.zaloTomorrowModal) return '';
+  const tomorrowIso = getTomorrowISO();
+  const textContent = buildZaloTomorrowText();
+
+  return `
+    <div onclick="appActions.closeZaloTomorrowModal()" class="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4">
+      <div onclick="event.stopPropagation()" class="bg-white w-full max-w-lg rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl max-h-[88dvh] flex flex-col">
+        <div class="flex items-center justify-between border-b pb-2 shrink-0">
+          <div>
+            <h3 class="font-black text-sm text-slate-900">📋 ĐIỂM DANH NGÀY MAI</h3>
+            <p class="text-[11px] text-slate-500">Ngày: <b class="font-mono text-slate-800">${escapeHtml(formatDayMonth(tomorrowIso))}</b></p>
+          </div>
+          <button type="button" onclick="appActions.closeZaloTomorrowModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+        </div>
+
+        <pre class="flex-1 min-h-0 overflow-auto p-3 rounded-2xl bg-slate-900 text-slate-100 font-mono text-[11px] whitespace-pre-wrap leading-relaxed">${escapeHtml(textContent)}</pre>
+
+        <div class="grid grid-cols-2 gap-2 pt-1 shrink-0">
+          <button type="button" onclick="appActions.copyZaloTomorrowText()" class="py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">📋 Copy gửi Zalo</button>
+          <button type="button" onclick="appActions.closeZaloTomorrowModal()" class="py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs">Đóng</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 function drawRoundedRect(ctx, x, y, w, h, r) {
   const radius = Math.max(0, Math.min(r, w / 2, h / 2));
@@ -199,6 +273,7 @@ function renderApp() {
     ${renderBottomNavHtml()}
     ${renderDetailModalHtml()}
     ${renderFormModalHtml()}
+    ${renderZaloTomorrowModalHtml()}
     ${renderCrewPassModalHtml()}
     ${renderCtpBillModalHtml()}
     ${renderCtpCustomShowModalHtml()}
@@ -225,7 +300,6 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
-  // === DÁN ĐOẠN MỚI VÀO ĐÂY ===
   openZaloTomorrowModal() {
     state.zaloTomorrowModal = true;
     renderApp();
@@ -276,7 +350,6 @@ window.appActions = {
     renderApp();
     showToast('Đã giữ riêng các lịch giữ chỗ này.', 'info');
   },
-  // === HẾT ĐOẠN MỚI (các hàm cũ bên dưới giữ nguyên) ===
   triggerVipAvatarUpload() {
     document.getElementById('vip-avatar-file-input')?.click();
   },
@@ -376,7 +449,25 @@ window.appActions = {
     const sh = state.shows.find(s => s.id === id);
     if (!sh || !canEditShow(sh)) return showToast('Không có quyền sửa show này!', 'error');
     state.detailShowId = null;
-    state.formModal = { mode: 'edit', showId: sh.id, stt: sh.stt, location: sh.location, partner: sh.partner || '', hidePartner: !!sh.hidePartner, startDate: sh.startDate, endDate: sh.endDate, memberIds: [...(sh.memberIds || [])], roles: JSON.parse(JSON.stringify(sh.roles || {})), externalCrew: JSON.parse(JSON.stringify(sh.externalCrew || [])), ownerId: sh.ownerId, creatorId: sh.creatorId || sh.ownerId, error: '' };
+    state.formModal = {
+      mode: 'edit',
+      showId: sh.id,
+      stt: sh.stt,
+      location: sh.location,
+      partner: sh.partner || '',
+      hidePartner: !!sh.hidePartner,
+      startDate: sh.startDate,
+      endDate: sh.endDate,
+      memberIds: [...(sh.memberIds || [])],
+      roles: JSON.parse(JSON.stringify(sh.roles || {})),
+      externalCrew: (sh.externalCrew || []).map((p, i) => ({
+        name: p?.name || `NS ${i + 1}`,
+        roles: Array.isArray(p?.roles) ? [...p.roles] : []
+      })),
+      ownerId: sh.ownerId,
+      creatorId: sh.creatorId || sh.ownerId,
+      error: ''
+    };
     renderApp();
   },
   closeFormModal() { state.formModal = null; renderApp(); },
@@ -414,7 +505,12 @@ window.appActions = {
     const [y, m] = f.startDate.split('-').map(Number);
     if (isYearMonthLocked(y, m)) return showToast(`🔒 Tháng ${m}/${y} đã khóa sổ!`, 'error');
 
-    const cleanExt = (f.externalCrew || []).filter(p => p.name.trim());
+    const cleanExt = (f.externalCrew || [])
+      .filter(p => String(p?.name || '').trim() || (Array.isArray(p?.roles) && p.roles.length > 0))
+      .map((p, i) => ({
+        name: String(p?.name || '').trim() || `NS ${i + 1}`,
+        roles: Array.isArray(p?.roles) ? [...p.roles] : []
+      }));
     let savedShow = null;
 
     if (f.mode === 'edit') {
@@ -612,7 +708,6 @@ window.appActions = {
 };
 
 window.ctpActions = {
-  // === DÁN ĐOẠN MỚI VÀO ĐÂY ===
   async toggleHoldBilling(showId) {
     const sh = state.shows.find(s => s.id === showId);
     if (!sh) return;
@@ -624,7 +719,6 @@ window.ctpActions = {
       'info'
     );
   },
-  // === HẾT ĐOẠN MỚI (các hàm cũ bên dưới giữ nguyên) ===
   setMonth(m) { state.ctpMonth = Number(m); renderApp(); },
   setOwner(o) { state.ctpOwnerId = o; renderApp(); },
   toggleTask(id, k) {
