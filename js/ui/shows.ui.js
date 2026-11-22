@@ -66,7 +66,7 @@ export function renderShowsTabHtml() {
                     <td class="sticky left-0 z-10 ${sh.isCancelled ? 'bg-rose-50' : editable ? 'bg-white' : 'bg-slate-50'} py-1.5 px-2 border-r border-slate-200 font-extrabold text-slate-900 sticky-col-shadow">
                       <div class="flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full shrink-0 border border-black/15" style="background-color:${sh.color || '#dbeafe'}"></span>
-                        <span class="truncate max-w-[115px] as-loc-text">${escapeHtml(sh.location)}</span>${statusBadge}
+                        <span class="truncate max-w-[115px] as-loc-text">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>${statusBadge}
                         ${sh.isCancelled ? '<span class="as-badge-cancelled">🚫 ĐÃ HỦY</span>' : ''}
                       </div>
                     </td>
