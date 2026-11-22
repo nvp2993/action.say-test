@@ -4,16 +4,28 @@ import { getVisiblePartnerText } from '../services/show.service.js';
 import { getCombinedCtpShows, getDefaultRateForTask } from '../services/finance.service.js';
 import { renderUnifiedDateBarHtml } from './header.ui.js';
 
+function shouldCountShowMoney(sh) {
+  return !sh?.isHold || Boolean(sh?.countHoldForBilling);
+}
+
+function getShowRawTotal(sh, item) {
+  const activeTaskSum = Object.entries(item?.tasks || {}).reduce(
+    (s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s,
+    0
+  );
+  const extraSum = (item?.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+  return activeTaskSum + extraSum;
+}
+
 export function renderCtpTabHtml() {
   const curMem = getMember(state.currentUserId);
   const filteredShows = getCombinedCtpShows();
   let grandTotal = 0;
+
   filteredShows.forEach(sh => {
+    if (!shouldCountShowMoney(sh)) return;
     const it = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
-    Object.entries(it.tasks || {}).forEach(([, v]) => {
-      if (v !== null && v !== undefined) grandTotal += (Number(v) || 0);
-    });
-    (it.extras || []).forEach(ex => { grandTotal += (Number(ex.amount) || 0); });
+    grandTotal += getShowRawTotal(sh, it);
   });
 
   return `
@@ -50,9 +62,9 @@ export function renderCtpTabHtml() {
           const item = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
           const days = getShowDays(sh);
           const owner = getMember(sh.ownerId);
-          const activeTaskSum = Object.entries(item.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
-          const extraSum = (item.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
-          const subTotal = activeTaskSum + extraSum;
+          const rawTotal = getShowRawTotal(sh, item);
+          const isCounted = shouldCountShowMoney(sh);
+          const subTotal = isCounted ? rawTotal : 0;
           const isPrivateShow = Boolean(sh.hidePartner || sh.isPrivate);
           const partnerText = getVisiblePartnerText(sh);
 
@@ -63,22 +75,31 @@ export function renderCtpTabHtml() {
           }));
 
           return `
-            <div class="bg-white rounded-3xl border border-slate-200 p-4 space-y-3">
-              <div class="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
+            <div class="${sh.isHold ? 'as-hold-striped-card' : 'bg-white border-slate-200'} rounded-3xl border p-4 space-y-3">
+              <div class="flex items-start justify-between gap-2 border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2">
                 <div class="min-w-0 flex-1">
-                  <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-bold text-[10px]">#${idx + 1}</span>
+                  <span class="px-2 py-0.5 rounded-full bg-white/90 text-slate-600 font-mono font-bold text-[10px] border border-slate-200/80">#${idx + 1}</span>
                   <span class="font-mono font-bold text-indigo-600 text-[10px] ml-1">${formatDayMonth(sh.startDate)} (${days}n)</span>
                   <h4 class="font-black text-slate-900 text-sm mt-1 flex items-center gap-1.5 flex-wrap">
                     <span>📍 ${escapeHtml(sh.location)}</span>
                     ${partnerText ? `<span class="text-slate-600 font-bold">(${escapeHtml(partnerText)})</span>` : ''}
                     ${isPrivateShow ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold">🔒 Riêng tư</span>` : ''}
-                    ${sh.isHold ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-extrabold">⏳ Giữ lịch</span>` : ''}
+                    ${sh.isHold ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold">⏳ Giữ lịch</span>` : ''}
+                    ${sh.isHold ? `
+                      <button type="button" onclick="ctpActions.toggleHoldBilling('${sh.id}')" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border transition ${
+                        sh.countHoldForBilling
+                          ? 'bg-emerald-600 text-white border-emerald-700'
+                          : 'bg-white text-amber-900 border-amber-400 hover:bg-amber-50'
+                      }">
+                        ${sh.countHoldForBilling ? '💰 Đang tính tiền' : '➕ Tính tiền show này'}
+                      </button>
+                    ` : ''}
                   </h4>
                   <p class="text-[10px] text-slate-500 mt-0.5">Chủ show: <b class="text-slate-700">${escapeHtml(owner.name)}</b></p>
                 </div>
-                <div class="text-right shrink-0 bg-emerald-50 px-3 py-1.5 rounded-2xl border border-emerald-200">
-                  <span class="text-[9px] text-emerald-700 font-bold block">Tổng Show</span>
-                  <span id="ctp-show-total-${sh.id}" class="text-xs font-black text-emerald-700 font-mono">${subTotal.toLocaleString('vi-VN')}đ</span>
+                <div class="text-right shrink-0 ${isCounted ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100/90 border-slate-200 text-slate-500'} px-3 py-1.5 rounded-2xl border">
+                  <span class="text-[9px] font-bold block">${sh.isHold && !sh.countHoldForBilling ? 'Không tính' : 'Tổng Show'}</span>
+                  <span id="ctp-show-total-${sh.id}" class="text-xs font-black font-mono">${subTotal.toLocaleString('vi-VN')}đ</span>
                 </div>
               </div>
 
@@ -88,7 +109,7 @@ export function renderCtpTabHtml() {
                   const val = checked ? item.tasks[t.key] : t.def;
                   return `
                     <div class="inline-flex flex-col items-start">
-                      <button type="button" onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')" class="px-3 py-1.5 rounded-full text-[10.5px] font-extrabold border transition ${checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200'}">
+                      <button type="button" onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')" class="px-3 py-1.5 rounded-full text-[10.5px] font-extrabold border transition ${checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-white/90 text-slate-700 border-slate-200'}">
                         ${t.label}
                       </button>
                       ${checked ? `<input type="tel" inputmode="numeric" value="${Number(val).toLocaleString('vi-VN')}" oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)" class="mt-1 w-24 px-2 py-0.5 bg-indigo-50 border border-indigo-300 rounded-lg text-[10px] font-mono font-black text-right" />` : ''}
@@ -97,15 +118,15 @@ export function renderCtpTabHtml() {
                 }).join('')}
               </div>
 
-              <div class="space-y-2 pt-1 border-t border-slate-100">
+              <div class="space-y-2 pt-1 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'}">
                 <div class="flex items-center justify-between">
                   <span class="text-[10px] font-black text-slate-400 uppercase">Phát Sinh:</span>
-                  <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-slate-100 text-indigo-600 rounded-xl text-[10px] font-black">Thêm phí</button>
+                  <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-white/90 border border-slate-200 text-indigo-600 rounded-xl text-[10px] font-black">Thêm phí</button>
                 </div>
                 ${(item.extras || []).map((ex, exIdx) => `
                   <div class="flex items-center gap-1.5">
-                    <input type="text" value="${escapeHtml(ex.name || '')}" oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this)" placeholder="Tên phí..." class="flex-1 min-w-0 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-bold" />
-                    <input type="tel" inputmode="numeric" value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}" oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this)" placeholder="Số tiền" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-50 border rounded-xl text-xs font-mono font-black text-right shrink-0" />
+                    <input type="text" value="${escapeHtml(ex.name || '')}" oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this)" placeholder="Tên phí..." class="flex-1 min-w-0 px-2.5 py-1.5 bg-white/90 border rounded-xl text-xs font-bold" />
+                    <input type="tel" inputmode="numeric" value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}" oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this)" placeholder="Số tiền" class="w-28 sm:w-32 px-2.5 py-1.5 bg-white/90 border rounded-xl text-xs font-mono font-black text-right shrink-0" />
                     <button type="button" onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx})" class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600 font-bold shrink-0">✕</button>
                   </div>
                 `).join('')}
@@ -134,7 +155,8 @@ export function renderCtpBillModalHtml() {
   const bm = state.ctpBillModal;
   if (!bm) return '';
   const prof = state.memberProfiles?.[state.currentUserId] || {};
-  const fullLegalName = (prof.fullName || bm.memberName).trim();
+  const memberNickname = (bm.memberName || prof.fullName || '').trim();
+  const bankHolderName = (prof.fullName || bm.memberName || '').trim().toUpperCase();
   const qrUrl = prof.bankAcc ? buildVietQrUrl(prof.bankBin, prof.bankAcc) : '';
 
   return `
@@ -143,7 +165,7 @@ export function renderCtpBillModalHtml() {
         <div class="flex justify-between items-center border-b pb-2 shrink-0">
           <div>
             <h3 class="font-black text-sm text-slate-900">BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}</h3>
-            <p class="text-[11px] text-slate-500">Nhân sự: <b>${escapeHtml(fullLegalName)}</b> • Chủ show: <b class="text-emerald-700">${escapeHtml(bm.ownerTitle)}</b></p>
+            <p class="text-[11px] text-slate-500">Nhân sự: <b>${escapeHtml(memberNickname)}</b> • Chủ show: <b class="text-emerald-700">${escapeHtml(bm.ownerTitle)}</b></p>
           </div>
           <button type="button" data-html2canvas-ignore="true" onclick="ctpActions.closeBillModal()" class="w-8 h-8 rounded-full bg-slate-100">✕</button>
         </div>
@@ -178,14 +200,14 @@ export function renderCtpBillModalHtml() {
         </div>
 
         ${qrUrl ? `
-          <div class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 shrink-0">
+          <div class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
             <div class="text-[11px] space-y-0.5">
-              <div class="font-black text-emerald-900 uppercase">💳 QUÉT MÃ VIETQR THANH TOÁN CTP</div>
+              <div class="font-black text-slate-900 uppercase">💳 QUÉT MÃ VIETQR THANH TOÁN CTP</div>
               <div>Ngân hàng: <b>${escapeHtml(getBankName(prof.bankBin))}</b></div>
-              <div>Chủ TK: <b class="uppercase">${escapeHtml(fullLegalName)}</b></div>
+              <div>Chủ TK: <b class="uppercase">${escapeHtml(bankHolderName)}</b></div>
               <div>Số TK: <b class="font-mono text-indigo-700">${escapeHtml(prof.bankAcc)}</b></div>
             </div>
-            <img src="${qrUrl}" alt="VietQR" class="vietqr-img-el w-24 h-24 object-contain bg-white p-1 rounded-xl border" />
+            <img src="${qrUrl}" alt="VietQR" class="vietqr-img-el w-24 h-24 object-contain bg-white p-1 rounded-xl border border-slate-200" />
           </div>
         ` : ''}
 
