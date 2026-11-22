@@ -92,7 +92,7 @@ function applyCustomLogoToDom() {
 function scrollActiveMonthIntoView() {
   const activeBtn = document.querySelector('.as-month-scroller .as-month-btn.active');
   if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
-    activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    activeBtn.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
   }
 }
 
