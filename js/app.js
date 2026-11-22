@@ -706,8 +706,8 @@ window.ctpActions = {
     const bm = state.ctpBillModal;
     if (!bm) return showToast('Không có dữ liệu Bill để chụp!', 'error');
     const prof = state.memberProfiles?.[state.currentUserId] || {};
-    const fullName = (state.officialLegalNames?.[state.currentUserId] || prof.fullName || bm.memberName || '').trim().toUpperCase();
-    const qrData = await loadQrBitmapIfAvailable(prof, fullName);
+    const bankHolderName = (state.officialLegalNames?.[state.currentUserId] || prof.fullName || bm.memberName || '').trim().toUpperCase();
+    const qrData = await loadQrBitmapIfAvailable(prof, bankHolderName);
 
     const canvas = document.createElement('canvas');
     const W = 940;
@@ -727,7 +727,7 @@ window.ctpActions = {
     ctx.fillText(`BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}`, 28, 42);
     ctx.fillStyle = '#475569';
     ctx.font = '13px sans-serif';
-    ctx.fillText(`Nhân sự: ${fullName}   •   Người phụ trách: ${bm.ownerTitle}`, 28, 66);
+    ctx.fillText(`Nhân sự: ${bm.memberName}   •   Chủ show: ${bm.ownerTitle}`, 28, 66);
 
     const tableX = 28, tableY = 86, tableW = W - 56;
     const cols = [52, 86, 190, 230, 140, tableW - 52 - 86 - 190 - 230 - 140];
@@ -808,31 +808,35 @@ window.ctpActions = {
 
       ctx.save();
       drawRoundedRect(ctx, tableX, qrBoxY, tableW, qrBoxH, 18);
-      ctx.fillStyle = '#ecfdf5';
+      ctx.fillStyle = '#f8fafc';
       ctx.fill();
-      ctx.strokeStyle = '#a7f3d0';
+      ctx.strokeStyle = '#e2e8f0';
       ctx.stroke();
       ctx.restore();
 
-      ctx.fillStyle = '#065f46';
+      ctx.fillStyle = '#0f172a';
       ctx.font = 'bold 12.5px sans-serif';
       ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN CTP', tableX + 18, qrBoxY + 25);
 
-      ctx.fillStyle = '#064e3b';
+      ctx.fillStyle = '#334155';
       ctx.font = '12px sans-serif';
       ctx.fillText('Ngân hàng: ', tableX + 18, qrBoxY + 50);
       ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#0f172a';
       ctx.fillText(qrData.bankLabel, tableX + 86, qrBoxY + 50);
 
+      ctx.fillStyle = '#334155';
       ctx.font = '12px sans-serif';
       ctx.fillText('Chủ TK: ', tableX + 18, qrBoxY + 73);
       ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#0f172a';
       ctx.fillText(qrData.holder, tableX + 68, qrBoxY + 73);
 
+      ctx.fillStyle = '#334155';
       ctx.font = '12px sans-serif';
       ctx.fillText('Số TK: ', tableX + 18, qrBoxY + 96);
       ctx.font = 'bold 12.5px monospace';
-      ctx.fillStyle = '#047857';
+      ctx.fillStyle = '#4338ca';
       ctx.fillText(qrData.acc, tableX + 60, qrBoxY + 96);
 
       const qrCardSize = 96;
@@ -843,7 +847,7 @@ window.ctpActions = {
       drawRoundedRect(ctx, qrCardX, qrCardY, qrCardSize, qrCardSize, 14);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
-      ctx.strokeStyle = '#a7f3d0';
+      ctx.strokeStyle = '#e2e8f0';
       ctx.stroke();
       ctx.clip();
       if (qrData.img) {
@@ -852,15 +856,15 @@ window.ctpActions = {
       ctx.restore();
     }
 
-    const ok = downloadCanvasWithVietQrFallback(canvas, `CTP_T${state.ctpMonth}_${state.selectedYear}.png`, qrData?.qrUrl || '');
-    showToast(ok ? '✅ Đã xuất ảnh Bill CTP (.PNG) thành công!' : '⚠️ Trình duyệt chặn xuất ảnh có QR ngoài, đã mở ảnh VietQR gốc!');
+    const ok = downloadCanvasWithVietQrFallback(canvas, `CTP_T${state.ctpMonth}_${state.selectedYear}.png`);
+    showToast(ok ? '✅ Đã xuất ảnh Bill CTP (.PNG) thành công!' : 'Lỗi xuất ảnh Bill CTP!', ok ? 'info' : 'error');
   },
   copyBillText() {
     const bm = state.ctpBillModal;
     if (!bm) return;
     const lines = [
       `BẢNG CTP THÁNG ${bm.month}/${state.selectedYear} - ${bm.memberName.toUpperCase()}`,
-      `Người phụ trách: ${bm.ownerTitle}`,
+      `Chủ show: ${bm.ownerTitle}`,
       '-----------------------'
     ];
     bm.rows.forEach(r => {
