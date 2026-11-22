@@ -78,7 +78,10 @@ export function renderShowsTabHtml() {
                     <td class="py-1.5 px-2 border-r border-slate-200 min-w-[205px]">
                       <div class="flex flex-wrap gap-1">
                         ${(sh.memberIds || []).map(mid => renderPillHtml(mid, 'xs')).join('')}
-                        ${(sh.externalCrew || []).map(p => `<span style="background:#4f46e5;color:#fff;border:1px dashed #c7d2fe;" class="inline-flex items-center font-extrabold rounded-full px-2 py-0.5 text-[9px]">🤝 ${escapeHtml(p.name)}</span>`).join('')}
+                        ${(sh.externalCrew || []).map((p, eIdx) => {
+                          const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
+                          return `<span style="background:#4f46e5;color:#fff;border:1px dashed #c7d2fe;" class="inline-flex items-center font-extrabold rounded-full px-2 py-0.5 text-[9px]">🤝 ${escapeHtml(extLabel)}</span>`;
+                        }).join('')}
                       </div>
                     </td>
                     <td class="py-1.5 px-1.5 border-r border-slate-200 text-center"><span class="text-[10px] font-semibold text-slate-700">${escapeHtml(owner.name)}</span></td>
@@ -135,14 +138,14 @@ export function renderDetailModalHtml() {
               return `<div class="flex items-center gap-1.5 font-bold text-slate-800"><span>-</span>${renderPillHtml(id, 'xs')}${roleStr ? `<span>-</span><span class="text-slate-700 font-semibold">${escapeHtml(roleStr)}</span>` : ''}</div>`;
             }).join('')}
             ${(sh.externalCrew || []).length > 0 ? `
-  <div class="border-t border-slate-200/80 pt-1.5 mt-1.5 space-y-1">
-    ${(sh.externalCrew || []).map((p, eIdx) => {
-      const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
-      const rStr = Array.isArray(p?.roles) ? p.roles.join(', ') : (p?.roles || '');
-      return `<div class="flex items-center gap-1.5 font-bold text-slate-800"><span>-</span><span style="background:#4f46e5;color:#fff;" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold">🤝 ${escapeHtml(extLabel)}</span>${rStr ? `<span>-</span><span class="text-slate-700 font-semibold">${escapeHtml(rStr)}</span>` : ''}</div>`;
-    }).join('')}
-  </div>
-` : ''}
+              <div class="border-t border-slate-200/80 pt-1.5 mt-1.5 space-y-1">
+                ${(sh.externalCrew || []).map((p, eIdx) => {
+                  const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
+                  const rStr = Array.isArray(p?.roles) ? p.roles.filter(Boolean).join(', ') : String(p?.roles || '').trim();
+                  return `<div class="flex items-center gap-1.5 font-bold text-slate-800"><span>-</span><span style="background:#4f46e5;color:#fff;" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold">🤝 ${escapeHtml(extLabel)}</span>${rStr ? `<span>-</span><span class="text-slate-700 font-semibold">${escapeHtml(rStr)}</span>` : ''}</div>`;
+                }).join('')}
+              </div>
+            ` : ''}
           </div>
         </div>
 
