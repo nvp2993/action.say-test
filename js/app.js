@@ -398,6 +398,16 @@ window.appActions = {
   addExternalCrewDraft() { if (state.formModal) { state.formModal.externalCrew.push({ name: '', roles: ['Quay'] }); renderApp(); } },
   updateExternalCrewName(idx, val) { if (state.formModal?.externalCrew[idx]) state.formModal.externalCrew[idx].name = val; },
   removeExternalCrewDraft(idx) { if (state.formModal) { state.formModal.externalCrew.splice(idx, 1); renderApp(); } },
+  toggleExternalCrewRole(idx, roleId) {
+    const f = state.formModal;
+    if (!f || !Array.isArray(f.externalCrew) || !f.externalCrew[idx]) return;
+    const cur = Array.isArray(f.externalCrew[idx].roles) ? [...f.externalCrew[idx].roles] : [];
+    const existsIdx = cur.indexOf(roleId);
+    if (existsIdx >= 0) cur.splice(existsIdx, 1);
+    else cur.push(roleId);
+    f.externalCrew[idx].roles = cur;
+    renderApp();
+  },
   async saveShowForm() {
     const f = state.formModal; if (!f) return;
     if (!f.location.trim()) { f.error = 'Vui lòng nhập địa điểm!'; return renderApp(); }
