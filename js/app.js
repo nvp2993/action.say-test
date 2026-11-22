@@ -104,31 +104,38 @@ async function loadQrBitmapIfAvailable(prof, fullName) {
   const baseQrUrl = buildVietQrUrl(prof.bankBin, acc);
   if (!baseQrUrl) return null;
 
-  const corsQrUrl = `${baseQrUrl}${baseQrUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`;
+  const candidateUrls = [
+    `https://wsrv.nl/?url=${encodeURIComponent(baseQrUrl)}&output=png`,
+    baseQrUrl
+  ];
 
-  try {
-    const resp = await fetch(corsQrUrl, { mode: 'cors', cache: 'no-store' });
-    if (!resp.ok) throw new Error('QR fetch failed');
-    const blob = await resp.blob();
-    const objUrl = URL.createObjectURL(blob);
+  for (const url of candidateUrls) {
+    try {
+      const resp = await fetch(url, { mode: 'cors', cache: 'no-store' });
+      if (!resp.ok) continue;
+      const blob = await resp.blob();
+      const objUrl = URL.createObjectURL(blob);
 
-    const img = await new Promise((resolve) => {
-      const el = new Image();
-      el.onload = () => {
-        URL.revokeObjectURL(objUrl);
-        resolve(el);
-      };
-      el.onerror = () => {
-        URL.revokeObjectURL(objUrl);
-        resolve(null);
-      };
-      el.src = objUrl;
-    });
+      const img = await new Promise((resolve) => {
+        const el = new Image();
+        el.onload = () => {
+          URL.revokeObjectURL(objUrl);
+          resolve(el);
+        };
+        el.onerror = () => {
+          URL.revokeObjectURL(objUrl);
+          resolve(null);
+        };
+        el.src = objUrl;
+      });
 
-    return { img, qrUrl: baseQrUrl, bankLabel, acc, holder };
-  } catch {
-    return { img: null, qrUrl: baseQrUrl, bankLabel, acc, holder };
+      if (img) return { img, qrUrl: baseQrUrl, bankLabel, acc, holder };
+    } catch {
+      // Thử URL tiếp theo
+    }
   }
+
+  return { img: null, qrUrl: baseQrUrl, bankLabel, acc, holder };
 }
 
 function downloadCanvasWithVietQrFallback(canvas, filename) {
