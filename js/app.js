@@ -101,30 +101,37 @@ async function loadQrBitmapIfAvailable(prof, fullName) {
   const bankLabel = getBankName(prof.bankBin);
   const acc = String(prof.bankAcc).trim();
   const holder = (fullName || '').toUpperCase();
-  const qrUrl = buildVietQrUrl(prof.bankBin, acc);
-  if (!qrUrl) return null;
+  const baseQrUrl = buildVietQrUrl(prof.bankBin, acc);
+  if (!baseQrUrl) return null;
 
-  return await new Promise((resolve) => {
-    const img = new Image();
-    const timer = setTimeout(() => {
-      resolve({ img: null, qrUrl, bankLabel, acc, holder });
-    }, 4500);
+  const corsQrUrl = `${baseQrUrl}${baseQrUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`;
 
-    img.onload = () => {
-      clearTimeout(timer);
-      resolve({ img, qrUrl, bankLabel, acc, holder });
-    };
+  try {
+    const resp = await fetch(corsQrUrl, { mode: 'cors', cache: 'no-store' });
+    if (!resp.ok) throw new Error('QR fetch failed');
+    const blob = await resp.blob();
+    const objUrl = URL.createObjectURL(blob);
 
-    img.onerror = () => {
-      clearTimeout(timer);
-      resolve({ img: null, qrUrl, bankLabel, acc, holder });
-    };
+    const img = await new Promise((resolve) => {
+      const el = new Image();
+      el.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        resolve(el);
+      };
+      el.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+        resolve(null);
+      };
+      el.src = objUrl;
+    });
 
-    img.src = qrUrl;
-  });
+    return { img, qrUrl: baseQrUrl, bankLabel, acc, holder };
+  } catch {
+    return { img: null, qrUrl: baseQrUrl, bankLabel, acc, holder };
+  }
 }
 
-function downloadCanvasWithVietQrFallback(canvas, filename, qrUrl) {
+function downloadCanvasWithVietQrFallback(canvas, filename) {
   try {
     const dataUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');
@@ -133,9 +140,6 @@ function downloadCanvasWithVietQrFallback(canvas, filename, qrUrl) {
     a.click();
     return true;
   } catch {
-    if (qrUrl) {
-      window.open(qrUrl, '_blank', 'noopener,noreferrer');
-    }
     return false;
   }
 }
