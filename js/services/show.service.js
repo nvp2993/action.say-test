@@ -135,8 +135,9 @@ export function canEditShow(show) {
   if (!show) return false;
   if (state.isAdminMode) return true;
   if (!state.currentUserId) return false;
-  const creatorId = String(show.creatorId || show.ownerId || '').trim();
-  return creatorId !== '' && creatorId === state.currentUserId;
+  const creatorId = String(show.creatorId || '').trim();
+  const ownerId = String(show.ownerId || '').trim();
+  return creatorId === state.currentUserId || ownerId === state.currentUserId;
 }
 
 export function canSeeShowPartner(show) {
