@@ -9,6 +9,10 @@ function shouldCountShowMoney(sh) {
   return !sh?.isHold || Boolean(sh?.countHoldForBilling);
 }
 
+function cleanHoldTitle(loc) {
+  return String(loc || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim();
+}
+
 export function renderDebtTabHtml() {
   const uid = state.currentUserId;
   const curMem = getMember(uid);
@@ -172,6 +176,7 @@ export function renderDebtTabHtml() {
           const days = getShowDays(sh);
           const partnerText = getVisiblePartnerText(sh);
           const isCounted = shouldCountShowMoney(sh);
+          const displayLocation = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
           const holdCardStyle = sh.isHold
             ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"'
             : '';
@@ -216,7 +221,7 @@ export function renderDebtTabHtml() {
                       <span class="px-2 py-0.5 rounded-full border text-[9.5px] font-bold ${stObj.badgeCls}">${stObj.label}</span>
                       ${holdControlsHtml}
                     </div>
-                    <div class="font-black text-slate-900 text-sm mt-1.5">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
+                    <div class="font-black text-slate-900 text-sm mt-1.5">${escapeHtml(displayLocation)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
                   </div>
                   <div class="text-right shrink-0 space-y-0.5">
                     ${isCounted ? `
@@ -345,7 +350,7 @@ export function renderDebtTabHtml() {
                       <span class="px-2 py-0.5 rounded-full border text-[9.5px] font-bold ${stObj.badgeCls}">${stObj.label}</span>
                       ${holdControlsHtml}
                     </div>
-                    <div class="font-black text-slate-900 text-sm mt-1.5">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
+                    <div class="font-black text-slate-900 text-sm mt-1.5">${escapeHtml(displayLocation)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
                   </div>
                   <div class="text-right shrink-0 space-y-0.5">
                     ${isCounted ? `
