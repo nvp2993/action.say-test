@@ -268,17 +268,50 @@ export function renderFormModalHtml() {
           }).join('')}
         </div>
 
-        <div class="p-3 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="font-black text-slate-900 text-xs">🤝 Nhân sự ngoài (Freelancer)</span>
-            <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3.5 py-1.5 rounded-full bg-slate-950 hover:bg-slate-800 text-white font-bold text-[11px]">Thêm người</button>
-          </div>
-          ${(f.externalCrew || []).map((p, idx) => `
-            <div class="flex items-center gap-2 pt-1">
-              <input type="text" value="${escapeHtml(p.name)}" oninput="appActions.updateExternalCrewName(${idx}, this.value)" placeholder="Tên freelancer..." class="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-xs focus:outline-none focus:border-slate-400" />
-              <button type="button" onclick="appActions.removeExternalCrewDraft(${idx})" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 font-bold flex items-center justify-center shrink-0">✕</button>
+        <div class="p-3.5 rounded-2xl border border-indigo-200/80 bg-indigo-50/90 space-y-2.5">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-start gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
+                🤝
+              </div>
+              <div class="min-w-0">
+                <div class="font-black text-slate-900 text-xs leading-tight">Nhân sự ngoài (Freelancer)</div>
+                <div class="text-[10.5px] text-slate-500 mt-0.5 leading-snug">Bão show book thêm người ngoài: ghi tên &amp; chọn vai trò</div>
+              </div>
             </div>
-          `).join('')}
+          </div>
+
+          <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-extrabold text-[11px] inline-flex items-center gap-1 transition">
+            <span>+ Thêm nhân sự ngoài</span>
+          </button>
+
+          ${(f.externalCrew || []).map((p, idx) => {
+            const extRoles = Array.isArray(p?.roles) ? p.roles : [];
+            return `
+              <div class="p-3 rounded-2xl bg-white border border-indigo-100 shadow-2xs space-y-2.5">
+                <div class="flex items-center gap-2">
+                  <input type="text" value="${escapeHtml(p?.name || '')}" oninput="appActions.updateExternalCrewName(${idx}, this.value)" placeholder="Nhập tên (VD: Minh Flycam)..." class="flex-1 min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-xs text-slate-800 focus:outline-none focus:border-indigo-500" />
+                  <button type="button" onclick="appActions.removeExternalCrewDraft(${idx})" title="Xóa nhân sự ngoài" class="w-9 h-9 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center shrink-0 transition">
+                    <i class="fa-regular fa-trash-can text-xs"></i>
+                  </button>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  ${ROLE_OPTIONS.map(r => {
+                    const active = extRoles.map(normalizeRoleName).includes(r.id);
+                    return `
+                      <button type="button" onclick="appActions.toggleExternalCrewRole(${idx}, '${r.id}')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-extrabold border transition ${
+                        active
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }">
+                        ${escapeHtml(r.label)}
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
 
         ${f.error ? `<div class="text-rose-600 font-bold">${escapeHtml(f.error)}</div>` : ''}
