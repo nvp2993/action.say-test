@@ -75,6 +75,7 @@ export function renderHeaderHtml(totalAlerts = 0) {
   const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
   const avatarSrc = prof.avatarUrl || prof.avatar || savedAvatars[state.currentUserId] || '';
   const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || './assets/logo.png';
+  const isExpanded = !!state.zenFullscreen;
 
   const uid = state.currentUserId;
   const activeHolds = (state.shows || []).filter(s =>
@@ -121,15 +122,15 @@ export function renderHeaderHtml(totalAlerts = 0) {
         </div>
       </div>
 
-      ${renderLiveMarqueeHtml()}
+      ${!isExpanded ? renderLiveMarqueeHtml() : ''}
 
-      ${state.readonlyMaintenanceMode ? `
+      ${!isExpanded && state.readonlyMaintenanceMode ? `
         <div class="bg-amber-100 border border-amber-400 text-amber-900 rounded-xl px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-1.5">
           <span>🛡️</span><span>HỆ THỐNG ĐANG KHÓA BẢO TRÌ (Chế độ chỉ xem)</span>
         </div>
       ` : ''}
 
-      ${(state.studioBroadcast?.enabled && state.studioBroadcast?.text) ? `
+      ${(!isExpanded && state.studioBroadcast?.enabled && state.studioBroadcast?.text) ? `
         <div class="bg-rose-50 border border-rose-300 text-rose-700 rounded-xl px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-2">
           <span style="color: #ffffff !important; background-color: #e11d48 !important;" class="bg-rose-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shrink-0 inline-flex items-center gap-1">📢 THÔNG BÁO</span>
           <span class="flex-1 text-rose-700 font-extrabold">${escapeHtml(state.studioBroadcast.text)}</span>
@@ -143,9 +144,9 @@ export function renderHeaderHtml(totalAlerts = 0) {
 
 export function renderBottomNavHtml() {
   return `
-    <nav style="padding-bottom: clamp(2px, env(safe-area-inset-bottom), 10px);" class="bg-white border-t border-slate-200 px-2 pt-1.5 shrink-0 z-30">
-      <div class="max-w-xl mx-auto w-full grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-4">
-        <div class="flex items-center justify-around gap-0.5 min-w-0">
+    <nav style="padding-bottom: clamp(2px, env(safe-area-inset-bottom), 10px);" class="bg-white border-t border-slate-200 px-2 sm:px-6 pt-1.5 shrink-0 z-30">
+      <div class="max-w-xl sm:max-w-none mx-auto w-full grid grid-cols-[1fr_auto_1fr] sm:flex sm:items-center sm:justify-around items-center gap-1.5 sm:gap-4">
+        <div class="flex items-center justify-around gap-0.5 min-w-0 sm:contents">
           <button type="button" onclick="appActions.setTab('shows')" class="flex flex-col items-center py-0.5 px-1 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
             <i class="fa-solid fa-table-list text-[11px] sm:text-xs"></i>
             <span class="text-[8px] sm:text-[10px] tracking-tighter leading-none mt-1">SHOW</span>
@@ -160,7 +161,7 @@ export function renderBottomNavHtml() {
           <i class="fa-solid fa-bolt text-[9px] sm:text-[11px]"></i><span>NỔ SHOW</span>
         </button>
 
-        <div class="flex items-center justify-around gap-0.5 min-w-0">
+        <div class="flex items-center justify-around gap-0.5 min-w-0 sm:contents">
           <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-1 px-1 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
             <i class="fa-solid fa-user-check text-[11px] sm:text-xs"></i>
             <span class="text-[8px] sm:text-[10px] tracking-tighter leading-none mt-1">NS</span>
