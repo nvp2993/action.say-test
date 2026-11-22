@@ -26,6 +26,7 @@ import {
 } from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
 
+const DEFAULT_STUDIO_LOGO = './assets/logo.png';
 const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
 
 function getTomorrowISO() {
@@ -201,11 +202,29 @@ function getBankName(bin) {
 }
 
 function getEffectiveLogoSrc() {
-  const custom = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || '';
-  if (custom && (custom.startsWith('data:image/') || custom.startsWith('http://') || custom.startsWith('https://') || custom.startsWith('./') || custom.startsWith('/'))) {
+  const custom =
+    state.customLogoDataUrl ||
+    state.customLogoUrl ||
+    state.studioLogoUrl ||
+    (() => {
+      try {
+        return localStorage.getItem('as_custom_logo_2026') || '';
+      } catch {
+        return '';
+      }
+    })();
+
+  if (
+    custom &&
+    (custom.startsWith('data:image/') ||
+      custom.startsWith('http://') ||
+      custom.startsWith('https://') ||
+      custom.startsWith('./') ||
+      custom.startsWith('/'))
+  ) {
     return custom;
   }
-  return FALLBACK_LOGO_SVG;
+  return DEFAULT_STUDIO_LOGO;
 }
 
 function applyCustomLogoToDom() {
@@ -328,6 +347,7 @@ function renderApp() {
 
   const prevCtpScroll = document.getElementById('ctp-shows-scroll-list')?.scrollTop || 0;
   const prevDebtScroll = document.getElementById('owner-debt-scroll-list')?.scrollTop || 0;
+  const prevModalScroll = document.querySelector('.ios-sheet')?.scrollTop || 0;
 
   root.innerHTML = `
     ${renderHeaderHtml(getBellAlertsCount())}
@@ -356,6 +376,10 @@ function renderApp() {
     const nextDebtScroll = document.getElementById('owner-debt-scroll-list');
     if (nextDebtScroll) nextDebtScroll.scrollTop = prevDebtScroll;
   }
+  if (prevModalScroll > 0) {
+    const nextModalScroll = document.querySelector('.ios-sheet');
+    if (nextModalScroll) nextModalScroll.scrollTop = prevModalScroll;
+  }
 }
 
 registerRenderer(renderApp);
@@ -370,7 +394,7 @@ window.appActions = {
     state.zaloTomorrowModal = false;
     renderApp();
   },
-async copyZaloTomorrowText() {
+  async copyZaloTomorrowText() {
     const txt = buildZaloTomorrowText();
     if (!txt) return;
     try {
@@ -667,7 +691,6 @@ async copyZaloTomorrowText() {
       const removedHolds = cleanupMatchingHoldsForOfficialShow(savedShow);
       state.formModal = null;
 
-      // PHẢI lưu shows lên Cloud TRƯỚC rồi mới ghi log activity để tránh onSnapshot ghi đè
       await syncShowsToCloud();
       await logStudioActivity(isEdit ? `Sửa show: ${loc}` : `Nổ show mới: ${loc}`);
 
@@ -771,56 +794,43 @@ async copyZaloTomorrowText() {
   openCrewManifestModal(id) {
     const sh = state.shows.find(s => s.id === id); if (!sh) return;
     state.crewManifestShowId = id;
+    state.crewManifestDraft = null;
     renderApp();
   },
   closeCrewManifestModal() {
     state.crewManifestShowId = null;
+    state.crewManifestDraft = null;
     renderApp();
   },
-  async saveCrewManifestEdits(id) {
-    const sh = state.shows.find(s => s.id === id);
-    if (!sh) return;
-    if (!state.memberProfiles) state.memberProfiles = {};
-    if (!state.officialLegalNames) state.officialLegalNames = {};
-
-    for (const mid of (sh.memberIds || [])) {
-      const fullName = (document.getElementById(`manifest-name-${mid}`)?.value || '').trim().toUpperCase();
-      const cccd = (document.getElementById(`manifest-cccd-${mid}`)?.value || '').trim();
-      const dob = (document.getElementById(`manifest-dob-${mid}`)?.value || '').trim();
-      const phone = (document.getElementById(`manifest-phone-${mid}`)?.value || '').trim();
-
-      const curProf = state.memberProfiles[mid] || {};
-      state.memberProfiles[mid] = { ...curProf, fullName, cccd, dob, phone };
-      if (fullName) state.officialLegalNames[mid] = fullName;
-      await saveOfficialLegalName(mid, fullName);
-      if (mid === state.currentUserId) {
-        await saveMyProfileToCloud(mid, state.memberProfiles[mid]);
-      }
-    }
-
-    if (Array.isArray(sh.externalCrew)) {
-      sh.externalCrew = sh.externalCrew.map((ext, idx) => {
-        const val = document.getElementById(`manifest-ext-${idx}`)?.value;
-        return { ...ext, name: val !== undefined ? val.trim() : ext.name };
-      }).filter(ext => ext.name);
-      await syncShowsToCloud();
-    }
-
+  updateCrewManifestDraft(val) {
+    state.crewManifestDraft = val;
+  },
+  resetCrewManifestDraft(id) {
+    state.crewManifestDraft = null;
     renderApp();
-    showToast('Đã lưu danh sách nhân sự!');
+    showToast('Đã khôi phục danh sách gốc!');
   },
   copyCrewManifestText(id) {
-    const sh = state.shows.find(s => s.id === id); if (!sh) return;
-    const lines = (sh.memberIds || []).map((mid, i) => {
-      const p = state.memberProfiles?.[mid] || {};
-      const name = (state.officialLegalNames?.[mid] || p.fullName || getMember(mid).name).toUpperCase();
-      return `${i + 1}. ${name} | CCCD: ${p.cccd || 'Chưa cập nhật'} | NS: ${p.dob || '-'} | SĐT: ${p.phone || '-'}`;
-    });
-    (sh.externalCrew || []).forEach((ext, j) => {
-      lines.push(`${(sh.memberIds || []).length + j + 1}. ${String(ext.name || '').toUpperCase()} (Freelancer)`);
-    });
-    navigator.clipboard?.writeText(lines.join('\n'));
-    showToast('📋 Đã copy Danh sách nhân sự!');
+    const sh = state.shows.find(s => s.id === id);
+    const taVal = document.getElementById('crew-manifest-textarea')?.value;
+    const textToCopy = typeof taVal === 'string'
+      ? taVal
+      : (sh ? [
+          ...(sh.memberIds || []).map((mid, i) => {
+            const p = state.memberProfiles?.[mid] || {};
+            const name = (state.officialLegalNames?.[mid] || p.fullName || getMember(mid).name).toUpperCase();
+            return `${i + 1}. ${name} | CCCD: ${p.cccd || 'Chưa cập nhật'} | SĐT: ${p.phone || '-'}`;
+          }),
+          ...(sh.externalCrew || []).map((ext, j) => {
+            const extName = String(ext?.name || '').trim().toUpperCase() || `NS ${j + 1}`;
+            const roleText = Array.isArray(ext?.roles) && ext.roles.length > 0 ? ` (${ext.roles.join(', ')})` : '';
+            return `${(sh.memberIds || []).length + j + 1}. ${extName}${roleText} | CCCD: ${ext?.cccd || 'Chưa cập nhật'} | SĐT: ${ext?.phone || '-'}`;
+          })
+        ].join('\n') : '');
+    if (!textToCopy) return;
+    navigator.clipboard?.writeText(textToCopy)
+      .then(() => showToast('📋 Đã copy Danh sách nhân sự!'))
+      .catch(() => showToast('Không thể copy, vui lòng thử lại!', 'error'));
   },
   tapLogoSecret() {
     window._logoTaps = (window._logoTaps || 0) + 1;
@@ -1759,19 +1769,39 @@ window.adminProActions = {
     const file = inputEl?.files?.[0];
     if (!file) return;
     try {
-      const reader = new FileReader();
-      const dataUrl = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result);
+      const cleanLogo = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
         reader.onerror = reject;
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = reject;
+          img.onload = () => {
+            const maxSide = 256;
+            const scale = Math.min(1, maxSide / Math.max(img.width || 1, img.height || 1));
+            const w = Math.max(1, Math.round((img.width || 256) * scale));
+            const h = Math.max(1, Math.round((img.height || 256) * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/png'));
+          };
+          img.src = reader.result;
+        };
         reader.readAsDataURL(file);
       });
-      state.customLogoDataUrl = String(dataUrl || '');
+
+      state.customLogoDataUrl = cleanLogo;
+      state.customLogoUrl = cleanLogo;
       try {
-        localStorage.setItem('as_custom_logo_2026', state.customLogoDataUrl);
+        localStorage.setItem('as_custom_logo_2026', cleanLogo);
       } catch {}
+      applyCustomLogoToDom();
+      await pushAdminConfigToCloud?.();
       await logStudioActivity('Cập nhật Logo Studio mới');
       renderApp();
-      showToast('🖼️ Đã đổi Logo thành công!');
+      showToast('🖼️ Đã đổi & đồng bộ Logo thành công!');
     } catch (err) {
       showToast('Lỗi tải ảnh logo: ' + err.message, 'error');
     } finally {
@@ -1780,9 +1810,12 @@ window.adminProActions = {
   },
   async resetLogoDefault() {
     state.customLogoDataUrl = '';
+    state.customLogoUrl = '';
     try {
       localStorage.removeItem('as_custom_logo_2026');
     } catch {}
+    applyCustomLogoToDom();
+    await pushAdminConfigToCloud?.();
     await logStudioActivity('Khôi phục Logo mặc định');
     renderApp();
     showToast('↩ Đã khôi phục Logo mặc định!');
