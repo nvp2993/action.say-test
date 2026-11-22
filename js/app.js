@@ -603,57 +603,73 @@ async copyZaloTomorrowText() {
   },
   async saveShowForm() {
     const f = state.formModal; if (!f) return;
-    if (!f.location.trim()) { f.error = 'Vui lòng nhập địa điểm!'; return renderApp(); }
-    const [y, m] = f.startDate.split('-').map(Number);
-    if (isYearMonthLocked(y, m)) return showToast(`🔒 Tháng ${m}/${y} đã khóa sổ!`, 'error');
+    const loc = String(f.location || '').trim();
+    if (!loc) { f.error = 'Vui lòng nhập địa điểm!'; return renderApp(); }
+    f.location = loc;
+    f.error = '';
+
+    const [y, m] = String(f.startDate || '').split('-').map(Number);
+    if (y && m && isYearMonthLocked(y, m)) {
+      return showToast(`🔒 Tháng ${m}/${y} đã khóa sổ!`, 'error');
+    }
 
     const cleanExt = (f.externalCrew || [])
-      .filter(p => String(p?.name || '').trim() || (Array.isArray(p?.roles) && p.roles.length > 0))
+      .filter(p => p && (String(p.name || '').trim() || (Array.isArray(p.roles) && p.roles.length > 0)))
       .map((p, i) => ({
-        name: String(p?.name || '').trim() || `NS ${i + 1}`,
-        roles: Array.isArray(p?.roles) ? [...p.roles] : []
+        name: String(p.name || '').trim() || `NS ${i + 1}`,
+        roles: Array.isArray(p.roles) ? [...p.roles] : []
       }));
-    let savedShow = null;
 
-    if (f.mode === 'edit') {
-      state.shows = state.shows.map(s => {
-        if (s.id !== f.showId) return s;
+    try {
+      let savedShow = null;
+
+      if (f.mode === 'edit') {
+        state.shows = state.shows.map(s => {
+          if (s.id !== f.showId) return s;
+          savedShow = {
+            ...s,
+            ...f,
+            location: loc,
+            isHold: false,
+            externalCrew: cleanExt,
+            color: resolveDynamicLocationColor(loc, f.partner),
+            updatedAt: Date.now()
+          };
+          return savedShow;
+        });
+        await logStudioActivity(`Sửa show: ${loc}`);
+      } else {
+        const nextStt = Math.max(300, ...state.shows.map(s => Number(s.stt) || 0)) + 1;
         savedShow = {
-          ...s,
+          id: 'sh_' + Date.now(),
+          stt: nextStt,
           ...f,
+          location: loc,
           isHold: false,
           externalCrew: cleanExt,
-          color: resolveDynamicLocationColor(f.location, f.partner),
+          postStatus: 'pending',
+          color: resolveDynamicLocationColor(loc, f.partner),
+          createdAt: Date.now(),
           updatedAt: Date.now()
         };
-        return savedShow;
-      });
-      await logStudioActivity(`Sửa show: ${f.location}`);
-    } else {
-      const nextStt = Math.max(300, ...state.shows.map(s => Number(s.stt) || 0)) + 1;
-      savedShow = {
-        id: 'sh_' + Date.now(),
-        stt: nextStt,
-        ...f,
-        isHold: false,
-        externalCrew: cleanExt,
-        postStatus: 'pending',
-        color: resolveDynamicLocationColor(f.location, f.partner),
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      };
-      state.shows.push(savedShow);
-      playStudioSound('noshow');
-      await logStudioActivity(`Nổ show mới: ${f.location}`);
+        state.shows.push(savedShow);
+        playStudioSound('noshow');
+        await logStudioActivity(`Nổ show mới: ${loc}`);
+      }
+
+      const removedHolds = cleanupMatchingHoldsForOfficialShow(savedShow);
+      state.formModal = null;
+      await syncShowsToCloud();
+      renderApp();
+      showToast(removedHolds > 0
+        ? `✅ Đã lưu show & tự dọn ${removedHolds} lịch giữ chỗ trùng ngày!`
+        : '✅ Đã lưu & đồng bộ Cloud!');
+    } catch (err) {
+      console.error('Lỗi lưu show:', err);
+      f.error = 'Lỗi lưu show: ' + (err?.message || err);
+      renderApp();
+      showToast('❌ Lưu show thất bại: ' + (err?.message || err), 'error');
     }
-    
-    const removedHolds = cleanupMatchingHoldsForOfficialShow(savedShow);
-    state.formModal = null;
-    await syncShowsToCloud();
-    renderApp();
-    showToast(removedHolds > 0
-      ? `✅ Đã lưu show & tự dọn ${removedHolds} lịch giữ chỗ trùng ngày!`
-      : '✅ Đã lưu & đồng bộ Cloud!');
   },
   async updatePostStatus(id, stVal) {
     const sh = state.shows.find(s => s.id === id);
