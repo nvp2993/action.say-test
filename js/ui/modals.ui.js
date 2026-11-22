@@ -277,52 +277,52 @@ export function renderFormModalHtml() {
           </select>
         </div>
 
-        <div class="space-y-1.5">
+        <div class="space-y-1">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-[11px] font-black text-slate-900">Chọn Nhân Sự &amp; Gắn Vai Trò (Chọn nhiều):</span>
-            <div class="flex items-center gap-2 shrink-0 text-[11px] font-bold">
-              <button type="button" onclick="appActions.selectOnlyMeInForm()" class="text-slate-700 hover:text-indigo-600">Chỉ mình tôi</button>
-              <button type="button" onclick="appActions.selectAllMembersInForm()" class="text-indigo-700 hover:text-indigo-900 font-extrabold">Chọn tất cả</button>
+            <span class="text-[11px] font-black text-slate-900">Chọn Nhân Sự &amp; Gắn Vai Trò:</span>
+            <div class="flex items-center gap-2 shrink-0 text-[10.5px] font-bold">
+              <button type="button" onclick="appActions.selectOnlyMeInForm()" class="text-slate-600 hover:text-indigo-600">Chỉ mình tôi</button>
+              <button type="button" onclick="appActions.selectAllMembersInForm()" class="text-indigo-600 hover:text-indigo-800 font-extrabold">Chọn tất cả</button>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-200/80">
+          <div class="grid grid-cols-3 gap-1.5 bg-slate-50 p-1.5 rounded-2xl border border-slate-200/80">
             ${state.members.map(m => {
               const sel = f.memberIds.includes(m.id);
               const busy = busyMap[m.id];
               const roles = f.roles?.[m.id] || [];
               const normRoles = (roles || []).map(normalizeRoleName);
               return `
-                <div onclick="appActions.toggleFormMember('${m.id}')" class="p-2.5 rounded-2xl border cursor-pointer transition select-none flex flex-col justify-between min-h-[78px] ${
+                <div onclick="appActions.toggleFormMember('${m.id}')" class="p-1.5 rounded-xl border cursor-pointer transition select-none flex flex-col gap-1 ${
                   sel
-                    ? 'bg-indigo-50/80 border-indigo-500 shadow-2xs'
+                    ? 'bg-indigo-50/90 border-indigo-500'
                     : busy
                       ? 'bg-rose-50/70 border-rose-200'
                       : 'bg-white border-slate-200/80 hover:border-slate-300'
                 }">
                   <div class="flex items-center justify-between gap-1">
                     ${renderPillHtml(m.id, 'xs')}
-                    <span class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
+                    <span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] shrink-0 ${
                       sel
-                        ? 'bg-slate-950 text-white'
-                        : 'border border-slate-200 bg-slate-100/70 text-transparent'
+                        ? 'bg-slate-900 text-white'
+                        : 'border border-slate-300 bg-white text-transparent'
                     }">✓</span>
                   </div>
 
-                  ${busy ? `<div class="text-[10px] font-extrabold text-rose-600 truncate mt-1.5">⚠️ Bận: ${escapeHtml(busy[0])}</div>` : ''}
+                  ${busy ? `<div class="text-[9px] font-extrabold text-rose-600 truncate leading-tight">⚠️ ${escapeHtml(busy[0])}</div>` : ''}
 
                   ${sel ? `
-                    <div class="flex flex-wrap gap-1 mt-2" onclick="event.stopPropagation()">
+                    <div class="flex flex-wrap gap-1 pt-0.5" onclick="event.stopPropagation()">
                       ${ROLE_OPTIONS.map(r => {
                         const active = normRoles.includes(r.id);
                         const ico = roleIcons[r.id] || '';
                         return `
-                          <button type="button" onclick="appActions.toggleMemberRole('${m.id}', '${r.id}')" class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold border transition ${
+                          <button type="button" onclick="appActions.toggleMemberRole('${m.id}', '${r.id}')" class="px-1.5 py-0.5 rounded-md text-[9.5px] font-extrabold border leading-tight transition ${
                             active
                               ? 'bg-slate-900 text-white border-slate-900'
                               : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                           }">
-                            ${ico ? `${ico} ` : ''}${escapeHtml(r.label)}
+                            ${ico ? `${ico}` : ''}${escapeHtml(r.label)}
                           </button>
                         `;
                       }).join('')}
