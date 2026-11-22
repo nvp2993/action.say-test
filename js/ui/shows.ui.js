@@ -134,10 +134,15 @@ export function renderDetailModalHtml() {
               const roleStr = formatMemberRolesClean(sh.roles?.[id]);
               return `<div class="flex items-center gap-1.5 font-bold text-slate-800"><span>-</span>${renderPillHtml(id, 'xs')}${roleStr ? `<span>-</span><span class="text-slate-700 font-semibold">${escapeHtml(roleStr)}</span>` : ''}</div>`;
             }).join('')}
-            ${(sh.externalCrew || []).map(p => {
-              const rStr = (p.roles || []).join(', ');
-              return `<div class="flex items-center gap-1.5 font-bold text-slate-800"><span>-</span><span style="background:#4f46e5;color:#fff;" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold">🤝 ${escapeHtml(p.name)}</span>${rStr ? `<span>-</span><span class="text-slate-700 font-semibold">${escapeHtml(rStr)}</span>` : ''}</div>`;
-            }).join('')}
+            ${(sh.externalCrew || []).length > 0 ? `
+  <div class="border-t border-slate-200/80 pt-1.5 mt-1.5 space-y-1">
+    ${(sh.externalCrew || []).map((p, eIdx) => {
+      const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
+      const rStr = Array.isArray(p?.roles) ? p.roles.join(', ') : (p?.roles || '');
+      return `<div class="flex items-center gap-1.5 font-bold text-slate-800"><span>-</span><span style="background:#4f46e5;color:#fff;" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold">🤝 ${escapeHtml(extLabel)}</span>${rStr ? `<span>-</span><span class="text-slate-700 font-semibold">${escapeHtml(rStr)}</span>` : ''}</div>`;
+    }).join('')}
+  </div>
+` : ''}
           </div>
         </div>
 
