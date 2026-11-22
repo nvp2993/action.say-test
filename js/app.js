@@ -28,6 +28,17 @@ import { renderAdminPortalHtml } from './ui/admin.ui.js';
 
 const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
 
+function drawRoundedRect(ctx, x, y, w, h, r) {
+  const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
 function getBankName(bin) {
   const map = {
     '970436': 'Vietcombank',
@@ -87,33 +98,21 @@ function getBellAlertsCount() {
 
 async function loadQrBitmapIfAvailable(prof, fullName) {
   if (!prof?.bankAcc) return null;
-  const qrUrl = buildVietQrUrl(prof.bankBin, prof.bankAcc);
-  if (!qrUrl) return null;
-
   const bankLabel = getBankName(prof.bankBin);
   const acc = String(prof.bankAcc).trim();
   const holder = (fullName || '').toUpperCase();
+  const qrUrl = buildVietQrUrl(prof.bankBin, acc);
+  if (!qrUrl) return null;
 
   return await new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     const timer = setTimeout(() => {
       resolve({ img: null, qrUrl, bankLabel, acc, holder });
-    }, 3500);
+    }, 4500);
 
     img.onload = () => {
       clearTimeout(timer);
-      try {
-        const testCanvas = document.createElement('canvas');
-        testCanvas.width = 16;
-        testCanvas.height = 16;
-        const tctx = testCanvas.getContext('2d');
-        tctx.drawImage(img, 0, 0, 16, 16);
-        tctx.getImageData(0, 0, 1, 1);
-        resolve({ img, qrUrl, bankLabel, acc, holder });
-      } catch {
-        resolve({ img: null, qrUrl, bankLabel, acc, holder });
-      }
+      resolve({ img, qrUrl, bankLabel, acc, holder });
     };
 
     img.onerror = () => {
@@ -123,6 +122,22 @@ async function loadQrBitmapIfAvailable(prof, fullName) {
 
     img.src = qrUrl;
   });
+}
+
+function downloadCanvasWithVietQrFallback(canvas, filename, qrUrl) {
+  try {
+    const dataUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.download = filename;
+    a.href = dataUrl;
+    a.click();
+    return true;
+  } catch {
+    if (qrUrl) {
+      window.open(qrUrl, '_blank', 'noopener,noreferrer');
+    }
+    return false;
+  }
 }
 
 function renderApp() {
@@ -686,7 +701,8 @@ window.ctpActions = {
     const canvas = document.createElement('canvas');
     const W = 940;
     const rowH = 44;
-    const H = 190 + Math.max(1, bm.rows.length) * rowH + (qrData ? 144 : 24);
+    const tableTotalH = 34 + Math.max(1, bm.rows.length) * rowH + 38;
+    const H = 86 + tableTotalH + (qrData ? 148 : 24);
     canvas.width = W * 2;
     canvas.height = H * 2;
     const ctx = canvas.getContext('2d');
@@ -705,6 +721,10 @@ window.ctpActions = {
     const tableX = 28, tableY = 86, tableW = W - 56;
     const cols = [52, 86, 190, 230, 140, tableW - 52 - 86 - 190 - 230 - 140];
     const headers = ['STT', 'NGÀY', 'SHOW', 'NHIỆM VỤ', 'PHÁT SINH', 'TỔNG'];
+
+    ctx.save();
+    drawRoundedRect(ctx, tableX, tableY, tableW, tableTotalH, 16);
+    ctx.clip();
 
     ctx.fillStyle = '#107c41';
     ctx.fillRect(tableX, tableY, tableW, 34);
@@ -765,36 +785,64 @@ window.ctpActions = {
     ctx.fillStyle = '#34d399';
     ctx.fillText(Number(bm.total || 0).toLocaleString('vi-VN') + 'đ', tableX + tableW - 10, ry + 24);
     ctx.textAlign = 'left';
+    ctx.restore();
+
+    drawRoundedRect(ctx, tableX, tableY, tableW, tableTotalH, 16);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.stroke();
 
     if (qrData) {
-      ry += 52;
+      const qrBoxY = tableY + tableTotalH + 14;
+      const qrBoxH = 116;
+
+      ctx.save();
+      drawRoundedRect(ctx, tableX, qrBoxY, tableW, qrBoxH, 18);
       ctx.fillStyle = '#ecfdf5';
-      ctx.fillRect(tableX, ry, tableW, 110);
+      ctx.fill();
       ctx.strokeStyle = '#a7f3d0';
-      ctx.strokeRect(tableX, ry, tableW, 110);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = '#065f46';
+      ctx.font = 'bold 12.5px sans-serif';
+      ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN CTP', tableX + 18, qrBoxY + 25);
+
       ctx.fillStyle = '#064e3b';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN CTP', tableX + 16, ry + 24);
       ctx.font = '12px sans-serif';
-      ctx.fillText(`Ngân hàng: ${qrData.bankLabel}`, tableX + 16, ry + 48);
-      ctx.fillText(`Chủ TK: ${qrData.holder}`, tableX + 16, ry + 70);
-      ctx.fillText(`Số TK: ${qrData.acc}`, tableX + 16, ry + 92);
+      ctx.fillText('Ngân hàng: ', tableX + 18, qrBoxY + 50);
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(qrData.bankLabel, tableX + 86, qrBoxY + 50);
+
+      ctx.font = '12px sans-serif';
+      ctx.fillText('Chủ TK: ', tableX + 18, qrBoxY + 73);
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(qrData.holder, tableX + 68, qrBoxY + 73);
+
+      ctx.font = '12px sans-serif';
+      ctx.fillText('Số TK: ', tableX + 18, qrBoxY + 96);
+      ctx.font = 'bold 12.5px monospace';
+      ctx.fillStyle = '#047857';
+      ctx.fillText(qrData.acc, tableX + 60, qrBoxY + 96);
+
+      const qrCardSize = 96;
+      const qrCardX = tableX + tableW - qrCardSize - 14;
+      const qrCardY = qrBoxY + 10;
+
+      ctx.save();
+      drawRoundedRect(ctx, qrCardX, qrCardY, qrCardSize, qrCardSize, 14);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#a7f3d0';
+      ctx.stroke();
+      ctx.clip();
       if (qrData.img) {
-        ctx.drawImage(qrData.img, tableX + tableW - 104, ry + 10, 90, 90);
-      } else {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(tableX + tableW - 104, ry + 10, 90, 90);
-        ctx.fillStyle = '#065f46';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillText('VIETQR', tableX + tableW - 76, ry + 58);
+        ctx.drawImage(qrData.img, qrCardX + 4, qrCardY + 4, qrCardSize - 8, qrCardSize - 8);
       }
+      ctx.restore();
     }
 
-    const link = document.createElement('a');
-    link.download = `CTP_T${state.ctpMonth}_${state.selectedYear}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    showToast('✅ Đã xuất ảnh Bill CTP (.PNG) thành công!');
+    const ok = downloadCanvasWithVietQrFallback(canvas, `CTP_T${state.ctpMonth}_${state.selectedYear}.png`, qrData?.qrUrl || '');
+    showToast(ok ? '✅ Đã xuất ảnh Bill CTP (.PNG) thành công!' : '⚠️ Trình duyệt chặn xuất ảnh có QR ngoài, đã mở ảnh VietQR gốc!');
   },
   copyBillText() {
     const bm = state.ctpBillModal;
@@ -1090,7 +1138,8 @@ window.ownerActions = {
     const canvas = document.createElement('canvas');
     const W = 1080;
     const rowH = 44;
-    const H = 195 + Math.max(1, visibleRows.length) * rowH + (qrData ? 144 : 28);
+    const tableTotalH = 34 + Math.max(1, visibleRows.length) * rowH + 38;
+    const H = 86 + tableTotalH + (qrData ? 148 : 28);
     canvas.width = W * 2;
     canvas.height = H * 2;
     const ctx = canvas.getContext('2d');
@@ -1109,6 +1158,10 @@ window.ownerActions = {
     const tableX = 28, tableY = 86, tableW = W - 56;
     const cols = [48, 72, 210, 250, 148, 128, tableW - 48 - 72 - 210 - 250 - 148 - 128];
     const headers = ['STT', 'NGÀY', 'SHOW / KHÁCH HÀNG', 'NỘI DUNG', 'BÁO GIÁ', 'ĐÃ TRẢ', 'CÒN NỢ'];
+
+    ctx.save();
+    drawRoundedRect(ctx, tableX, tableY, tableW, tableTotalH, 16);
+    ctx.clip();
 
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(tableX, tableY, tableW, 34);
@@ -1188,36 +1241,68 @@ window.ownerActions = {
     ctx.fillStyle = '#fb7185';
     ctx.fillText(totalRemaining.toLocaleString('vi-VN') + 'đ', tableX + tableW - 10, ry + 24);
     ctx.textAlign = 'left';
+    ctx.restore();
+
+    drawRoundedRect(ctx, tableX, tableY, tableW, tableTotalH, 16);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.stroke();
 
     if (qrData) {
-      ry += 52;
+      const qrBoxY = tableY + tableTotalH + 14;
+      const qrBoxH = 116;
+
+      ctx.save();
+      drawRoundedRect(ctx, tableX, qrBoxY, tableW, qrBoxH, 18);
       ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(tableX, ry, tableW, 110);
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.strokeRect(tableX, ry, tableW, 110);
+      ctx.fill();
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.stroke();
+      ctx.restore();
+
       ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN', tableX + 16, ry + 24);
+      ctx.font = 'bold 12.5px sans-serif';
+      ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN', tableX + 18, qrBoxY + 25);
+
+      ctx.fillStyle = '#334155';
       ctx.font = '12px sans-serif';
-      ctx.fillText(`Ngân hàng: ${qrData.bankLabel}`, tableX + 16, ry + 48);
-      ctx.fillText(`Chủ TK: ${qrData.holder}`, tableX + 16, ry + 70);
-      ctx.fillText(`Số TK: ${qrData.acc}`, tableX + 16, ry + 92);
+      ctx.fillText('Ngân hàng: ', tableX + 18, qrBoxY + 50);
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(qrData.bankLabel, tableX + 86, qrBoxY + 50);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('Chủ TK: ', tableX + 18, qrBoxY + 73);
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(qrData.holder, tableX + 68, qrBoxY + 73);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('Số TK: ', tableX + 18, qrBoxY + 96);
+      ctx.font = 'bold 12.5px monospace';
+      ctx.fillStyle = '#4338ca';
+      ctx.fillText(qrData.acc, tableX + 60, qrBoxY + 96);
+
+      const qrCardSize = 96;
+      const qrCardX = tableX + tableW - qrCardSize - 14;
+      const qrCardY = qrBoxY + 10;
+
+      ctx.save();
+      drawRoundedRect(ctx, qrCardX, qrCardY, qrCardSize, qrCardSize, 14);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.stroke();
+      ctx.clip();
       if (qrData.img) {
-        ctx.drawImage(qrData.img, tableX + tableW - 104, ry + 10, 90, 90);
-      } else {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(tableX + tableW - 104, ry + 10, 90, 90);
-        ctx.fillStyle = '#475569';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillText('VIETQR', tableX + tableW - 76, ry + 58);
+        ctx.drawImage(qrData.img, qrCardX + 4, qrCardY + 4, qrCardSize - 8, qrCardSize - 8);
       }
+      ctx.restore();
     }
 
-    const a = document.createElement('a');
-    a.download = `CongNo_KhachHang_${state.selectedYear}.png`;
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-    showToast('✅ Đã xuất ảnh bảng công nợ khách hàng!');
+    const ok = downloadCanvasWithVietQrFallback(canvas, `CongNo_KhachHang_${state.selectedYear}.png`, qrData?.qrUrl || '');
+    showToast(ok ? '✅ Đã xuất ảnh bảng công nợ khách hàng!' : '⚠️ Trình duyệt chặn xuất ảnh có QR ngoài, đã mở ảnh VietQR gốc!');
   },
   exportOwnerExcel() {
     const uid = state.currentUserId;
