@@ -75,7 +75,7 @@ export function renderCtpTabHtml() {
           }));
 
           return `
-           <div ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border-slate-200 border'} rounded-3xl p-4 space-y-3">
+            <div ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border-slate-200 border'} rounded-3xl p-4 space-y-3">
               <div class="flex items-start justify-between gap-2 border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2">
                 <div class="min-w-0 flex-1">
                   <span class="px-2 py-0.5 rounded-full bg-white/90 text-slate-600 font-mono font-bold text-[10px] border border-slate-200/80">#${idx + 1}</span>
@@ -85,15 +85,6 @@ export function renderCtpTabHtml() {
                     ${partnerText ? `<span class="text-slate-600 font-bold">(${escapeHtml(partnerText)})</span>` : ''}
                     ${isPrivateShow ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold">🔒 Riêng tư</span>` : ''}
                     ${sh.isHold ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold">⏳ Giữ lịch</span>` : ''}
-                    ${sh.isHold ? `
-                      <button type="button" onclick="ctpActions.toggleHoldBilling('${sh.id}')" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border transition ${
-                        sh.countHoldForBilling
-                          ? 'bg-emerald-600 text-white border-emerald-700'
-                          : 'bg-white text-amber-900 border-amber-400 hover:bg-amber-50'
-                      }">
-                        ${sh.countHoldForBilling ? '💰 Đang tính tiền' : '➕ Tính tiền show này'}
-                      </button>
-                    ` : ''}
                   </h4>
                   <p class="text-[10px] text-slate-500 mt-0.5">Chủ show: <b class="text-slate-700">${escapeHtml(owner.name)}</b></p>
                 </div>
@@ -102,6 +93,24 @@ export function renderCtpTabHtml() {
                   <span id="ctp-show-total-${sh.id}" class="text-xs font-black font-mono">${subTotal.toLocaleString('vi-VN')}đ</span>
                 </div>
               </div>
+
+              ${sh.isHold ? `
+                <div onclick="ctpActions.toggleHoldBilling('${sh.id}')" class="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl border cursor-pointer transition select-none ${
+                  sh.countHoldForBilling
+                    ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900'
+                    : 'bg-white/85 border-amber-300/80 text-amber-900 hover:bg-white'
+                }">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm leading-none">${sh.countHoldForBilling ? '💰' : '⏳'}</span>
+                    <span class="text-[11px] font-extrabold truncate">
+                      ${sh.countHoldForBilling ? 'Đang tính tiền show giữ lịch này' : 'Tính tiền show này (mặc định 0đ)'}
+                    </span>
+                  </div>
+                  <div class="w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${sh.countHoldForBilling ? 'bg-emerald-500' : 'bg-slate-300'}">
+                    <div class="w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${sh.countHoldForBilling ? 'translate-x-4' : 'translate-x-0'}"></div>
+                  </div>
+                </div>
+              ` : ''}
 
               <div class="flex flex-wrap gap-1.5">
                 ${taskList.map(t => {
