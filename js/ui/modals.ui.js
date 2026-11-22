@@ -716,12 +716,13 @@ export function renderHoldBellModalHtml() {
   // 2. Lịch mình đi cùng, chờ Chủ show khác chốt
   const memberHolds = holds.filter(s => s.ownerId !== uid && (s.memberIds || []).includes(uid));
 
-  // Gom nhóm các lịch trùng ngày của cùng chủ show để hiện nút Gộp nhanh
+  // Tìm các lịch trùng ngày chưa bấm "Giữ riêng" để hỏi Chủ show có muốn gộp không
+  const unconfirmedHolds = ownerHolds.filter(h => !h.holdSplitConfirmed);
   const overlapIds = new Set();
-  for (let i = 0; i < ownerHolds.length; i++) {
-    for (let j = i + 1; j < ownerHolds.length; j++) {
-      const a = ownerHolds[i];
-      const b = ownerHolds[j];
+  for (let i = 0; i < unconfirmedHolds.length; i++) {
+    for (let j = i + 1; j < unconfirmedHolds.length; j++) {
+      const a = unconfirmedHolds[i];
+      const b = unconfirmedHolds[j];
       const aEnd = a.endDate || a.startDate;
       const bEnd = b.endDate || b.startDate;
       if (a.startDate <= bEnd && b.startDate <= aEnd) {
@@ -748,14 +749,23 @@ export function renderHoldBellModalHtml() {
         </button>
 
         <div class="space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <div class="text-[10.5px] font-black text-amber-700 uppercase">⏳ CHỜ BẠN CẬP NHẬT / CHỐT SHOW (${ownerHolds.length})</div>
-            ${overlapIds.size >= 2 ? `
-              <button type="button" onclick="appActions.mergeHoldGroup('${escapeHtml(overlapCsv)}')" class="px-2.5 py-1 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] shrink-0">
-                🔗 Gộp ${overlapIds.size} lịch trùng
-              </button>
-            ` : ''}
-          </div>
+          <div class="text-[10.5px] font-black text-amber-700 uppercase">⏳ CHỜ BẠN CẬP NHẬT / CHỐT SHOW (${ownerHolds.length})</div>
+
+          ${overlapIds.size >= 2 ? `
+            <div class="p-3 rounded-2xl bg-indigo-50 border border-indigo-200 space-y-2">
+              <div class="text-[11px] font-bold text-indigo-950 leading-snug">
+                🤝 Phát hiện <b>${overlapIds.size} lịch giữ chỗ trùng ngày</b> gửi về bạn. Bạn có muốn gộp chung thành 1 show không?
+              </div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button type="button" onclick="appActions.mergeHoldGroup('${escapeHtml(overlapCsv)}')" class="py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px]">
+                  🔗 Gộp thành 1 show
+                </button>
+                <button type="button" onclick="appActions.keepHoldGroupSeparate('${escapeHtml(overlapCsv)}')" class="py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-[11px]">
+                  Giữ riêng
+                </button>
+              </div>
+            </div>
+          ` : ''}
 
           ${ownerHolds.length === 0 ? `
             <div class="py-4 px-3 rounded-2xl border border-dashed border-slate-200 text-center text-[11px] text-slate-400">
