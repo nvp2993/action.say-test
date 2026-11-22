@@ -3,6 +3,35 @@ import { ALL_YEARS, ADMIN_SWATCH_COLORS_30 } from '../config/constants.js';
 import { escapeHtml, getMember, getSortedMembers, formatDayMonth } from '../utils/helpers.js';
 import { isYearMonthLocked } from '../services/show.service.js';
 
+const DEFAULT_STUDIO_LOGO = './assets/logo.png';
+const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
+
+function getAdminLogoSrc() {
+  const custom =
+    state.customLogoDataUrl ||
+    state.customLogoUrl ||
+    state.studioLogoUrl ||
+    (() => {
+      try {
+        return localStorage.getItem('as_custom_logo_2026') || '';
+      } catch {
+        return '';
+      }
+    })();
+
+  if (
+    custom &&
+    (custom.startsWith('data:image/') ||
+      custom.startsWith('http://') ||
+      custom.startsWith('https://') ||
+      custom.startsWith('./') ||
+      custom.startsWith('/'))
+  ) {
+    return custom;
+  }
+  return DEFAULT_STUDIO_LOGO;
+}
+
 function getShowCreatedTimestamp(sh) {
   const raw = sh?.createdAt ?? sh?.updatedAt ?? 0;
   if (typeof raw === 'number') return raw;
@@ -511,7 +540,7 @@ function renderSystemTabHtml() {
   const lockYear = Number(state.adminLockViewYear) || 2026;
   const trash = state.deletedShowsTrash || [];
   const bc = state.studioBroadcast || { enabled: false, text: '' };
-  const curLogo = state.customLogoDataUrl || './assets/logo.png';
+  const curLogo = getAdminLogoSrc();
 
   return `
     <div class="space-y-4">
@@ -522,7 +551,7 @@ function renderSystemTabHtml() {
         </div>
         <div class="flex items-center gap-3 flex-wrap">
           <div class="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-            <img src="${escapeHtml(curLogo)}" alt="Logo" class="w-full h-full object-contain" />
+            <img src="${escapeHtml(curLogo)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Logo" class="w-full h-full object-contain" />
           </div>
           <button type="button" onclick="adminProActions.triggerLogoUpload()" class="px-3.5 py-2 rounded-xl bg-slate-900 text-amber-400 font-black text-xs">📤 Chọn Ảnh Logo Mới</button>
           ${state.customLogoDataUrl ? `<button type="button" onclick="adminProActions.resetLogoDefault()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">↩ Dùng Logo Mặc Định</button>` : ''}
