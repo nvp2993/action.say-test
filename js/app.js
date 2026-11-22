@@ -562,6 +562,18 @@ async copyZaloTomorrowText() {
       renderApp();
     }
   },
+  selectOnlyMeInForm() {
+    const f = state.formModal;
+    if (!f) return;
+    f.memberIds = state.currentUserId ? [state.currentUserId] : [];
+    renderApp();
+  },
+  selectAllMembersInForm() {
+    const f = state.formModal;
+    if (!f) return;
+    f.memberIds = (state.members || []).map(m => m.id);
+    renderApp();
+  },
   toggleFormMember(mid) {
     const f = state.formModal; if (!f) return;
     const i = f.memberIds.indexOf(mid);
