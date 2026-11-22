@@ -292,24 +292,35 @@ export function renderFormModalHtml() {
               const busy = busyMap[m.id];
               const roles = f.roles?.[m.id] || [];
               const normRoles = (roles || []).map(normalizeRoleName);
+
+              const cardStyleCls = sel
+                ? (busy
+                    ? 'bg-rose-50/95 border-rose-500 ring-1 ring-rose-300'
+                    : 'bg-indigo-50/90 border-indigo-500')
+                : (busy
+                    ? 'bg-rose-50/70 border-rose-200'
+                    : 'bg-white border-slate-200/80 hover:border-slate-300');
+
               return `
-                <div onclick="appActions.toggleFormMember('${m.id}')" class="p-1.5 rounded-xl border cursor-pointer transition select-none flex flex-col gap-1 ${
-                  sel
-                    ? 'bg-indigo-50/90 border-indigo-500'
-                    : busy
-                      ? 'bg-rose-50/70 border-rose-200'
-                      : 'bg-white border-slate-200/80 hover:border-slate-300'
-                }">
+                <div onclick="appActions.toggleFormMember('${m.id}')" class="p-1.5 rounded-xl border cursor-pointer transition select-none flex flex-col gap-1 ${cardStyleCls}">
                   <div class="flex items-center justify-between gap-1">
                     ${renderPillHtml(m.id, 'xs')}
                     <span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] shrink-0 ${
                       sel
-                        ? 'bg-slate-900 text-white'
+                        ? (busy ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white')
                         : 'border border-slate-300 bg-white text-transparent'
                     }">✓</span>
                   </div>
 
-                  ${busy ? `<div class="text-[9px] font-extrabold text-rose-600 truncate leading-tight">⚠️ ${escapeHtml(busy[0])}</div>` : ''}
+                  ${busy ? `
+                    <div class="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold truncate leading-tight ${
+                      sel
+                        ? 'bg-rose-600 text-white'
+                        : 'text-rose-600'
+                    }">
+                      ⚠️ ${sel ? 'Trùng: ' : ''}${escapeHtml(busy.join(', '))}
+                    </div>
+                  ` : ''}
 
                   ${sel ? `
                     <div class="flex flex-wrap gap-1 pt-0.5" onclick="event.stopPropagation()">
