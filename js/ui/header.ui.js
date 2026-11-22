@@ -1,6 +1,8 @@
 import { state } from '../state/store.js';
 import { escapeHtml, getMember, getTodayISO } from '../utils/helpers.js';
 
+const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
+
 export function renderUnifiedDateBarHtml(mode = 'shows') {
   const activeMonth = mode === 'ctp' ? state.ctpMonth : mode === 'owner' ? state.ownerMonth : state.selectedMonth;
   const isAllActive = mode === 'shows' ? state.filterAllMonthsInList : mode === 'owner' ? state.ownerAllMonths : false;
@@ -8,6 +10,8 @@ export function renderUnifiedDateBarHtml(mode = 'shows') {
   const allLabel = mode === 'owner' ? 'Cả năm' : 'Tất cả';
   const allClick = mode === 'owner' ? 'ownerActions.toggleAllMonths()' : 'appActions.toggleAllMonths()';
   const monthClickFn = mode === 'ctp' ? 'ctpActions.setMonth' : mode === 'owner' ? 'ownerActions.setMonth' : 'appActions.setMonth';
+  const isExpanded = !!state.zenFullscreen;
+  const showZenBtn = (mode === 'shows' || mode === 'matrix');
 
   return `
     <div class="as-date-bar-wrap">
@@ -23,6 +27,12 @@ export function renderUnifiedDateBarHtml(mode = 'shows') {
           <button type="button" onclick="${monthClickFn}(${m})" class="as-month-btn ${!isAllActive && activeMonth === m ? 'active' : 'inactive'}">T${m}</button>
         `).join('')}
       </div>
+      ${showZenBtn ? `
+        <div class="as-divider-v"></div>
+        <button type="button" onclick="appActions.toggleZenFullscreen()" title="${isExpanded ? 'Thu gọn về bình thường' : 'Mở rộng bảng'}" class="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition ${isExpanded ? 'bg-amber-400 text-slate-950' : 'bg-slate-200/80 hover:bg-slate-300 text-slate-700'}">
+          <i class="fa-solid ${isExpanded ? 'fa-compress' : 'fa-expand'} text-[11px]"></i>
+        </button>
+      ` : ''}
     </div>
   `;
 }
@@ -67,14 +77,12 @@ function renderLiveMarqueeHtml() {
   `;
 }
 
-const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
-
 export function renderHeaderHtml(totalAlerts = 0) {
   const curMem = getMember(state.currentUserId);
   const prof = state.memberProfiles?.[state.currentUserId] || {};
   const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
   const avatarSrc = prof.avatarUrl || prof.avatar || savedAvatars[state.currentUserId] || '';
-  const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || './assets/logo.png';
+  const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || FALLBACK_LOGO_SVG;
   const isExpanded = !!state.zenFullscreen;
 
   const uid = state.currentUserId;
@@ -89,7 +97,7 @@ export function renderHeaderHtml(totalAlerts = 0) {
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 min-w-0">
           <div onclick="appActions.tapLogoSecret()" class="w-8 h-8 rounded-lg bg-black overflow-hidden flex items-center justify-center shrink-0 shadow-sm border border-slate-700 cursor-pointer active:scale-90">
-            <img src="${escapeHtml(logoSrc)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Action x Say" class="w-full h-full object-cover" />
+            <img data-brand-logo="true" src="${escapeHtml(logoSrc)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Action x Say" class="w-full h-full object-cover" />
           </div>
           <div id="as-two-line-brand-title">
             <span class="as-title-top">LỊCH SHOW</span>
@@ -104,9 +112,6 @@ export function renderHeaderHtml(totalAlerts = 0) {
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
-          <button type="button" onclick="appActions.toggleZenFullscreen()" title="${isExpanded ? 'Thu nhỏ về bình thường' : 'Mở rộng bảng'}" class="w-8 h-8 rounded-xl border ${isExpanded ? 'bg-amber-400 text-slate-950 border-amber-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} flex items-center justify-center">
-            <i class="fa-solid ${isExpanded ? 'fa-compress' : 'fa-expand'} text-xs"></i>
-          </button>
           ${state.isAdminMode ? `
             <button type="button" onclick="appActions.enterBackendPortal()" class="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black flex items-center gap-1">
               <i class="fa-solid fa-shield-halved text-amber-600"></i><span>ADMIN</span>
