@@ -5,6 +5,27 @@ import { getMember } from '../utils/helpers.js';
 
 let unsubs = [];
 
+function normalizeExternalCrewList(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter(p => p && (String(p.name || '').trim() || (Array.isArray(p.roles) && p.roles.length > 0)))
+    .map((p, i) => ({
+      name: String(p.name || '').trim() || `NS ${i + 1}`,
+      roles: Array.isArray(p.roles) ? [...p.roles] : []
+    }));
+}
+
+function normalizeShowsList(shows) {
+  if (!Array.isArray(shows)) return [];
+  return shows.map(sh => {
+    if (!sh) return sh;
+    return {
+      ...sh,
+      externalCrew: normalizeExternalCrewList(sh.externalCrew)
+    };
+  });
+}
+
 export function detachShowListeners() {
   unsubs.forEach(fn => { try { fn(); } catch {} });
   unsubs = [];
@@ -20,7 +41,7 @@ export function attachShowListeners() {
     if (snap.exists()) {
       const d = snap.data();
       if (Array.isArray(d.shows)) {
-        state.shows = d.shows;
+        state.shows = normalizeShowsList(d.shows);
         localStorage.setItem('as_shows_backup_2026', JSON.stringify(state.shows));
       }
       if (Array.isArray(d.visibleYears) && d.visibleYears.length) state.visibleYears = d.visibleYears;
@@ -97,6 +118,7 @@ export function cleanupMatchingHoldsForOfficialShow(officialShow) {
 }
 
 export async function syncShowsToCloud() {
+  state.shows = normalizeShowsList(state.shows);
   localStorage.setItem('as_shows_backup_2026', JSON.stringify(state.shows));
   const masterRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'app_single_doc', 'shows_master');
   await setDoc(masterRef, { shows: state.shows, updatedAt: Date.now() }, { merge: true });
