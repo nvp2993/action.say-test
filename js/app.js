@@ -370,9 +370,8 @@ window.appActions = {
     state.zaloTomorrowModal = false;
     renderApp();
   },
-  async copyZaloTomorrowText() {
-    const pre = document.querySelector('#app pre');
-    const txt = pre?.textContent || '';
+async copyZaloTomorrowText() {
+    const txt = buildZaloTomorrowText();
     if (!txt) return;
     try {
       await navigator.clipboard.writeText(txt);
