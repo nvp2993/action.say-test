@@ -81,7 +81,7 @@ export function findAnyCtpShow(showId) {
 
 export function getCombinedCtpShows() {
   const regular = (state.shows || []).filter(sh => {
-    if (!sh || sh.isCancelled || sh.isHold || !sh.startDate) return false;
+    if (!sh || sh.isCancelled || !sh.startDate) return false;
     const [y, m] = sh.startDate.split('-').map(Number);
     if (y !== state.selectedYear || m !== state.ctpMonth) return false;
     if (!(sh.memberIds || []).includes(state.currentUserId)) return false;
