@@ -608,9 +608,12 @@ async copyZaloTomorrowText() {
     f.location = loc;
     f.error = '';
 
-    const [y, m] = String(f.startDate || '').split('-').map(Number);
-    if (y && m && isYearMonthLocked(y, m)) {
-      return showToast(`🔒 Tháng ${m}/${y} đã khóa sổ!`, 'error');
+    const dateStr = String(f.startDate || '').trim();
+    if (dateStr) {
+      const [y, m] = dateStr.split('-').map(Number);
+      if (y && m && isYearMonthLocked(y, m)) {
+        return showToast(`🔒 Tháng ${m}/${y} đã khóa sổ!`, 'error');
+      }
     }
 
     const cleanExt = (f.externalCrew || [])
@@ -665,7 +668,7 @@ async copyZaloTomorrowText() {
         ? `✅ Đã lưu show & tự dọn ${removedHolds} lịch giữ chỗ trùng ngày!`
         : '✅ Đã lưu & đồng bộ Cloud!');
     } catch (err) {
-      console.error('Lỗi lưu show:', err);
+      console.error('SAVE_SHOW_ERROR:', err);
       f.error = 'Lỗi lưu show: ' + (err?.message || err);
       renderApp();
       showToast('❌ Lưu show thất bại: ' + (err?.message || err), 'error');
