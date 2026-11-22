@@ -75,7 +75,7 @@ export function renderCtpTabHtml() {
           }));
 
           return `
-            <div class="${sh.isHold ? 'as-hold-striped-card' : 'bg-white border-slate-200'} rounded-3xl border p-4 space-y-3">
+           <div ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border-slate-200 border'} rounded-3xl p-4 space-y-3">
               <div class="flex items-start justify-between gap-2 border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2">
                 <div class="min-w-0 flex-1">
                   <span class="px-2 py-0.5 rounded-full bg-white/90 text-slate-600 font-mono font-bold text-[10px] border border-slate-200/80">#${idx + 1}</span>
