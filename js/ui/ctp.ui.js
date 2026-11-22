@@ -17,6 +17,10 @@ function getShowRawTotal(sh, item) {
   return activeTaskSum + extraSum;
 }
 
+function cleanHoldTitle(loc) {
+  return String(loc || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim();
+}
+
 export function renderCtpTabHtml() {
   const curMem = getMember(state.currentUserId);
   const filteredShows = getCombinedCtpShows();
@@ -67,6 +71,7 @@ export function renderCtpTabHtml() {
           const subTotal = isCounted ? rawTotal : 0;
           const isPrivateShow = Boolean(sh.hidePartner || sh.isPrivate);
           const partnerText = getVisiblePartnerText(sh);
+          const displayLocation = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
 
           const taskList = ['quay', 'dung', 'chup', 'lamhinh', 'flycam', 'gimbal'].map(k => ({
             key: k,
@@ -85,7 +90,7 @@ export function renderCtpTabHtml() {
                     ${isPrivateShow ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[9.5px] font-extrabold">🔒 Riêng tư</span>` : ''}
                   </div>
                   <h4 class="font-black text-slate-900 text-sm mt-1.5 flex items-center gap-1.5 flex-wrap">
-                    <span>${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>
+                    <span>${escapeHtml(displayLocation)}</span>
                     ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}
                   </h4>
                   <p class="text-[10px] text-slate-500 mt-0.5">Chủ show: <b class="text-slate-700">${escapeHtml(owner.name)}</b></p>
