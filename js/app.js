@@ -37,16 +37,21 @@ function getTomorrowISO() {
   return `${y}-${m}-${day}`;
 }
 
-function buildZaloTomorrowText() {
+function getTomorrowShowsList() {
   const tomorrowIso = getTomorrowISO();
-  const activeShows = (state.shows || []).filter(s =>
+  return (state.shows || []).filter(s =>
     s && !s.isCancelled && !s.isHold &&
     s.startDate && s.startDate <= tomorrowIso && (s.endDate || s.startDate) >= tomorrowIso
   );
+}
+
+function buildZaloTomorrowText() {
+  const tomorrowIso = getTomorrowISO();
+  const activeShows = getTomorrowShowsList();
 
   const lines = [
-    `📋 ĐIỂM DANH NGÀY MAI (${formatDayMonth(tomorrowIso)} - ${tomorrowIso})`,
-    '-----------------------------------'
+    `📋 ĐIỂM DANH NGÀY MAI (${formatDayMonth(tomorrowIso)})`,
+    '────────────────────'
   ];
 
   if (!activeShows.length) {
@@ -69,7 +74,7 @@ function buildZaloTomorrowText() {
     });
 
     lines.push(`${idx + 1}. 📍 ${sh.location}${partner ? ` (${partner})` : ''} • Chủ: ${owner.name}`);
-    lines.push(`   NS: ${crewText.length ? crewText.join(', ') : 'Chưa gán'}`);
+    lines.push(`   • NS: ${crewText.length ? crewText.join(', ') : 'Chưa gán'}`);
   });
 
   return lines.join('\n');
@@ -78,24 +83,81 @@ function buildZaloTomorrowText() {
 function renderZaloTomorrowModalHtml() {
   if (!state.zaloTomorrowModal) return '';
   const tomorrowIso = getTomorrowISO();
-  const textContent = buildZaloTomorrowText();
+  const activeShows = getTomorrowShowsList();
 
   return `
-    <div onclick="appActions.closeZaloTomorrowModal()" class="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4">
-      <div onclick="event.stopPropagation()" class="bg-white w-full max-w-lg rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl max-h-[88dvh] flex flex-col">
-        <div class="flex items-center justify-between border-b pb-2 shrink-0">
+    <div onclick="appActions.closeZaloTomorrowModal()" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4">
+      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 text-xs shadow-2xl max-h-[88dvh] flex flex-col">
+        <div class="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-100 shrink-0">
           <div>
-            <h3 class="font-black text-sm text-slate-900">📋 ĐIỂM DANH NGÀY MAI</h3>
-            <p class="text-[11px] text-slate-500">Ngày: <b class="font-mono text-slate-800">${escapeHtml(formatDayMonth(tomorrowIso))}</b></p>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase">
+              <span>📅 Ngày mai • ${escapeHtml(formatDayMonth(tomorrowIso))}</span>
+            </div>
+            <h3 class="font-black text-base text-slate-900 mt-1">📋 Điểm danh ngày mai</h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">${activeShows.length} show chính thức đang chạy</p>
           </div>
-          <button type="button" onclick="appActions.closeZaloTomorrowModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+          <button type="button" onclick="appActions.closeZaloTomorrowModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 flex items-center justify-center shrink-0">✕</button>
         </div>
 
-        <pre class="flex-1 min-h-0 overflow-auto p-3 rounded-2xl bg-slate-900 text-slate-100 font-mono text-[11px] whitespace-pre-wrap leading-relaxed">${escapeHtml(textContent)}</pre>
+        <div class="flex-1 min-h-0 overflow-y-auto custom-scroll space-y-2.5 pr-0.5">
+          ${activeShows.length === 0 ? `
+            <div class="py-10 px-4 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200 space-y-1.5">
+              <div class="text-2xl">🌤️</div>
+              <div class="font-bold text-slate-700">Chưa có show chính thức nào cho ngày mai</div>
+              <div class="text-[11px] text-slate-400">Các lịch giữ chỗ tạm thời không tính vào điểm danh chính thức</div>
+            </div>
+          ` : activeShows.map((sh, idx) => {
+            const partner = getVisiblePartnerText(sh);
+            const owner = getMember(sh.ownerId);
+            const membersHtml = (sh.memberIds || []).map(mid => {
+              const m = getMember(mid);
+              const roles = Array.isArray(sh.roles?.[mid]) ? sh.roles[mid].filter(Boolean).join(', ') : '';
+              return `
+                <div class="flex items-center justify-between gap-2 py-1 px-2.5 rounded-xl bg-white border border-slate-200/80">
+                  <span class="font-extrabold text-slate-800">${escapeHtml(m.name)}</span>
+                  <span class="text-[10.5px] font-semibold text-indigo-700 text-right">${escapeHtml(roles || 'Chưa gắn vai trò')}</span>
+                </div>
+              `;
+            }).join('');
+
+            const extHtml = (sh.externalCrew || []).map((p, eIdx) => {
+              const label = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
+              const roles = Array.isArray(p?.roles) ? p.roles.filter(Boolean).join(', ') : '';
+              return `
+                <div class="flex items-center justify-between gap-2 py-1 px-2.5 rounded-xl bg-indigo-50/70 border border-indigo-200/80">
+                  <span class="font-extrabold text-indigo-900">🤝 ${escapeHtml(label)}</span>
+                  <span class="text-[10.5px] font-semibold text-indigo-700 text-right">${escapeHtml(roles || 'Freelancer')}</span>
+                </div>
+              `;
+            }).join('');
+
+            return `
+              <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2.5">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono font-black text-[10px]">#${idx + 1}</span>
+                      <span class="text-[10.5px] font-bold text-slate-500">Chủ show: <b class="text-slate-800">${escapeHtml(owner.name)}</b></span>
+                    </div>
+                    <div class="font-black text-slate-900 text-sm mt-1">
+                      ${escapeHtml(sh.location)}
+                      ${partner ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partner)})</span>` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  ${membersHtml}${extHtml}
+                  ${(!membersHtml && !extHtml) ? `<div class="text-[11px] text-slate-400 italic">Chưa phân công nhân sự</div>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
 
         <div class="grid grid-cols-2 gap-2 pt-1 shrink-0">
-          <button type="button" onclick="appActions.copyZaloTomorrowText()" class="py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">📋 Copy gửi Zalo</button>
-          <button type="button" onclick="appActions.closeZaloTomorrowModal()" class="py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs">Đóng</button>
+          <button type="button" onclick="appActions.copyZaloTomorrowText()" class="py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition">📋 Copy gửi Zalo</button>
+          <button type="button" onclick="appActions.closeZaloTomorrowModal()" class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs transition">Đóng</button>
         </div>
       </div>
     </div>
