@@ -1,7 +1,34 @@
 import { state } from '../state/store.js';
 import { escapeHtml, getMember, getTodayISO } from '../utils/helpers.js';
 
+const DEFAULT_STUDIO_LOGO = './assets/logo.png';
 const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
+
+function getHeaderLogoSrc() {
+  const custom =
+    state.customLogoDataUrl ||
+    state.customLogoUrl ||
+    state.studioLogoUrl ||
+    (() => {
+      try {
+        return localStorage.getItem('as_custom_logo_2026') || '';
+      } catch {
+        return '';
+      }
+    })();
+
+  if (
+    custom &&
+    (custom.startsWith('data:image/') ||
+      custom.startsWith('http://') ||
+      custom.startsWith('https://') ||
+      custom.startsWith('./') ||
+      custom.startsWith('/'))
+  ) {
+    return custom;
+  }
+  return DEFAULT_STUDIO_LOGO;
+}
 
 export function renderUnifiedDateBarHtml(mode = 'shows') {
   const activeMonth = mode === 'ctp' ? state.ctpMonth : mode === 'owner' ? state.ownerMonth : state.selectedMonth;
@@ -82,7 +109,7 @@ export function renderHeaderHtml(totalAlerts = 0) {
   const prof = state.memberProfiles?.[state.currentUserId] || {};
   const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
   const avatarSrc = prof.avatarUrl || prof.avatar || savedAvatars[state.currentUserId] || '';
-  const logoSrc = state.customLogoDataUrl || state.customLogoUrl || localStorage.getItem('as_custom_logo_2026') || FALLBACK_LOGO_SVG;
+  const logoSrc = getHeaderLogoSrc();
   const isExpanded = !!state.zenFullscreen;
 
   const uid = state.currentUserId;
