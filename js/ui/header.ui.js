@@ -104,6 +104,9 @@ export function renderHeaderHtml(totalAlerts = 0) {
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
+          <button type="button" onclick="appActions.toggleZenFullscreen()" title="${isExpanded ? 'Thu nhỏ về bình thường' : 'Mở rộng bảng'}" class="w-8 h-8 rounded-xl border ${isExpanded ? 'bg-amber-400 text-slate-950 border-amber-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} flex items-center justify-center">
+            <i class="fa-solid ${isExpanded ? 'fa-compress' : 'fa-expand'} text-xs"></i>
+          </button>
           ${state.isAdminMode ? `
             <button type="button" onclick="appActions.enterBackendPortal()" class="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black flex items-center gap-1">
               <i class="fa-solid fa-shield-halved text-amber-600"></i><span>ADMIN</span>
