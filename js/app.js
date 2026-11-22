@@ -532,7 +532,36 @@ async copyZaloTomorrowText() {
     renderApp();
   },
   closeFormModal() { state.formModal = null; renderApp(); },
-  updateFormField(k, v) { if (state.formModal) { state.formModal[k] = v; if (k === 'startDate' && state.formModal.endDate < v) state.formModal.endDate = v; } },
+  updateFormField(k, v) {
+    const f = state.formModal;
+    if (!f) return;
+    f[k] = v;
+
+    if (k === 'startDate' && v) {
+      if (!f.endDate || f.endDate < v) {
+        f.endDate = v;
+      } else if (f._prevStartDate && f.endDate >= f._prevStartDate) {
+        const prevStart = new Date(`${f._prevStartDate}T00:00:00`).getTime();
+        const prevEnd = new Date(`${f.endDate}T00:00:00`).getTime();
+        const nextStart = new Date(`${v}T00:00:00`).getTime();
+        if (!Number.isNaN(prevStart) && !Number.isNaN(prevEnd) && !Number.isNaN(nextStart)) {
+          const spanDays = Math.round((prevEnd - prevStart) / 86400000);
+          const d = new Date(nextStart + spanDays * 86400000);
+          f.endDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+      }
+      f._prevStartDate = v;
+    } else if (k === 'endDate' && v) {
+      if (f.startDate && v < f.startDate) {
+        f.startDate = v;
+        f._prevStartDate = v;
+      }
+    }
+
+    if (k === 'startDate' || k === 'endDate' || k === 'ownerId') {
+      renderApp();
+    }
+  },
   toggleFormMember(mid) {
     const f = state.formModal; if (!f) return;
     const i = f.memberIds.indexOf(mid);
