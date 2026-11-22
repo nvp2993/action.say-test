@@ -34,44 +34,61 @@ function renderTodayTomorrowTickerHtml() {
   `;
 }
 
-export function renderHeaderHtml(bellAlertsCount = 0) {
+export function renderUnifiedDateBarHtml(options = {}) {
+  const {
+    yearValue = state.selectedYear,
+    monthValue = state.selectedMonth,
+    onYearChange = "appActions.setYear(this.value)",
+    onMonthChange = "appActions.setMonth",
+    showAllMonthsBtn = false,
+    allMonthsActive = false,
+    onAllMonthsClick = "appActions.toggleAllMonths()",
+    rightHtml = ''
+  } = options;
+
   const years = Array.isArray(state.visibleYears) && state.visibleYears.length ? state.visibleYears : [2026];
 
-  // Chế độ mở rộng: ẩn toàn bộ thông báo, logo, chữ chạy — chỉ giữ thanh năm/tháng + icon thu nhỏ
-  if (state.zenFullscreen) {
-    return `
-      <header class="bg-white border-b border-slate-200 px-2.5 py-1.5 shrink-0 z-30 flex items-center gap-2">
-        <select onchange="appActions.setYear(this.value)" class="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-black text-slate-800 shrink-0 focus:outline-none">
-          ${years.map(y => `<option value="${y}" ${state.selectedYear === y ? 'selected' : ''}>${y}</option>`).join('')}
-        </select>
+  return `
+    <div class="px-2.5 py-1.5 flex items-center gap-1.5 bg-white border-b border-slate-100">
+      <select onchange="${onYearChange}" class="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-black text-slate-800 shrink-0 focus:outline-none">
+        ${years.map(y => `<option value="${y}" ${Number(yearValue) === Number(y) ? 'selected' : ''}>${y}</option>`).join('')}
+      </select>
 
-        <div class="as-month-scroller flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar">
-          ${Array.from({ length: 12 }, (_, i) => i + 1).map(m => `
-            <button type="button" onclick="appActions.setMonth(${m})" class="as-month-btn px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap shrink-0 transition ${
-              !state.filterAllMonthsInList && state.selectedMonth === m
-                ? 'active bg-slate-900 text-amber-300'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }">T${m}</button>
-          `).join('')}
-        </div>
+      <div class="as-month-scroller flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar">
+        ${Array.from({ length: 12 }, (_, i) => i + 1).map(m => `
+          <button type="button" onclick="${onMonthChange}(${m})" class="as-month-btn px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap shrink-0 transition ${
+            !allMonthsActive && Number(monthValue) === m
+              ? 'active bg-slate-900 text-amber-300'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }">T${m}</button>
+        `).join('')}
+        ${showAllMonthsBtn ? `
+          <button type="button" onclick="${onAllMonthsClick}" class="px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap shrink-0 transition ${
+            allMonthsActive
+              ? 'bg-indigo-600 text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }">Tất cả</button>
+        ` : ''}
+      </div>
 
-        <button type="button" onclick="appActions.toggleZenFullscreen()" title="Thu nhỏ về bình thường" class="w-7 h-7 rounded-lg bg-slate-900 text-amber-300 hover:bg-slate-800 flex items-center justify-center shrink-0">
-          <i class="fa-solid fa-compress text-xs"></i>
-        </button>
-      </header>
-    `;
-  }
+      ${rightHtml ? `<div class="shrink-0">${rightHtml}</div>` : ''}
+    </div>
+  `;
+}
 
+export function renderHeaderHtml(bellAlertsCount = 0) {
+  const years = Array.isArray(state.visibleYears) && state.visibleYears.length ? state.visibleYears : [2026];
   const curMem = getMember(state.currentUserId);
   const prof = state.memberProfiles?.[state.currentUserId] || {};
   const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
   const avatarSrc = prof.avatarUrl || prof.avatar || savedAvatars[state.currentUserId] || '';
   const logoSrc = state.customLogoDataUrl || localStorage.getItem('as_custom_logo_2026') || FALLBACK_LOGO_SVG;
   const broadcast = state.studioBroadcast;
+  const isExpanded = !!state.zenFullscreen;
 
   return `
     <header class="bg-white border-b border-slate-200 shrink-0 z-30">
-      ${broadcast?.enabled && broadcast?.text ? `
+      ${!isExpanded && broadcast?.enabled && broadcast?.text ? `
         <div class="bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1 text-center truncate">
           📢 ${escapeHtml(broadcast.text)}
         </div>
@@ -82,15 +99,17 @@ export function renderHeaderHtml(bellAlertsCount = 0) {
           <div onclick="appActions.tapLogoSecret()" class="w-8 h-8 rounded-xl bg-slate-950 overflow-hidden shrink-0 cursor-pointer border border-slate-200">
             <img data-brand-logo="true" src="${escapeHtml(logoSrc)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Action x Say" class="w-full h-full object-cover" />
           </div>
-          <div class="min-w-0">
-            <div class="font-black text-xs text-slate-900 leading-tight truncate">ACTION × SAY</div>
-            <div class="text-[9.5px] font-bold text-slate-400 leading-tight">Lịch Show ${state.selectedYear}</div>
-          </div>
+          ${!isExpanded ? `
+            <div class="min-w-0">
+              <div class="font-black text-xs text-slate-900 leading-tight truncate">ACTION × SAY</div>
+              <div class="text-[9.5px] font-bold text-slate-400 leading-tight">Lịch Show ${state.selectedYear}</div>
+            </div>
+          ` : ''}
         </div>
 
         <div class="flex items-center gap-1.5 shrink-0">
-          <button type="button" onclick="appActions.toggleZenFullscreen()" title="Mở rộng toàn màn hình" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center">
-            <i class="fa-solid fa-expand text-xs"></i>
+          <button type="button" onclick="appActions.toggleZenFullscreen()" title="${isExpanded ? 'Thu nhỏ về bình thường' : 'Mở rộng bảng'}" class="w-8 h-8 rounded-xl ${isExpanded ? 'bg-slate-900 text-amber-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'} flex items-center justify-center">
+            <i class="fa-solid ${isExpanded ? 'fa-compress' : 'fa-expand'} text-xs"></i>
           </button>
 
           <button type="button" onclick="holdBellActions.openBellDrawer()" title="Thông báo & Giữ lịch" class="relative w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center">
@@ -124,7 +143,7 @@ export function renderHeaderHtml(bellAlertsCount = 0) {
         </div>
       </div>
 
-      ${renderTodayTomorrowTickerHtml()}
+      ${!isExpanded ? renderTodayTomorrowTickerHtml() : ''}
     </header>
   `;
 }
