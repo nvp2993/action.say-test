@@ -761,7 +761,64 @@ export function renderHoldBellModalHtml() {
                   🔗 Gộp thành 1 show
                 </button>
                 <button type="button" onclick="appActions.keepHoldGroupSeparate('${escapeHtml(overlapCsv)}')" class="py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-[11px]">
-                  Giữ riêng
+                  Giữ riêngexport function renderHoldBellModalHtml() {
+  if (!state.holdBellModalOpen) return '';
+  const uid = state.currentUserId;
+  const holds = (state.shows || []).filter(s => s && s.isHold && !s.isCancelled);
+
+  // 1. Lịch chờ mình duyệt / chốt (mình là Chủ show)
+  const ownerHolds = holds.filter(s => s.ownerId === uid);
+  // 2. Lịch mình đi cùng, chờ Chủ show khác chốt
+  const memberHolds = holds.filter(s => s.ownerId !== uid && (s.memberIds || []).includes(uid));
+
+  // Tìm các lịch trùng ngày chưa bấm "Giữ riêng"
+  const unconfirmedHolds = ownerHolds.filter(h => !h.holdSplitConfirmed);
+  const overlapIds = new Set();
+  for (let i = 0; i < unconfirmedHolds.length; i++) {
+    for (let j = i + 1; j < unconfirmedHolds.length; j++) {
+      const a = unconfirmedHolds[i];
+      const b = unconfirmedHolds[j];
+      const aEnd = a.endDate || a.startDate;
+      const bEnd = b.endDate || b.startDate;
+      if (a.startDate <= bEnd && b.startDate <= aEnd) {
+        overlapIds.add(a.id);
+        overlapIds.add(b.id);
+      }
+    }
+  }
+  const overlapCsv = Array.from(overlapIds).join(',');
+  const showMergeTools = ownerHolds.length >= 2;
+  const mergeSelectedJs = "const ids=Array.from(document.querySelectorAll('.hold-merge-chk:checked')).map(el=>el.value);if(ids.length<2){alert('Tick chọn ít nhất 2 lịch muốn gộp nhé!');return;}appActions.mergeHoldGroup(ids.join(','));";
+
+  return `
+    <div onclick="holdBellActions.closeBellDrawer()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4">
+      <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3.5 text-xs shadow-2xl max-h-[88dvh] overflow-y-auto">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="font-black text-sm text-slate-900">🔔 THÔNG BÁO &amp; GIỮ LỊCH</h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">Vuốt lên xuống để xem tất cả lịch chờ &amp; show mới chốt</p>
+          </div>
+          <button type="button" onclick="holdBellActions.closeBellDrawer()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+        </div>
+
+        <button type="button" onclick="holdBellActions.createQuickHold()" class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wide">
+          GIỮ LỊCH / NHẮC CHỦ SHOW MỚI
+        </button>
+
+        <div class="space-y-2">
+          <div class="text-[10.5px] font-black text-amber-700 uppercase">⏳ CHỜ BẠN CẬP NHẬT / CHỐT SHOW (${ownerHolds.length})</div>
+
+          ${overlapIds.size >= 2 ? `
+            <div class="p-3 rounded-2xl bg-indigo-50 border border-indigo-200 space-y-2">
+              <div class="text-[11px] font-bold text-indigo-950 leading-snug">
+                🤝 Có <b>${overlapIds.size} lịch trùng ngày</b>. Tick chọn những lịch đi chung 1 show rồi bấm gộp:
+              </div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button type="button" onclick="${mergeSelectedJs}" class="py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px]">
+                  🔗 Gộp lịch đã chọn
+                </button>
+                <button type="button" onclick="appActions.keepHoldGroupSeparate('${escapeHtml(overlapCsv)}')" class="py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-[11px]">
+                  Giữ riêng tất cả
                 </button>
               </div>
             </div>
@@ -776,9 +833,14 @@ export function renderHoldBellModalHtml() {
             const creator = h.creatorId ? getMember(h.creatorId).name : '';
             return `
               <div class="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 flex items-center justify-between gap-2">
-                <div class="min-w-0">
-                  <div class="font-black text-slate-900 text-xs truncate">🗓️ ${escapeHtml(h.startDate)}${h.endDate && h.endDate !== h.startDate ? ' → ' + escapeHtml(h.endDate) : ''} • ${escapeHtml(h.location || '')}</div>
-                  <div class="text-[10.5px] text-slate-600 mt-0.5 truncate">Ekip: <b>${escapeHtml(crewNames || 'Chưa gán')}</b>${creator ? ` • Tạo bởi: ${escapeHtml(creator)}` : ''}</div>
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  ${showMergeTools ? `
+                    <input type="checkbox" value="${escapeHtml(h.id)}" class="hold-merge-chk w-4 h-4 rounded accent-indigo-600 shrink-0 cursor-pointer" />
+                  ` : ''}
+                  <div class="min-w-0">
+                    <div class="font-black text-slate-900 text-xs truncate">🗓️ ${escapeHtml(h.startDate)}${h.endDate && h.endDate !== h.startDate ? ' → ' + escapeHtml(h.endDate) : ''} • ${escapeHtml(h.location || '')}</div>
+                    <div class="text-[10.5px] text-slate-600 mt-0.5 truncate">Ekip: <b>${escapeHtml(crewNames || 'Chưa gán')}</b>${creator ? ` • Tạo bởi: ${escapeHtml(creator)}` : ''}</div>
+                  </div>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
                   <button type="button" onclick="holdBellActions.closeBellDrawer(); appActions.openEditModal('${escapeHtml(h.id)}')" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10.5px]">⚡ Chốt</button>
