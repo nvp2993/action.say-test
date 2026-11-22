@@ -49,24 +49,24 @@ export function renderUnifiedDateBarHtml(options = {}) {
   const years = Array.isArray(state.visibleYears) && state.visibleYears.length ? state.visibleYears : [2026];
 
   return `
-    <div class="px-2.5 py-1.5 flex items-center gap-1.5 bg-white border-b border-slate-100">
-      <select onchange="${onYearChange}" class="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-black text-slate-800 shrink-0 focus:outline-none">
+    <div class="px-2.5 py-1.5 flex items-center gap-1.5 bg-white">
+      <select onchange="${onYearChange}" class="px-2.5 py-1 rounded-xl bg-white border border-slate-300 text-xs font-black text-slate-800 shrink-0 focus:outline-none">
         ${years.map(y => `<option value="${y}" ${Number(yearValue) === Number(y) ? 'selected' : ''}>${y}</option>`).join('')}
       </select>
 
-      <div class="as-month-scroller flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar">
+      <div class="as-month-scroller flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         ${Array.from({ length: 12 }, (_, i) => i + 1).map(m => `
-          <button type="button" onclick="${onMonthChange}(${m})" class="as-month-btn px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap shrink-0 transition ${
+          <button type="button" onclick="${onMonthChange}(${m})" class="as-month-btn px-3 py-1 rounded-full text-xs font-black whitespace-nowrap shrink-0 transition ${
             !allMonthsActive && Number(monthValue) === m
-              ? 'active bg-slate-900 text-amber-300'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ? 'active bg-emerald-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
           }">T${m}</button>
         `).join('')}
         ${showAllMonthsBtn ? `
-          <button type="button" onclick="${onAllMonthsClick}" class="px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap shrink-0 transition ${
+          <button type="button" onclick="${onAllMonthsClick}" class="px-3 py-1 rounded-full text-xs font-black whitespace-nowrap shrink-0 transition ${
             allMonthsActive
               ? 'bg-indigo-600 text-white'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
           }">Tất cả</button>
         ` : ''}
       </div>
@@ -94,50 +94,48 @@ export function renderHeaderHtml(bellAlertsCount = 0) {
         </div>
       ` : ''}
 
-      <div class="px-2.5 py-1.5 flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2 min-w-0">
-          <div onclick="appActions.tapLogoSecret()" class="w-8 h-8 rounded-xl bg-slate-950 overflow-hidden shrink-0 cursor-pointer border border-slate-200">
+      <div class="px-3 py-2 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div onclick="appActions.tapLogoSecret()" class="w-9 h-9 rounded-full bg-slate-950 overflow-hidden shrink-0 cursor-pointer border border-slate-200">
             <img data-brand-logo="true" src="${escapeHtml(logoSrc)}" onerror="this.onerror=null;this.src='${FALLBACK_LOGO_SVG}'" alt="Action x Say" class="w-full h-full object-cover" />
           </div>
-          ${!isExpanded ? `
-            <div class="min-w-0">
-              <div class="font-black text-xs text-slate-900 leading-tight truncate">ACTION × SAY</div>
-              <div class="text-[9.5px] font-bold text-slate-400 leading-tight">Lịch Show ${state.selectedYear}</div>
-            </div>
-          ` : ''}
+          <div class="min-w-0">
+            <div class="font-black text-xs sm:text-sm text-slate-900 leading-tight truncate">ACTION × SAY</div>
+            <div class="text-[10px] font-semibold text-slate-400 leading-tight">Lịch Show ${state.selectedYear}</div>
+          </div>
         </div>
 
         <div class="flex items-center gap-1.5 shrink-0">
-          <button type="button" onclick="appActions.toggleZenFullscreen()" title="${isExpanded ? 'Thu nhỏ về bình thường' : 'Mở rộng bảng'}" class="w-8 h-8 rounded-xl ${isExpanded ? 'bg-slate-900 text-amber-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'} flex items-center justify-center">
+          <button type="button" onclick="appActions.toggleZenFullscreen()" title="${isExpanded ? 'Thu nhỏ về bình thường' : 'Mở rộng bảng'}" class="w-8 h-8 rounded-xl border ${isExpanded ? 'bg-slate-900 text-amber-300 border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'} flex items-center justify-center">
             <i class="fa-solid ${isExpanded ? 'fa-compress' : 'fa-expand'} text-xs"></i>
           </button>
 
-          <button type="button" onclick="holdBellActions.openBellDrawer()" title="Thông báo & Giữ lịch" class="relative w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center">
+          <button type="button" onclick="holdBellActions.openBellDrawer()" title="Thông báo & Giữ lịch" class="relative w-8 h-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 flex items-center justify-center">
             <i class="fa-solid fa-bell text-xs"></i>
             ${bellAlertsCount > 0 ? `<span class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center">${bellAlertsCount}</span>` : ''}
           </button>
 
-          <button type="button" onclick="appActions.openCrewPassModal()" class="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white">
+          <button type="button" onclick="appActions.openCrewPassModal()" class="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white">
             ${avatarSrc
-              ? `<img src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(curMem.name)}" class="w-6 h-6 rounded-lg object-cover shrink-0" />`
-              : `<span style="background-color:${curMem.bg || '#334155'};color:${curMem.text || '#ffffff'}" class="w-6 h-6 rounded-lg text-[10px] font-black flex items-center justify-center shrink-0">${escapeHtml((curMem.shortLabel || curMem.name || 'AS').slice(0, 2))}</span>`
+              ? `<img src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(curMem.name)}" class="w-6 h-6 rounded-full object-cover shrink-0" />`
+              : `<span style="background-color:${curMem.bg || '#334155'};color:${curMem.text || '#ffffff'}" class="w-6 h-6 rounded-full text-[10px] font-black flex items-center justify-center shrink-0">${escapeHtml((curMem.shortLabel || curMem.name || 'AS').slice(0, 2))}</span>`
             }
-            <span class="text-[11px] font-black max-w-[72px] truncate">${escapeHtml(curMem.name)}</span>
+            <span class="text-xs font-extrabold max-w-[90px] truncate">${escapeHtml(curMem.name)}</span>
           </button>
         </div>
       </div>
 
-      <div class="px-2.5 pb-1.5 flex items-center gap-1.5">
-        <select onchange="appActions.setYear(this.value)" class="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-black text-slate-800 shrink-0 focus:outline-none">
+      <div class="px-3 pb-2 flex items-center gap-1.5">
+        <select onchange="appActions.setYear(this.value)" class="px-2.5 py-1 rounded-xl bg-white border border-slate-300 text-xs font-black text-slate-800 shrink-0 focus:outline-none">
           ${years.map(y => `<option value="${y}" ${state.selectedYear === y ? 'selected' : ''}>${y}</option>`).join('')}
         </select>
 
-        <div class="as-month-scroller flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar">
+        <div class="as-month-scroller flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           ${Array.from({ length: 12 }, (_, i) => i + 1).map(m => `
-            <button type="button" onclick="appActions.setMonth(${m})" class="as-month-btn px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap shrink-0 transition ${
+            <button type="button" onclick="appActions.setMonth(${m})" class="as-month-btn px-3 py-1 rounded-full text-xs font-black whitespace-nowrap shrink-0 transition ${
               !state.filterAllMonthsInList && state.selectedMonth === m
-                ? 'active bg-slate-900 text-amber-300'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'active bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }">T${m}</button>
           `).join('')}
         </div>
