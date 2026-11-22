@@ -7,12 +7,7 @@ export function renderShowsTabHtml() {
   const filtered = getFilteredShows();
   return `
     <div class="flex-1 flex flex-col min-h-0 bg-white">
-      ${state.zenFullscreen ? `
-        <div class="bg-slate-900 text-white px-2.5 py-1 flex items-center justify-between border-b border-slate-800 shrink-0 text-[10px] font-bold">
-          <span>🖥️ Đang mở rộng bảng Lịch Show</span>
-          <button type="button" onclick="appActions.toggleZenFullscreen()" class="px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-extrabold">Thu nhỏ</button>
-        </div>
-      ` : `
+      ${state.zenFullscreen ? '' : `
         <div class="bg-slate-100 px-2.5 py-1.5 border-b border-slate-200 shrink-0 space-y-1.5">
           <div class="flex items-center gap-1.5">
             <div class="relative flex-1 min-w-0">
