@@ -588,7 +588,12 @@ async copyZaloTomorrowText() {
     f.roles[mid] = arr;
     renderApp();
   },
-  addExternalCrewDraft() { if (state.formModal) { state.formModal.externalCrew.push({ name: '', roles: ['Quay'] }); renderApp(); } },
+  addExternalCrewDraft() {
+    if (state.formModal) {
+      state.formModal.externalCrew.push({ name: '', roles: [] });
+      renderApp();
+    }
+  },
   updateExternalCrewName(idx, val) { if (state.formModal?.externalCrew[idx]) state.formModal.externalCrew[idx].name = val; },
   removeExternalCrewDraft(idx) { if (state.formModal) { state.formModal.externalCrew.splice(idx, 1); renderApp(); } },
   toggleExternalCrewRole(idx, roleId) {
