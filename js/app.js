@@ -625,8 +625,9 @@ async copyZaloTomorrowText() {
 
     try {
       let savedShow = null;
+      const isEdit = f.mode === 'edit';
 
-      if (f.mode === 'edit') {
+      if (isEdit) {
         state.shows = state.shows.map(s => {
           if (s.id !== f.showId) return s;
           savedShow = {
@@ -640,7 +641,6 @@ async copyZaloTomorrowText() {
           };
           return savedShow;
         });
-        await logStudioActivity(`Sửa show: ${loc}`);
       } else {
         const nextStt = Math.max(300, ...state.shows.map(s => Number(s.stt) || 0)) + 1;
         savedShow = {
@@ -657,12 +657,15 @@ async copyZaloTomorrowText() {
         };
         state.shows.push(savedShow);
         playStudioSound('noshow');
-        await logStudioActivity(`Nổ show mới: ${loc}`);
       }
 
       const removedHolds = cleanupMatchingHoldsForOfficialShow(savedShow);
       state.formModal = null;
+
+      // PHẢI lưu shows lên Cloud TRƯỚC rồi mới ghi log activity để tránh onSnapshot ghi đè
       await syncShowsToCloud();
+      await logStudioActivity(isEdit ? `Sửa show: ${loc}` : `Nổ show mới: ${loc}`);
+
       renderApp();
       showToast(removedHolds > 0
         ? `✅ Đã lưu show & tự dọn ${removedHolds} lịch giữ chỗ trùng ngày!`
