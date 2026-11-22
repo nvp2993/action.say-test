@@ -225,6 +225,58 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
+  // === DÁN ĐOẠN MỚI VÀO ĐÂY ===
+  openZaloTomorrowModal() {
+    state.zaloTomorrowModal = true;
+    renderApp();
+  },
+  closeZaloTomorrowModal() {
+    state.zaloTomorrowModal = false;
+    renderApp();
+  },
+  async copyZaloTomorrowText() {
+    const pre = document.querySelector('#app pre');
+    const txt = pre?.textContent || '';
+    if (!txt) return;
+    try {
+      await navigator.clipboard.writeText(txt);
+      showToast('✅ Đã copy danh sách điểm danh ngày mai!', 'info');
+    } catch {
+      showToast('Không thể copy tự động, anh chọn tay giúp em nhé!', 'error');
+    }
+  },
+  async mergeHoldGroup(idsCsv) {
+    const ids = String(idsCsv || '').split(',').filter(Boolean);
+    if (ids.length < 2) return;
+    const targets = state.shows.filter(s => ids.includes(s.id));
+    if (targets.length < 2) return;
+
+    const primary = targets[0];
+    const mergedMembers = Array.from(new Set(targets.flatMap(t => t.memberIds || [])));
+    const minStart = targets.map(t => t.startDate).filter(Boolean).sort()[0] || primary.startDate;
+    const maxEnd = targets.map(t => t.endDate || t.startDate).filter(Boolean).sort().pop() || primary.endDate;
+
+    primary.memberIds = mergedMembers;
+    primary.startDate = minStart;
+    primary.endDate = maxEnd;
+    primary.holdSplitConfirmed = false;
+
+    const removeSet = new Set(ids.slice(1));
+    state.shows = state.shows.filter(s => !removeSet.has(s.id));
+    await syncShowsToCloud?.();
+    renderApp();
+    showToast('✅ Đã gộp chung thành 1 lịch giữ chỗ!', 'info');
+  },
+  async keepHoldGroupSeparate(idsCsv) {
+    const ids = new Set(String(idsCsv || '').split(',').filter(Boolean));
+    state.shows.forEach(s => {
+      if (ids.has(s.id)) s.holdSplitConfirmed = true;
+    });
+    await syncShowsToCloud?.();
+    renderApp();
+    showToast('Đã giữ riêng các lịch giữ chỗ này.', 'info');
+  },
+  // === HẾT ĐOẠN MỚI (các hàm cũ bên dưới giữ nguyên) ===
   triggerVipAvatarUpload() {
     document.getElementById('vip-avatar-file-input')?.click();
   },
@@ -550,6 +602,19 @@ window.appActions = {
 };
 
 window.ctpActions = {
+  // === DÁN ĐOẠN MỚI VÀO ĐÂY ===
+  async toggleHoldBilling(showId) {
+    const sh = state.shows.find(s => s.id === showId);
+    if (!sh) return;
+    sh.countHoldForBilling = !sh.countHoldForBilling;
+    await syncShowsToCloud?.();
+    renderApp();
+    showToast(
+      sh.countHoldForBilling ? '💰 Đã bật tính tiền cho show giữ chỗ này!' : '⏳ Đã tắt tính tiền show giữ chỗ.',
+      'info'
+    );
+  },
+  // === HẾT ĐOẠN MỚI (các hàm cũ bên dưới giữ nguyên) ===
   setMonth(m) { state.ctpMonth = Number(m); renderApp(); },
   setOwner(o) { state.ctpOwnerId = o; renderApp(); },
   toggleTask(id, k) {
