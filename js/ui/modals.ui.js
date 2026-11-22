@@ -716,61 +716,6 @@ export function renderHoldBellModalHtml() {
   // 2. Lịch mình đi cùng, chờ Chủ show khác chốt
   const memberHolds = holds.filter(s => s.ownerId !== uid && (s.memberIds || []).includes(uid));
 
-  // Tìm các lịch trùng ngày chưa bấm "Giữ riêng" để hỏi Chủ show có muốn gộp không
-  const unconfirmedHolds = ownerHolds.filter(h => !h.holdSplitConfirmed);
-  const overlapIds = new Set();
-  for (let i = 0; i < unconfirmedHolds.length; i++) {
-    for (let j = i + 1; j < unconfirmedHolds.length; j++) {
-      const a = unconfirmedHolds[i];
-      const b = unconfirmedHolds[j];
-      const aEnd = a.endDate || a.startDate;
-      const bEnd = b.endDate || b.startDate;
-      if (a.startDate <= bEnd && b.startDate <= aEnd) {
-        overlapIds.add(a.id);
-        overlapIds.add(b.id);
-      }
-    }
-  }
-  const overlapCsv = Array.from(overlapIds).join(',');
-
-  return `
-    <div onclick="holdBellActions.closeBellDrawer()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4">
-      <div onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-3xl p-5 space-y-3.5 text-xs shadow-2xl max-h-[88dvh] overflow-y-auto">
-        <div class="flex items-start justify-between">
-          <div>
-            <h3 class="font-black text-sm text-slate-900">🔔 THÔNG BÁO &amp; GIỮ LỊCH</h3>
-            <p class="text-[11px] text-slate-500 mt-0.5">Vuốt lên xuống để xem tất cả lịch chờ &amp; show mới chốt</p>
-          </div>
-          <button type="button" onclick="holdBellActions.closeBellDrawer()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
-        </div>
-
-        <button type="button" onclick="holdBellActions.createQuickHold()" class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wide">
-          GIỮ LỊCH / NHẮC CHỦ SHOW MỚI
-        </button>
-
-        <div class="space-y-2">
-          <div class="text-[10.5px] font-black text-amber-700 uppercase">⏳ CHỜ BẠN CẬP NHẬT / CHỐT SHOW (${ownerHolds.length})</div>
-
-          ${overlapIds.size >= 2 ? `
-            <div class="p-3 rounded-2xl bg-indigo-50 border border-indigo-200 space-y-2">
-              <div class="text-[11px] font-bold text-indigo-950 leading-snug">
-                🤝 Phát hiện <b>${overlapIds.size} lịch giữ chỗ trùng ngày</b> gửi về bạn. Bạn có muốn gộp chung thành 1 show không?
-              </div>
-              <div class="grid grid-cols-2 gap-1.5">
-                <button type="button" onclick="appActions.mergeHoldGroup('${escapeHtml(overlapCsv)}')" class="py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px]">
-                  🔗 Gộp thành 1 show
-                </button>
-                <button type="button" onclick="appActions.keepHoldGroupSeparate('${escapeHtml(overlapCsv)}')" class="py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-[11px]">
-                  Giữ riêngexport function renderHoldBellModalHtml() {
-  if (!state.holdBellModalOpen) return '';
-  const uid = state.currentUserId;
-  const holds = (state.shows || []).filter(s => s && s.isHold && !s.isCancelled);
-
-  // 1. Lịch chờ mình duyệt / chốt (mình là Chủ show)
-  const ownerHolds = holds.filter(s => s.ownerId === uid);
-  // 2. Lịch mình đi cùng, chờ Chủ show khác chốt
-  const memberHolds = holds.filter(s => s.ownerId !== uid && (s.memberIds || []).includes(uid));
-
   // Tìm các lịch trùng ngày chưa bấm "Giữ riêng"
   const unconfirmedHolds = ownerHolds.filter(h => !h.holdSplitConfirmed);
   const overlapIds = new Set();
