@@ -33,7 +33,6 @@ export function renderDebtTabHtml() {
     if (isOwner) cOwner++;
     else cCrew++;
 
-    // Show giữ lịch mặc định không cộng vào tổng công nợ/doanh thu, chỉ cộng khi bật tính tiền
     if (!shouldCountShowMoney(sh)) return;
 
     if (isOwner) {
@@ -179,15 +178,25 @@ export function renderDebtTabHtml() {
           const holdCardCls = sh.isHold
             ? 'rounded-3xl p-3.5 space-y-3'
             : 'bg-white rounded-3xl border border-slate-200 p-3.5 space-y-3';
-          const holdControlsHtml = sh.isHold ? `
-            <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[9.5px] font-extrabold">⏳ Giữ lịch</span>
-            <button type="button" onclick="event.stopPropagation(); ctpActions.toggleHoldBilling('${sh.id}')" class="px-2 py-0.5 rounded-full text-[9.5px] font-black border transition ${
+          const holdControlsHtml = sh.isHold
+            ? `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[9.5px] font-extrabold">⏳ Giữ lịch</span>`
+            : '';
+          const holdBillingBarHtml = sh.isHold ? `
+            <div onclick="event.stopPropagation(); ctpActions.toggleHoldBilling('${sh.id}')" class="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl border cursor-pointer transition select-none ${
               sh.countHoldForBilling
-                ? 'bg-emerald-600 text-white border-emerald-700'
-                : 'bg-white text-amber-900 border-amber-400 hover:bg-amber-50'
+                ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900'
+                : 'bg-white/85 border-amber-300/80 text-amber-900 hover:bg-white'
             }">
-              ${sh.countHoldForBilling ? '💰 Đang tính tiền' : '➕ Tính tiền show này'}
-            </button>
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-sm leading-none">${sh.countHoldForBilling ? '💰' : '⏳'}</span>
+                <span class="text-[11px] font-extrabold truncate">
+                  ${sh.countHoldForBilling ? 'Đang tính tiền show giữ lịch này' : 'Tính tiền show này (mặc định 0đ)'}
+                </span>
+              </div>
+              <div class="w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${sh.countHoldForBilling ? 'bg-emerald-500' : 'bg-slate-300'}">
+                <div class="w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${sh.countHoldForBilling ? 'translate-x-4' : 'translate-x-0'}"></div>
+              </div>
+            </div>
           ` : '';
 
           if (isOwner) {
@@ -219,6 +228,8 @@ export function renderDebtTabHtml() {
                     `}
                   </div>
                 </div>
+
+                ${holdBillingBarHtml}
 
                 ${expanded ? `
                   <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-3">
@@ -346,6 +357,8 @@ export function renderDebtTabHtml() {
                     `}
                   </div>
                 </div>
+
+                ${holdBillingBarHtml}
 
                 ${expanded ? `
                   <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-3">
