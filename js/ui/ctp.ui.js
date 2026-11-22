@@ -81,7 +81,7 @@ export function renderCtpTabHtml() {
                   <span class="px-2 py-0.5 rounded-full bg-white/90 text-slate-600 font-mono font-bold text-[10px] border border-slate-200/80">#${idx + 1}</span>
                   <span class="font-mono font-bold text-indigo-600 text-[10px] ml-1">${formatDayMonth(sh.startDate)} (${days}n)</span>
                   <h4 class="font-black text-slate-900 text-sm mt-1 flex items-center gap-1.5 flex-wrap">
-                    <span>📍 ${escapeHtml(sh.location)}</span>
+                    <span>📍 ${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>
                     ${partnerText ? `<span class="text-slate-600 font-bold">(${escapeHtml(partnerText)})</span>` : ''}
                     ${isPrivateShow ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold">🔒 Riêng tư</span>` : ''}
                     ${sh.isHold ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold">⏳ Giữ lịch</span>` : ''}
