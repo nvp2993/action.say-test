@@ -708,8 +708,29 @@ export function renderHoldComposerModalHtml() {
 
 export function renderHoldBellModalHtml() {
   if (!state.holdBellModalOpen) return '';
+  const uid = state.currentUserId;
   const holds = (state.shows || []).filter(s => s && s.isHold && !s.isCancelled);
-  const myHolds = holds.filter(s => s.ownerId === state.currentUserId || (s.memberIds || []).includes(state.currentUserId));
+
+  // 1. Lịch chờ mình duyệt / chốt (mình là Chủ show)
+  const ownerHolds = holds.filter(s => s.ownerId === uid);
+  // 2. Lịch mình đi cùng, chờ Chủ show khác chốt
+  const memberHolds = holds.filter(s => s.ownerId !== uid && (s.memberIds || []).includes(uid));
+
+  // Gom nhóm các lịch trùng ngày của cùng chủ show để hiện nút Gộp nhanh
+  const overlapIds = new Set();
+  for (let i = 0; i < ownerHolds.length; i++) {
+    for (let j = i + 1; j < ownerHolds.length; j++) {
+      const a = ownerHolds[i];
+      const b = ownerHolds[j];
+      const aEnd = a.endDate || a.startDate;
+      const bEnd = b.endDate || b.startDate;
+      if (a.startDate <= bEnd && b.startDate <= aEnd) {
+        overlapIds.add(a.id);
+        overlapIds.add(b.id);
+      }
+    }
+  }
+  const overlapCsv = Array.from(overlapIds).join(',');
 
   return `
     <div onclick="holdBellActions.closeBellDrawer()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4">
@@ -726,18 +747,43 @@ export function renderHoldBellModalHtml() {
           GIỮ LỊCH / NHẮC CHỦ SHOW MỚI
         </button>
 
-        <div class="space-y-1.5">
-          <div class="text-[10.5px] font-black text-amber-700 uppercase">⏳ CHỜ BẠN CẬP NHẬT / CHỐT SHOW (0)</div>
-          <div class="py-4 px-3 rounded-2xl border border-dashed border-slate-200 text-center text-[11px] text-slate-400">
-            Không có lịch giữ chỗ nào đang chờ bạn chốt.
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-[10.5px] font-black text-amber-700 uppercase">⏳ CHỜ BẠN CẬP NHẬT / CHỐT SHOW (${ownerHolds.length})</div>
+            ${overlapIds.size >= 2 ? `
+              <button type="button" onclick="appActions.mergeHoldGroup('${escapeHtml(overlapCsv)}')" class="px-2.5 py-1 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] shrink-0">
+                🔗 Gộp ${overlapIds.size} lịch trùng
+              </button>
+            ` : ''}
           </div>
+
+          ${ownerHolds.length === 0 ? `
+            <div class="py-4 px-3 rounded-2xl border border-dashed border-slate-200 text-center text-[11px] text-slate-400">
+              Không có lịch giữ chỗ nào đang chờ bạn chốt.
+            </div>
+          ` : ownerHolds.map(h => {
+            const crewNames = (h.memberIds || []).map(id => getMember(id).name).join(', ');
+            const creator = h.creatorId ? getMember(h.creatorId).name : '';
+            return `
+              <div class="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="font-black text-slate-900 text-xs truncate">🗓️ ${escapeHtml(h.startDate)}${h.endDate && h.endDate !== h.startDate ? ' → ' + escapeHtml(h.endDate) : ''} • ${escapeHtml(h.location || '')}</div>
+                  <div class="text-[10.5px] text-slate-600 mt-0.5 truncate">Ekip: <b>${escapeHtml(crewNames || 'Chưa gán')}</b>${creator ? ` • Tạo bởi: ${escapeHtml(creator)}` : ''}</div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" onclick="holdBellActions.closeBellDrawer(); appActions.openEditModal('${escapeHtml(h.id)}')" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10.5px]">⚡ Chốt</button>
+                  <button type="button" onclick="holdBellActions.releaseHold('${escapeHtml(h.id)}')" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 font-bold text-[10.5px]">Gỡ</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
 
         <div class="space-y-2">
-          <div class="text-[10.5px] font-black text-rose-700 uppercase">📌 LỊCH BẠN ĐƯỢC GIỮ CHỖ — CHỜ CHỦ SHOW (${myHolds.length})</div>
-          ${myHolds.length === 0 ? `
+          <div class="text-[10.5px] font-black text-rose-700 uppercase">📌 LỊCH BẠN ĐƯỢC GIỮ CHỖ — CHỜ CHỦ SHOW (${memberHolds.length})</div>
+          ${memberHolds.length === 0 ? `
             <div class="py-3 px-3 rounded-2xl bg-slate-50 text-center text-[11px] text-slate-400">Chưa có lịch giữ chỗ nào.</div>
-          ` : myHolds.map(h => {
+          ` : memberHolds.map(h => {
             const owner = getMember(h.ownerId);
             const crewNames = (h.memberIds || []).map(id => getMember(id).name).join(', ');
             return `
