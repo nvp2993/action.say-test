@@ -39,6 +39,15 @@ function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+async function getPreviewFonts() {
+  try {
+    if (document.fonts?.ready) await document.fonts.ready;
+  } catch {}
+  const ui = getComputedStyle(document.body).fontFamily || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  const mono = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+  return { ui, mono };
+}
+
 function getBankName(bin) {
   const map = {
     '970436': 'Vietcombank',
@@ -708,6 +717,7 @@ window.ctpActions = {
     const prof = state.memberProfiles?.[state.currentUserId] || {};
     const bankHolderName = (state.officialLegalNames?.[state.currentUserId] || prof.fullName || bm.memberName || '').trim().toUpperCase();
     const qrData = await loadQrBitmapIfAvailable(prof, bankHolderName);
+    const { ui, mono } = await getPreviewFonts();
 
     const canvas = document.createElement('canvas');
     const W = 940;
@@ -723,10 +733,10 @@ window.ctpActions = {
     ctx.fillRect(0, 0, W, H);
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 20px sans-serif';
+    ctx.font = `800 20px ${ui}`;
     ctx.fillText(`BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}`, 28, 42);
     ctx.fillStyle = '#475569';
-    ctx.font = '13px sans-serif';
+    ctx.font = `500 13px ${ui}`;
     ctx.fillText(`Nhân sự: ${bm.memberName}   •   Chủ show: ${bm.ownerTitle}`, 28, 66);
 
     const tableX = 28, tableY = 86, tableW = W - 56;
@@ -740,7 +750,7 @@ window.ctpActions = {
     ctx.fillStyle = '#107c41';
     ctx.fillRect(tableX, tableY, tableW, 34);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = `700 11px ${ui}`;
     let cx = tableX;
     headers.forEach((h, idx) => {
       if (idx === 5) {
@@ -772,13 +782,13 @@ window.ctpActions = {
       cells.forEach((txt, cIdx) => {
         if (cIdx === 5) {
           ctx.fillStyle = '#047857';
-          ctx.font = 'bold 12px monospace';
+          ctx.font = `700 12px ${mono}`;
           ctx.textAlign = 'right';
           ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
           ctx.textAlign = 'left';
         } else {
           ctx.fillStyle = '#0f172a';
-          ctx.font = cIdx === 2 ? 'bold 12px sans-serif' : '12px sans-serif';
+          ctx.font = cIdx === 2 ? `700 12px ${ui}` : `500 12px ${ui}`;
           const clipped = txt.length > 36 ? txt.slice(0, 34) + '…' : txt;
           ctx.fillText(clipped, xPos + 8, ry + 27);
         }
@@ -790,7 +800,7 @@ window.ctpActions = {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(tableX, ry, tableW, 38);
     ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 13px monospace';
+    ctx.font = `700 13px ${mono}`;
     ctx.textAlign = 'right';
     ctx.fillText('TỔNG CỘNG:', tableX + tableW - cols[5] - 12, ry + 24);
     ctx.fillStyle = '#34d399';
@@ -815,27 +825,27 @@ window.ctpActions = {
       ctx.restore();
 
       ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 12.5px sans-serif';
+      ctx.font = `800 12.5px ${ui}`;
       ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN CTP', tableX + 18, qrBoxY + 25);
 
       ctx.fillStyle = '#334155';
-      ctx.font = '12px sans-serif';
+      ctx.font = `500 12px ${ui}`;
       ctx.fillText('Ngân hàng: ', tableX + 18, qrBoxY + 50);
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = `700 12px ${ui}`;
       ctx.fillStyle = '#0f172a';
       ctx.fillText(qrData.bankLabel, tableX + 86, qrBoxY + 50);
 
       ctx.fillStyle = '#334155';
-      ctx.font = '12px sans-serif';
+      ctx.font = `500 12px ${ui}`;
       ctx.fillText('Chủ TK: ', tableX + 18, qrBoxY + 73);
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = `700 12px ${ui}`;
       ctx.fillStyle = '#0f172a';
       ctx.fillText(qrData.holder, tableX + 68, qrBoxY + 73);
 
       ctx.fillStyle = '#334155';
-      ctx.font = '12px sans-serif';
+      ctx.font = `500 12px ${ui}`;
       ctx.fillText('Số TK: ', tableX + 18, qrBoxY + 96);
-      ctx.font = 'bold 12.5px monospace';
+      ctx.font = `700 12.5px ${mono}`;
       ctx.fillStyle = '#4338ca';
       ctx.fillText(qrData.acc, tableX + 60, qrBoxY + 96);
 
@@ -1149,6 +1159,7 @@ window.ownerActions = {
     const prof = state.memberProfiles?.[state.currentUserId] || {};
     const ownerFullName = (state.officialLegalNames?.[state.currentUserId] || prof.fullName || dbm.ownerName || '').trim().toUpperCase();
     const qrData = await loadQrBitmapIfAvailable(prof, ownerFullName);
+    const { ui, mono } = await getPreviewFonts();
 
     const canvas = document.createElement('canvas');
     const W = 1080;
@@ -1164,10 +1175,10 @@ window.ownerActions = {
     ctx.fillRect(0, 0, W, H);
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 20px sans-serif';
+    ctx.font = `800 20px ${ui}`;
     ctx.fillText(`BẢNG CÔNG NỢ KHÁCH HÀNG — ${dbm.periodLabel}`, 28, 42);
     ctx.fillStyle = '#475569';
-    ctx.font = '12.5px sans-serif';
+    ctx.font = `500 12.5px ${ui}`;
     ctx.fillText(`Khách hàng: ${headerClient}   •   Người phụ trách: ${ownerFullName}   •   Còn thiếu: ${totalRemaining.toLocaleString('vi-VN')}đ`, 28, 66);
 
     const tableX = 28, tableY = 86, tableW = W - 56;
@@ -1181,7 +1192,7 @@ window.ownerActions = {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(tableX, tableY, tableW, 34);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 10.5px sans-serif';
+    ctx.font = `700 10.5px ${ui}`;
     let cx = tableX;
     headers.forEach((h, idx) => {
       if (idx >= 4) {
@@ -1215,25 +1226,25 @@ window.ownerActions = {
       vals.forEach((txt, cIdx) => {
         if (cIdx === 6) {
           ctx.fillStyle = '#dc2626';
-          ctx.font = 'bold 11.5px monospace';
+          ctx.font = `700 11.5px ${mono}`;
           ctx.textAlign = 'right';
           ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
           ctx.textAlign = 'left';
         } else if (cIdx === 5) {
           ctx.fillStyle = '#047857';
-          ctx.font = 'bold 11.5px monospace';
+          ctx.font = `700 11.5px ${mono}`;
           ctx.textAlign = 'right';
           ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
           ctx.textAlign = 'left';
         } else if (cIdx === 4) {
           ctx.fillStyle = '#0f172a';
-          ctx.font = 'bold 11.5px monospace';
+          ctx.font = `700 11.5px ${mono}`;
           ctx.textAlign = 'right';
           ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
           ctx.textAlign = 'left';
         } else {
           ctx.fillStyle = cIdx === 2 ? '#0f172a' : '#334155';
-          ctx.font = cIdx === 2 ? 'bold 11.5px sans-serif' : '11.5px sans-serif';
+          ctx.font = cIdx === 2 ? `700 11.5px ${ui}` : `500 11.5px ${ui}`;
           const maxLen = cIdx === 3 ? 38 : cIdx === 2 ? 32 : 16;
           const clipped = txt.length > maxLen ? txt.slice(0, maxLen - 1) + '…' : txt;
           ctx.fillText(clipped, xPos + 8, ry + 27);
@@ -1246,7 +1257,7 @@ window.ownerActions = {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(tableX, ry, tableW, 38);
     ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 12px monospace';
+    ctx.font = `700 12px ${mono}`;
     ctx.textAlign = 'right';
     ctx.fillText('TỔNG CỘNG:', tableX + cols[0] + cols[1] + cols[2] + cols[3] - 12, ry + 24);
     ctx.fillStyle = '#ffffff';
@@ -1275,27 +1286,27 @@ window.ownerActions = {
       ctx.restore();
 
       ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 12.5px sans-serif';
+      ctx.font = `800 12.5px ${ui}`;
       ctx.fillText('QUÉT MÃ VIETQR THANH TOÁN', tableX + 18, qrBoxY + 25);
 
       ctx.fillStyle = '#334155';
-      ctx.font = '12px sans-serif';
+      ctx.font = `500 12px ${ui}`;
       ctx.fillText('Ngân hàng: ', tableX + 18, qrBoxY + 50);
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = `700 12px ${ui}`;
       ctx.fillStyle = '#0f172a';
       ctx.fillText(qrData.bankLabel, tableX + 86, qrBoxY + 50);
 
       ctx.fillStyle = '#334155';
-      ctx.font = '12px sans-serif';
+      ctx.font = `500 12px ${ui}`;
       ctx.fillText('Chủ TK: ', tableX + 18, qrBoxY + 73);
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = `700 12px ${ui}`;
       ctx.fillStyle = '#0f172a';
       ctx.fillText(qrData.holder, tableX + 68, qrBoxY + 73);
 
       ctx.fillStyle = '#334155';
-      ctx.font = '12px sans-serif';
+      ctx.font = `500 12px ${ui}`;
       ctx.fillText('Số TK: ', tableX + 18, qrBoxY + 96);
-      ctx.font = 'bold 12.5px monospace';
+      ctx.font = `700 12.5px ${mono}`;
       ctx.fillStyle = '#4338ca';
       ctx.fillText(qrData.acc, tableX + 60, qrBoxY + 96);
 
@@ -1316,8 +1327,8 @@ window.ownerActions = {
       ctx.restore();
     }
 
-    const ok = downloadCanvasWithVietQrFallback(canvas, `CongNo_KhachHang_${state.selectedYear}.png`, qrData?.qrUrl || '');
-    showToast(ok ? '✅ Đã xuất ảnh bảng công nợ khách hàng!' : '⚠️ Trình duyệt chặn xuất ảnh có QR ngoài, đã mở ảnh VietQR gốc!');
+    const ok = downloadCanvasWithVietQrFallback(canvas, `CongNo_KhachHang_${state.selectedYear}.png`);
+    showToast(ok ? '✅ Đã xuất ảnh bảng công nợ khách hàng!' : 'Lỗi xuất ảnh bảng công nợ!', ok ? 'info' : 'error');
   },
   exportOwnerExcel() {
     const uid = state.currentUserId;
