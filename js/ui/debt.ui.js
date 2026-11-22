@@ -184,13 +184,13 @@ export function renderDebtTabHtml() {
           const holdBillingBarHtml = sh.isHold ? `
             <div onclick="event.stopPropagation(); ctpActions.toggleHoldBilling('${sh.id}')" class="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl border cursor-pointer transition select-none ${
               sh.countHoldForBilling
-                ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900'
-                : 'bg-white/85 border-amber-300/80 text-amber-900 hover:bg-white'
+                ? 'bg-emerald-50/95 border-emerald-300 text-emerald-900'
+                : 'bg-white/90 border-amber-300/80 text-amber-900 hover:bg-white'
             }">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="text-sm leading-none">${sh.countHoldForBilling ? '💰' : '⏳'}</span>
+                <span class="text-sm leading-none">${sh.countHoldForBilling ? '💰' : '💵'}</span>
                 <span class="text-[11px] font-extrabold truncate">
-                  ${sh.countHoldForBilling ? 'Đang tính tiền show giữ lịch này' : 'Tính tiền show này (mặc định 0đ)'}
+                  ${sh.countHoldForBilling ? 'Đang tính tiền show này' : 'Tính tiền show này (mặc định 0đ)'}
                 </span>
               </div>
               <div class="w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${sh.countHoldForBilling ? 'bg-emerald-500' : 'bg-slate-300'}">
@@ -216,7 +216,7 @@ export function renderDebtTabHtml() {
                       <span class="px-2 py-0.5 rounded-full border text-[9.5px] font-bold ${stObj.badgeCls}">${stObj.label}</span>
                       ${holdControlsHtml}
                     </div>
-                    <div class="font-black text-slate-900 text-sm mt-1">📍 ${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
+                    <div class="font-black text-slate-900 text-sm mt-1.5">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
                   </div>
                   <div class="text-right shrink-0 space-y-0.5">
                     ${isCounted ? `
@@ -345,7 +345,7 @@ export function renderDebtTabHtml() {
                       <span class="px-2 py-0.5 rounded-full border text-[9.5px] font-bold ${stObj.badgeCls}">${stObj.label}</span>
                       ${holdControlsHtml}
                     </div>
-                    <div class="font-black text-slate-900 text-sm mt-1">📍 ${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
+                    <div class="font-black text-slate-900 text-sm mt-1.5">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)} ${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}</div>
                   </div>
                   <div class="text-right shrink-0 space-y-0.5">
                     ${isCounted ? `
