@@ -646,7 +646,7 @@ async copyZaloTomorrowText() {
       playStudioSound('noshow');
       await logStudioActivity(`Nổ show mới: ${f.location}`);
     }
-
+    
     const removedHolds = cleanupMatchingHoldsForOfficialShow(savedShow);
     state.formModal = null;
     await syncShowsToCloud();
