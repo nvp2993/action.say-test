@@ -79,6 +79,16 @@ export function findAnyCtpShow(showId) {
   return state.shows.find(s => s.id === showId) || (state.ctpCustomShows || []).find(s => s.id === showId);
 }
 
+export function getMemberExtrasForShow(showId, memberId) {
+  const sh = findAnyCtpShow(showId);
+  const extras = Array.isArray(state.ctpItems?.[showId]?.extras) ? state.ctpItems[showId].extras : [];
+  return extras.filter(ex => {
+    if (!ex) return false;
+    if (ex.payerId) return ex.payerId === memberId;
+    return sh ? sh.ownerId !== memberId : true;
+  });
+}
+
 export function getCombinedCtpShows() {
   const uid = state.currentUserId;
   const regular = (state.shows || []).filter(sh => {
@@ -88,8 +98,8 @@ export function getCombinedCtpShows() {
     if (state.ctpOwnerId !== 'all' && sh.ownerId !== state.ctpOwnerId) return false;
 
     const isCrewMember = (sh.memberIds || []).includes(uid) && sh.ownerId !== uid;
-    const hasMyExpense = Array.isArray(state.ctpItems?.[sh.id]?.extras) &&
-      state.ctpItems[sh.id].extras.some(ex => ex && (ex.payerId === uid || (!ex.payerId && sh.ownerId !== uid)));
+    const myExtras = getMemberExtrasForShow(sh.id, uid);
+    const hasMyExpense = myExtras.length > 0 && sh.ownerId !== uid;
 
     return isCrewMember || hasMyExpense;
   }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
@@ -147,9 +157,8 @@ export function calculateCrewShowMetrics(sh) {
   const uid = state.currentUserId;
   const ctpItem = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
   const taskSum = Object.entries(ctpItem.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
-  const extraBillSum = (ctpItem.extras || [])
-    .filter(ex => ex && (!ex.payerId || ex.payerId === uid))
-    .reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+  const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
+  const extraBillSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
   const grossCtp = taskSum + extraBillSum;
   const rec = ensureOwnerFinRecord(sh);
   if (!rec.crewMemberMeta[uid]) {
@@ -159,50 +168,7 @@ export function calculateCrewShowMetrics(sh) {
   const selfExpense = Number(meta.selfExpense) || 0;
   const netPocket = grossCtp - selfExpense;
   const isSettled = meta.ctpStatus === 'settled';
-  return { ctpItem, meta, grossCtp, selfExpense, netPocket, isSettled, pendingCtpDebt: isSettled ? 0 : Math.max(0, grossCtp) };
-}
-
-export async function addQuickShowExpenseToCtp({ showId, title, amount, payerId }) {
-  const cleanTitle = String(title || '').trim();
-  const numAmount = Number(amount) || 0;
-  if (!showId || !cleanTitle || numAmount <= 0) {
-    throw new Error('Thiếu thông tin show, nội dung hoặc số tiền');
-  }
-
-  const targetPayerId = payerId || state.currentUserId;
-  const extraEntry = {
-    id: 'exp_' + Date.now(),
-    name: cleanTitle,
-    amount: numAmount,
-    payerId: targetPayerId,
-    createdById: state.currentUserId,
-    createdAt: Date.now()
-  };
-
-  if (!state.ctpItems[showId]) state.ctpItems[showId] = { tasks: {}, extras: [] };
-  if (!Array.isArray(state.ctpItems[showId].extras)) state.ctpItems[showId].extras = [];
-  state.ctpItems[showId].extras.push(extraEntry);
-
-  saveCtpState(true);
-
-  if (targetPayerId && targetPayerId !== state.currentUserId) {
-    const payerRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', targetPayerId);
-    const curPayerShow = state.ctpItems[showId] || { tasks: {}, extras: [] };
-    const nextExtras = Array.isArray(curPayerShow.extras) ? curPayerShow.extras : [];
-    await setDoc(
-      payerRef,
-      {
-        items: {
-          [showId]: {
-            tasks: curPayerShow.tasks || {},
-            extras: nextExtras
-          }
-        },
-        updatedAt: Date.now()
-      },
-      { merge: true }
-    );
-  }
+  return { ctpItem: { ...ctpItem, extras: myExtras }, meta, grossCtp, selfExpense, netPocket, isSettled, pendingCtpDebt: isSettled ? 0 : Math.max(0, grossCtp) };
 }
 
 export async function saveQuickShowExpensesBatch({ showId, entries = [], deletedIds = [] }) {
@@ -251,7 +217,6 @@ export async function saveQuickShowExpensesBatch({ showId, entries = [], deleted
     const isOwnerPaying = Boolean(showOwnerId && payerId === showOwnerId);
     const entryId = item?.id || `exp_${Date.now()}_${idx}`;
 
-    // Dọn bản ghi cũ nếu sửa/chuyển luồng giữa CTP và Công nợ
     const prevExtraIdx = state.ctpItems[showId].extras.findIndex(x => x && x.id === entryId);
     const prevOtherIdx = ownerRec.otherExpenses.findIndex(x => x && x.id === entryId);
 
