@@ -208,20 +208,39 @@ export async function addQuickShowExpenseToCtp({ showId, title, amount, payerId 
 export async function saveQuickShowExpensesBatch({ showId, entries = [], deletedIds = [] }) {
   if (!showId) throw new Error('Thiếu showId');
 
+  const sh = findAnyCtpShow(showId);
+  const showOwnerId = sh?.ownerId || '';
+
   if (!state.ctpItems[showId]) state.ctpItems[showId] = { tasks: {}, extras: [] };
   if (!Array.isArray(state.ctpItems[showId].extras)) state.ctpItems[showId].extras = [];
 
-  const deletedSet = new Set((deletedIds || []).filter(Boolean));
-  const touchedPayers = new Set([state.currentUserId]);
+  const ownerRec = ensureOwnerFinRecord(showId);
+  if (!Array.isArray(ownerRec.otherExpenses)) ownerRec.otherExpenses = [];
 
-  let extras = state.ctpItems[showId].extras.filter(ex => {
-    if (!ex) return false;
-    if (ex.id && deletedSet.has(ex.id)) {
-      if (ex.payerId) touchedPayers.add(ex.payerId);
-      return false;
-    }
-    return true;
-  });
+  const deletedSet = new Set((deletedIds || []).filter(Boolean));
+  const touchedCtpPayers = new Set();
+  let ctpChanged = false;
+  let ownerChanged = false;
+
+  if (deletedSet.size > 0) {
+    const beforeExtrasLen = state.ctpItems[showId].extras.length;
+    state.ctpItems[showId].extras = state.ctpItems[showId].extras.filter(ex => {
+      if (!ex) return false;
+      if (ex.id && deletedSet.has(ex.id)) {
+        if (ex.payerId) touchedCtpPayers.add(ex.payerId);
+        return false;
+      }
+      return true;
+    });
+    if (state.ctpItems[showId].extras.length !== beforeExtrasLen) ctpChanged = true;
+
+    const beforeOtherLen = ownerRec.otherExpenses.length;
+    ownerRec.otherExpenses = ownerRec.otherExpenses.filter(ex => {
+      if (!ex) return false;
+      return !(ex.id && deletedSet.has(ex.id));
+    });
+    if (ownerRec.otherExpenses.length !== beforeOtherLen) ownerChanged = true;
+  }
 
   (entries || []).forEach((item, idx) => {
     const cleanTitle = String(item?.title || '').trim();
@@ -229,53 +248,85 @@ export async function saveQuickShowExpensesBatch({ showId, entries = [], deleted
     if (!cleanTitle || numAmount <= 0) return;
 
     const payerId = item?.payerId || state.currentUserId;
-    touchedPayers.add(payerId);
+    const isOwnerPaying = Boolean(showOwnerId && payerId === showOwnerId);
+    const entryId = item?.id || `exp_${Date.now()}_${idx}`;
 
-    if (item?.id) {
-      const existingIdx = extras.findIndex(x => x && x.id === item.id);
-      if (existingIdx >= 0) {
-        const prevPayer = extras[existingIdx]?.payerId;
-        if (prevPayer) touchedPayers.add(prevPayer);
-        extras[existingIdx] = {
-          ...extras[existingIdx],
-          name: cleanTitle,
-          amount: numAmount,
-          payerId,
-          updatedAt: Date.now()
-        };
-        return;
-      }
+    // Dọn bản ghi cũ nếu sửa/chuyển luồng giữa CTP và Công nợ
+    const prevExtraIdx = state.ctpItems[showId].extras.findIndex(x => x && x.id === entryId);
+    const prevOtherIdx = ownerRec.otherExpenses.findIndex(x => x && x.id === entryId);
+
+    if (prevExtraIdx >= 0) {
+      const prevPayer = state.ctpItems[showId].extras[prevExtraIdx]?.payerId;
+      if (prevPayer) touchedCtpPayers.add(prevPayer);
+      state.ctpItems[showId].extras.splice(prevExtraIdx, 1);
+      ctpChanged = true;
+    }
+    if (prevOtherIdx >= 0) {
+      ownerRec.otherExpenses.splice(prevOtherIdx, 1);
+      ownerChanged = true;
     }
 
-    extras.push({
-      id: item?.id || `exp_${Date.now()}_${idx}`,
-      name: cleanTitle,
-      amount: numAmount,
-      payerId,
-      createdById: state.currentUserId,
-      createdAt: Date.now()
-    });
+    if (isOwnerPaying) {
+      ownerRec.otherExpenses.push({
+        id: entryId,
+        name: cleanTitle,
+        amount: numAmount,
+        payerId,
+        createdById: state.currentUserId,
+        updatedAt: Date.now()
+      });
+      ownerChanged = true;
+    } else {
+      state.ctpItems[showId].extras.push({
+        id: entryId,
+        name: cleanTitle,
+        amount: numAmount,
+        payerId,
+        createdById: state.currentUserId,
+        updatedAt: Date.now()
+      });
+      touchedCtpPayers.add(payerId);
+      if (state.currentUserId) touchedCtpPayers.add(state.currentUserId);
+      ctpChanged = true;
+    }
   });
 
-  state.ctpItems[showId].extras = extras;
-  saveCtpState(true);
+  if (ctpChanged) {
+    saveCtpState(true);
+    const ctpPayload = {
+      items: {
+        [showId]: {
+          tasks: state.ctpItems[showId].tasks || {},
+          extras: state.ctpItems[showId].extras
+        }
+      },
+      updatedAt: Date.now()
+    };
 
-  const payload = {
-    items: {
-      [showId]: {
-        tasks: state.ctpItems[showId].tasks || {},
-        extras
-      }
-    },
-    updatedAt: Date.now()
-  };
+    await Promise.all(
+      Array.from(touchedCtpPayers)
+        .filter(pid => pid && pid !== state.currentUserId)
+        .map(pid => {
+          const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', pid);
+          return setDoc(ref, ctpPayload, { merge: true });
+        })
+    );
+  }
 
-  await Promise.all(
-    Array.from(touchedPayers)
-      .filter(pid => pid && pid !== state.currentUserId)
-      .map(pid => {
-        const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', pid);
-        return setDoc(ref, payload, { merge: true });
-      })
-  );
+  if (ownerChanged) {
+    saveOwnerFinanceState(true);
+    if (showOwnerId && showOwnerId !== state.currentUserId) {
+      const ownerDocRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'owner_finance_v2', showOwnerId);
+      await setDoc(
+        ownerDocRef,
+        {
+          map: {
+            [showId]: state.ownerFinanceMap[showId]
+          },
+          updatedAt: Date.now()
+        },
+        { merge: true }
+      );
+    }
+  }
 }
