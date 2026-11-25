@@ -195,5 +195,80 @@ export async function addQuickShowExpenseToCtp({ showId, title, amount, payerId 
       },
       { merge: true }
     );
+
+  export async function saveQuickShowExpensesBatch({ showId, entries = [], deletedIds = [] }) {
+  if (!showId) throw new Error('Thiếu showId');
+
+  if (!state.ctpItems[showId]) state.ctpItems[showId] = { tasks: {}, extras: [] };
+  if (!Array.isArray(state.ctpItems[showId].extras)) state.ctpItems[showId].extras = [];
+
+  const deletedSet = new Set((deletedIds || []).filter(Boolean));
+  const touchedPayers = new Set([state.currentUserId]);
+
+  let extras = state.ctpItems[showId].extras.filter(ex => {
+    if (!ex) return false;
+    if (ex.id && deletedSet.has(ex.id)) {
+      if (ex.payerId) touchedPayers.add(ex.payerId);
+      return false;
+    }
+    return true;
+  });
+
+  (entries || []).forEach((item, idx) => {
+    const cleanTitle = String(item?.title || '').trim();
+    const numAmount = Number(item?.amount) || 0;
+    if (!cleanTitle || numAmount <= 0) return;
+
+    const payerId = item?.payerId || state.currentUserId;
+    touchedPayers.add(payerId);
+
+    if (item?.id) {
+      const existingIdx = extras.findIndex(x => x && x.id === item.id);
+      if (existingIdx >= 0) {
+        const prevPayer = extras[existingIdx]?.payerId;
+        if (prevPayer) touchedPayers.add(prevPayer);
+        extras[existingIdx] = {
+          ...extras[existingIdx],
+          name: cleanTitle,
+          amount: numAmount,
+          payerId,
+          updatedAt: Date.now()
+        };
+        return;
+      }
+    }
+
+    extras.push({
+      id: item?.id || `exp_${Date.now()}_${idx}`,
+      name: cleanTitle,
+      amount: numAmount,
+      payerId,
+      createdById: state.currentUserId,
+      createdAt: Date.now()
+    });
+  });
+
+  state.ctpItems[showId].extras = extras;
+  saveCtpState(true);
+
+  const payload = {
+    items: {
+      [showId]: {
+        tasks: state.ctpItems[showId].tasks || {},
+        extras
+      }
+    },
+    updatedAt: Date.now()
+  };
+
+  await Promise.all(
+    Array.from(touchedPayers)
+      .filter(pid => pid && pid !== state.currentUserId)
+      .map(pid => {
+        const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', pid);
+        return setDoc(ref, payload, { merge: true });
+      })
+  );
+}
   }
 }
