@@ -1,7 +1,7 @@
 import { state, registerRenderer } from './state/store.js';
 import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin, logoutCurrentUser } from './services/auth.service.js';
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText, cleanupMatchingHoldsForOfficialShow } from './services/show.service.js';
-import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics, addQuickShowExpenseToCtp } from './services/finance.service.js';
+import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics, saveQuickShowExpensesBatch } from './services/finance.service.js';
 import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
 import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain, buildVietQrUrl, escapeHtml } from './utils/helpers.js';
 import { exportShowToAppleCalendar } from './utils/export.js';
@@ -459,8 +459,9 @@ window.appActions = {
 
     state.quickExpenseModal = {
       showId: firstShow?.id || '',
-      rawNote: '',
-      payerId: defaultPayer
+      payerId: defaultPayer,
+      drafts: [{ id: '', title: '', amountRaw: '' }],
+      deletedIds: []
     };
     renderApp();
   },
@@ -475,6 +476,8 @@ window.appActions = {
     const nextPayer = sh && (sh.memberIds || []).includes(uid) ? uid : (sh?.ownerId || uid);
     state.quickExpenseModal.showId = showId;
     state.quickExpenseModal.payerId = nextPayer;
+    state.quickExpenseModal.drafts = [{ id: '', title: '', amountRaw: '' }];
+    state.quickExpenseModal.deletedIds = [];
     renderApp();
   },
   selectQuickExpensePayer(payerId) {
@@ -482,39 +485,93 @@ window.appActions = {
     state.quickExpenseModal.payerId = payerId;
     renderApp();
   },
-  appendQuickExpensePhrase(phrase) {
-    if (!state.quickExpenseModal) return;
-    const el = document.getElementById('quick-exp-note-line');
-    const cur = el ? el.value : (state.quickExpenseModal.rawNote || '');
-    const next = cur && !cur.endsWith(' ') ? `${cur} ${phrase.trim()} ` : `${cur}${phrase}`;
-    state.quickExpenseModal.rawNote = next;
+  updateQuickExpenseDraft(idx, field, val) {
+    const q = state.quickExpenseModal;
+    if (!q || !Array.isArray(q.drafts) || !q.drafts[idx]) return;
+    q.drafts[idx][field] = val;
+  },
+  addQuickExpenseDraft() {
+    const q = state.quickExpenseModal;
+    if (!q) return;
+    if (!Array.isArray(q.drafts)) q.drafts = [];
+    q.drafts.push({ id: '', title: '', amountRaw: '' });
     renderApp();
   },
-  updateQuickExpenseField(k, v) {
-    if (!state.quickExpenseModal) return;
-    state.quickExpenseModal[k] = v;
+  removeQuickExpenseDraft(idx) {
+    const q = state.quickExpenseModal;
+    if (!q || !Array.isArray(q.drafts)) return;
+    const removed = q.drafts[idx];
+    if (removed?.id) {
+      q.deletedIds = Array.from(new Set([...(q.deletedIds || []), removed.id]));
+    }
+    q.drafts.splice(idx, 1);
+    if (!q.drafts.length) q.drafts.push({ id: '', title: '', amountRaw: '' });
+    renderApp();
+  },
+  editSavedQuickExpense(expId) {
+    const q = state.quickExpenseModal;
+    if (!q || !q.showId || !expId) return;
+    const extras = state.ctpItems?.[q.showId]?.extras || [];
+    const target = extras.find(x => x && x.id === expId);
+    if (!target) return;
+    q.drafts = [{
+      id: target.id,
+      title: target.name || '',
+      amountRaw: String(target.amount || '')
+    }];
+    if (target.payerId) q.payerId = target.payerId;
+    renderApp();
+  },
+  async deleteSavedQuickExpense(expId) {
+    const q = state.quickExpenseModal;
+    if (!q || !q.showId || !expId) return;
+    try {
+      await saveQuickShowExpensesBatch({
+        showId: q.showId,
+        entries: [],
+        deletedIds: [expId]
+      });
+      renderApp();
+      showToast('🗑️ Đã xóa khoản chi!');
+    } catch (err) {
+      showToast('Lỗi xóa chi phí: ' + (err?.message || err), 'error');
+    }
   },
   async submitQuickExpense() {
     const q = state.quickExpenseModal;
     if (!q) return;
-    const rawLine = document.getElementById('quick-exp-note-line')?.value ?? q.rawNote ?? '';
-    const { title, amount } = parseQuickExpenseLine(rawLine, state.selectedYear);
-
     if (!q.showId) return showToast('Không có show đang diễn ra để ghi!', 'error');
-    if (!rawLine.trim()) return showToast('Gõ nội dung chi phí (VD: ăn sáng 25/7 100k)!', 'error');
-    if (amount <= 0) return showToast('Chưa thấy số tiền hợp lệ (VD: 100k hoặc 100000)!', 'error');
+
+    const drafts = Array.isArray(q.drafts) ? q.drafts : [];
+    const entries = drafts.map((row, idx) => {
+      const titleVal = (document.getElementById(`quick-exp-title-${idx}`)?.value ?? row.title ?? '').trim();
+      const amountVal = document.getElementById(`quick-exp-amount-${idx}`)?.value ?? row.amountRaw ?? '';
+      return {
+        id: row.id || '',
+        title: titleVal,
+        amount: parseFlexibleMoneyInput(amountVal),
+        payerId: q.payerId || state.currentUserId
+      };
+    });
+
+    const validEntries = entries.filter(e => e.title && e.amount > 0);
+    const hasDeleted = Array.isArray(q.deletedIds) && q.deletedIds.length > 0;
+
+    if (!validEntries.length && !hasDeleted) {
+      return showToast('Nhập nội dung và số tiền hợp lệ (VD: 100k hoặc 100000)!', 'error');
+    }
 
     try {
-      await addQuickShowExpenseToCtp({
+      await saveQuickShowExpensesBatch({
         showId: q.showId,
-        title,
-        amount,
-        payerId: q.payerId || state.currentUserId
+        entries: validEntries,
+        deletedIds: q.deletedIds || []
       });
       const payerName = getMember(q.payerId || state.currentUserId).name;
-      state.quickExpenseModal = null;
+      q.drafts = [{ id: '', title: '', amountRaw: '' }];
+      q.deletedIds = [];
       renderApp();
-      showToast(`✅ Đã ghi "${title}" ${amount.toLocaleString('vi-VN')}đ vào CTP ${payerName}!`);
+      showToast(`✅ Đã lưu ${validEntries.length} khoản chi vào CTP ${payerName}!`);
     } catch (err) {
       showToast('Lỗi lưu chi phí: ' + (err?.message || err), 'error');
     }
