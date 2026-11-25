@@ -1007,67 +1007,66 @@ function getActiveShowsInPeriodForUser() {
   });
 }
 
-const PAYER_COLOR_PALETTE = [
-  'bg-emerald-600 text-white border-emerald-600',
-  'bg-sky-600 text-white border-sky-600',
-  'bg-amber-500 text-slate-950 border-amber-500',
-  'bg-violet-600 text-white border-violet-600',
-  'bg-rose-600 text-white border-rose-600',
-  'bg-teal-600 text-white border-teal-600',
-  'bg-indigo-600 text-white border-indigo-600',
-  'bg-orange-500 text-white border-orange-500'
-];
+function getContrastTextColor(hex) {
+  const clean = String(hex || '').replace('#', '').trim();
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '#ffffff';
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luma > 0.62 ? '#0f172a' : '#ffffff';
+}
 
 export function renderQuickExpenseBubbleHtml() {
   if (!state.currentUserId || state.isBackendPortal || state.activeTab === 'ctp' || state.activeTab === 'owner_stats') {
     return '';
   }
 
-  const todayShows = getActiveShowsInPeriodForUser();
+  const activeShows = getActiveShowsInPeriodForUser();
   const q = state.quickExpenseModal;
 
   const bubbleBtn = `
     <button
       type="button"
       onclick="appActions.openQuickExpenseModal()"
-      title="Note nhanh chi phí show hôm nay"
-      class="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-full bg-slate-950 hover:bg-slate-800 active:scale-95 text-amber-400 border border-amber-400/40 shadow-xl flex items-center justify-center transition"
+      title="Note nhanh chi phí show đang đi"
+      class="fixed bottom-20 right-4 z-[75] w-12 h-12 rounded-full bg-slate-950 hover:bg-slate-800 active:scale-95 text-amber-400 border border-amber-400/40 shadow-xl flex items-center justify-center transition"
     >
       <span class="text-base leading-none">💸</span>
-      ${todayShows.length > 0 ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white font-mono font-black text-[10px] flex items-center justify-center">${todayShows.length}</span>` : ''}
+      ${activeShows.length > 0 ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white font-mono font-black text-[10px] flex items-center justify-center">${activeShows.length}</span>` : ''}
     </button>
   `;
 
   if (!q) return bubbleBtn;
 
-  const activeShow = todayShows.find(s => s.id === q.showId) || todayShows[0] || null;
+  const activeShow = activeShows.find(s => s.id === q.showId) || activeShows[0] || null;
   const participantIds = activeShow
     ? Array.from(new Set([...(activeShow.memberIds || []), activeShow.ownerId].filter(Boolean)))
     : [];
   const selectedPayerId = participantIds.includes(q.payerId) ? q.payerId : (participantIds[0] || state.currentUserId);
-  const quickPhrases = ['ăn sáng ', 'cà phê ', 'ăn trưa ', 'xăng '];
+  const drafts = Array.isArray(q.drafts) && q.drafts.length ? q.drafts : [{ id: '', title: '', amountRaw: '' }];
+
+  const showExtras = activeShow && Array.isArray(state.ctpItems?.[activeShow.id]?.extras)
+    ? state.ctpItems[activeShow.id].extras.filter(Boolean)
+    : [];
 
   return `
     ${bubbleBtn}
-    <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4">
-      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl">
-        <div class="flex items-start justify-between gap-2 pb-2 border-b border-slate-100">
-          <div>
-            <div class="text-[9.5px] font-black tracking-wider text-emerald-700 uppercase">SHOW ĐANG DIỄN RA</div>
-            <h3 class="font-black text-sm text-slate-900 mt-0.5">💸 Note nhanh chi phí vào CTP</h3>
-          </div>
-          <button type="button" onclick="appActions.closeQuickExpenseModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 flex items-center justify-center">✕</button>
+    <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-[80] bg-slate-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4">
+      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl max-h-[90dvh] overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <h3 class="font-black text-xs sm:text-sm text-slate-900 uppercase tracking-tight truncate">NOTE NHANH CHI PHÍ SHOW ĐANG ĐI</h3>
+          <button type="button" onclick="appActions.closeQuickExpenseModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 flex items-center justify-center shrink-0">✕</button>
         </div>
 
-        ${todayShows.length === 0 ? `
+        ${activeShows.length === 0 ? `
           <div class="py-6 px-3 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 font-semibold">
             Hiện không có show nào đang diễn ra mà bạn tham gia.
           </div>
         ` : `
           <div class="space-y-1.5">
-            <label class="block text-[10px] font-black text-slate-500 uppercase">1. Chọn show</label>
             <div class="flex flex-wrap gap-1.5">
-              ${todayShows.map(sh => {
+              ${activeShows.map(sh => {
                 const picked = activeShow && sh.id === activeShow.id;
                 return `
                   <button
@@ -1084,55 +1083,103 @@ export function renderQuickExpenseBubbleHtml() {
             </div>
           </div>
 
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between gap-2">
-              <label class="block text-[10px] font-black text-slate-500 uppercase">2. Note nhanh (nội dung + ngày + tiền)</label>
-              <div class="flex items-center gap-1">
-                ${quickPhrases.map(ph => `
+          <div class="space-y-2">
+            ${drafts.map((row, idx) => `
+              <div class="grid grid-cols-[1.35fr_1fr_auto] gap-1.5 items-center">
+                <input
+                  id="quick-exp-title-${idx}"
+                  type="text"
+                  value="${escapeHtml(row.title || '')}"
+                  oninput="appActions.updateQuickExpenseDraft(${idx}, 'title', this.value)"
+                  placeholder="Nội dung (VD: Cà phê)"
+                  class="w-full min-w-0 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 focus:outline-none focus:border-slate-900"
+                />
+                <input
+                  id="quick-exp-amount-${idx}"
+                  type="text"
+                  inputmode="text"
+                  value="${escapeHtml(row.amountRaw || '')}"
+                  oninput="appActions.updateQuickExpenseDraft(${idx}, 'amountRaw', this.value)"
+                  placeholder="Tiền (100k / 100000)"
+                  class="w-full min-w-0 px-2.5 py-2 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-slate-900 focus:outline-none focus:border-slate-900"
+                />
+                ${drafts.length > 1 ? `
                   <button
                     type="button"
-                    onclick="appActions.appendQuickExpensePhrase('${escapeHtml(ph)}')"
-                    class="px-1.5 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] transition"
-                  >+ ${escapeHtml(ph.trim())}</button>
-                `).join('')}
+                    onclick="appActions.removeQuickExpenseDraft(${idx})"
+                    class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold flex items-center justify-center shrink-0"
+                  >✕</button>
+                ` : `<span class="w-2"></span>`}
               </div>
-            </div>
-            <input
-              id="quick-exp-note-line"
-              type="text"
-              value="${escapeHtml(q.rawNote || '')}"
-              oninput="appActions.updateQuickExpenseField('rawNote', this.value)"
-              placeholder="VD: ăn sáng 25/7 100k hoặc cà phê 80k"
-              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 focus:outline-none focus:border-slate-900"
-            />
+            `).join('')}
+
+            <button
+              type="button"
+              onclick="appActions.addQuickExpenseDraft()"
+              class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[11px] inline-flex items-center gap-1 transition"
+            >+ Thêm chi phí</button>
           </div>
 
           <div class="space-y-1.5">
-            <label class="block text-[10px] font-black text-slate-500 uppercase">3. Người trả (nhảy vào CTP người đó)</label>
+            <div class="text-[10px] font-black text-slate-500 uppercase">Người trả</div>
             <div class="flex flex-wrap gap-1.5">
-              ${participantIds.map((mid, idx) => {
+              ${participantIds.map(mid => {
                 const mem = getMember(mid);
                 const active = selectedPayerId === mid;
-                const activeCls = PAYER_COLOR_PALETTE[idx % PAYER_COLOR_PALETTE.length];
-                const memBg = mem?.bg || '';
-                const styleAttr = active && memBg
-                  ? `style="background-color:${escapeHtml(memBg)};border-color:${escapeHtml(memBg)};color:#ffffff"`
-                  : '';
+                const bgHex = mem?.bg || '#0f172a';
+                const fgHex = getContrastTextColor(bgHex);
                 return `
                   <button
                     type="button"
-                    ${styleAttr}
                     onclick="appActions.selectQuickExpensePayer('${escapeHtml(mid)}')"
-                    class="px-3 py-1.5 rounded-xl text-[11px] font-black border transition active:scale-95 ${
+                    style="${active ? `background-color:${escapeHtml(bgHex)};border-color:${escapeHtml(bgHex)};color:${fgHex}` : `border-color:${escapeHtml(bgHex)}55`}"
+                    class="px-2.5 py-1 rounded-xl text-[11px] font-extrabold border transition active:scale-95 ${
                       active
-                        ? (memBg ? 'ring-2 ring-slate-900/20 shadow-xs' : activeCls)
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'shadow-xs ring-2 ring-slate-900/15'
+                        : 'bg-white text-slate-700 hover:bg-slate-50'
                     }"
                   >${escapeHtml(mem.name)}</button>
                 `;
               }).join('')}
             </div>
           </div>
+
+          ${showExtras.length > 0 ? `
+            <div class="pt-2 border-t border-slate-100 space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase">
+                <span>Chi phí đã lưu trong show (${showExtras.length})</span>
+                <span class="font-mono text-emerald-700">${showExtras.reduce((s, x) => s + (Number(x.amount) || 0), 0).toLocaleString('vi-VN')}đ</span>
+              </div>
+              <div class="space-y-1.5 max-h-36 overflow-y-auto custom-scroll pr-0.5">
+                ${showExtras.map(ex => {
+                  const payerMem = ex.payerId ? getMember(ex.payerId) : null;
+                  return `
+                    <div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                      <div class="min-w-0 flex-1">
+                        <div class="font-bold text-slate-900 truncate">${escapeHtml(ex.name || '')}</div>
+                        <div class="text-[10px] text-slate-500 font-semibold">
+                          <span class="font-mono font-extrabold text-emerald-700">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
+                          ${payerMem ? ` • <b>${escapeHtml(payerMem.name)}</b>` : ''}
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onclick="appActions.editSavedQuickExpense('${escapeHtml(ex.id || '')}')"
+                          class="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700"
+                        >Sửa</button>
+                        <button
+                          type="button"
+                          onclick="appActions.deleteSavedQuickExpense('${escapeHtml(ex.id || '')}')"
+                          class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-[10px] font-bold text-rose-600"
+                        >Xóa</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
 
           <button
             type="button"
