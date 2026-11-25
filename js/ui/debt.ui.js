@@ -210,6 +210,24 @@ export function renderDebtTabHtml() {
             const crewMembers = (sh.memberIds || []).filter(mid => mid !== sh.ownerId);
             const missingClient = Math.max(0, m.clientPrice - m.depositPaid);
 
+            const ownerOtherList = (m.rec.otherExpenses || []).filter(Boolean).map(ex => ({
+              name: ex.name || 'Chi phí khác',
+              amount: Number(ex.amount) || 0,
+              payer: ex.payerId ? getMember(ex.payerId).name : curMem.name
+            }));
+            const crewExtrasList = Array.isArray(state.ctpItems?.[sh.id]?.extras)
+              ? state.ctpItems[sh.id].extras.filter(Boolean).map(ex => {
+                  const pid = ex.payerId || ex.createdById;
+                  return {
+                    name: ex.name || 'Phát sinh CTP',
+                    amount: Number(ex.amount) || 0,
+                    payer: pid ? getMember(pid).name : 'Ekip'
+                  };
+                })
+              : [];
+            const allShowExpenses = [...ownerOtherList, ...crewExtrasList].filter(x => x.amount > 0);
+            const allShowExpensesSum = allShowExpenses.reduce((s, x) => s + x.amount, 0);
+
             return `
               <div ${holdCardStyle} class="${holdCardCls}">
                 <div onclick="ownerActions.toggleExpandShow('${sh.id}')" class="flex items-start justify-between gap-2 cursor-pointer">
@@ -302,32 +320,81 @@ export function renderDebtTabHtml() {
 
                     <div class="space-y-2">
                       <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-black text-slate-500 uppercase">🚌 CHI PHÍ KHÁC (XE, KS, ĂN, ĐỒ):</span>
-                        <button type="button" onclick="ownerActions.addOwnerExpense('${sh.id}')" class="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-slate-200 border border-slate-200 text-slate-800 font-extrabold text-[10px]">Thêm chi</button>
+                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-wide">🚌 CHI PHÍ KHÁC (XE, KS, ĂN, ĐỒ)</span>
+                        <button type="button" onclick="ownerActions.addOwnerExpense('${sh.id}')" class="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold text-[10px] transition">+ Thêm chi</button>
                       </div>
-                      ${(m.rec.otherExpenses || []).map((ex, exIdx) => `
-                        <div class="flex items-center gap-1.5">
-                          <input type="text" value="${escapeHtml(ex.name || '')}" oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'name', this)" placeholder="Tên khoản chi..." class="flex-1 min-w-0 px-2.5 py-1.5 bg-white border rounded-xl text-xs font-bold" />
-                          <input type="tel" inputmode="numeric" value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}" oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'amount', this)" placeholder="Số tiền" class="w-28 sm:w-32 px-2.5 py-1.5 bg-white border rounded-xl text-xs font-mono font-black text-right text-rose-600 shrink-0" />
-                          <button type="button" onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx})" class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600 font-bold shrink-0">✕</button>
+
+                      ${(m.rec.otherExpenses || []).length > 0 ? `
+                        <div class="space-y-1.5">
+                          ${(m.rec.otherExpenses || []).map((ex, exIdx) => {
+                            const payerLabel = ex.payerId ? getMember(ex.payerId).name : curMem.name;
+                            return `
+                              <div class="p-2 rounded-2xl bg-slate-50/90 border border-slate-200/80 space-y-1.5">
+                                <div class="flex items-center gap-1.5">
+                                  <input
+                                    type="text"
+                                    value="${escapeHtml(ex.name || '')}"
+                                    oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'name', this)"
+                                    placeholder="Nội dung chi (VD: Xe, KS, Ăn...)"
+                                    class="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-slate-900"
+                                  />
+                                  <input
+                                    type="tel"
+                                    inputmode="numeric"
+                                    value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}"
+                                    oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'amount', this)"
+                                    placeholder="Số tiền"
+                                    class="w-24 sm:w-28 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono font-black text-right text-rose-600 shrink-0 focus:outline-none focus:border-slate-900"
+                                  />
+                                  <button
+                                    type="button"
+                                    onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx})"
+                                    title="Xóa khoản chi"
+                                    class="w-7 h-7 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs flex items-center justify-center shrink-0 transition"
+                                  >✕</button>
+                                </div>
+                                <div class="flex items-center justify-between px-1 text-[10px] text-slate-500">
+                                  <span>Chi bởi: <b class="text-slate-700">${escapeHtml(payerLabel)}</b></span>
+                                  <span class="font-mono font-bold text-rose-600">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
+                                </div>
+                              </div>
+                            `;
+                          }).join('')}
                         </div>
-                      `).join('')}
+                      ` : ''}
+
+                      ${allShowExpenses.length > 0 ? `
+                        <div class="p-2.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-1.5">
+                          <div class="flex items-center justify-between text-[10px] font-black text-amber-950 uppercase">
+                            <span>📋 THỐNG KÊ CHI PHÍ PHÁT SINH TRONG SHOW (${allShowExpenses.length})</span>
+                            <span class="font-mono text-rose-600">${allShowExpensesSum.toLocaleString('vi-VN')}đ</span>
+                          </div>
+                          <div class="space-y-1">
+                            ${allShowExpenses.map(row => `
+                              <div class="flex items-center justify-between gap-2 px-2.5 py-1 rounded-xl bg-white/95 border border-amber-100 text-[11px]">
+                                <span class="font-bold text-slate-800 truncate">${escapeHtml(row.name)} <span class="font-normal text-[10px] text-slate-500">• ${escapeHtml(row.payer)}</span></span>
+                                <span class="font-mono font-extrabold text-rose-600 shrink-0">${row.amount.toLocaleString('vi-VN')}đ</span>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      ` : ''}
                     </div>
 
-                    <div class="pt-2 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} flex items-center justify-between text-xs font-mono">
+                    <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs font-mono">
                       <div>
-                        <span class="text-[10px] font-sans font-bold text-slate-400 uppercase block">TỔNG CHI DỰ KIẾN:</span>
+                        <span class="text-[9.5px] font-sans font-extrabold text-slate-400 uppercase block">TỔNG CHI DỰ KIẾN</span>
                         <span class="font-black text-rose-600">${m.totalExpense.toLocaleString('vi-VN')}đ</span>
                       </div>
                       <div class="text-right">
-                        <span class="text-[10px] font-sans font-bold text-slate-400 uppercase block">💎 CÒN LẠI (LÃI CHỦ SHOW):</span>
+                        <span class="text-[9.5px] font-sans font-extrabold text-slate-400 uppercase block">💎 CÒN LẠI (LÃI CHỦ SHOW)</span>
                         <span class="font-black text-emerald-700">${m.netProfit >= 0 ? '+' : ''}${m.netProfit.toLocaleString('vi-VN')}đ</span>
                       </div>
                     </div>
 
                     <div class="flex items-center gap-2">
-                      <button type="button" onclick="ownerActions.toggleExpandShow('${sh.id}')" class="px-3.5 py-2.5 rounded-2xl bg-white/90 border border-slate-200 text-slate-700 font-bold text-xs">Thu gọn ▲</button>
-                      <button type="button" onclick="ownerActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs">💾 LƯU THÔNG TIN SHOW</button>
+                      <button type="button" onclick="ownerActions.toggleExpandShow('${sh.id}')" class="px-3.5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">Thu gọn ▲</button>
+                      <button type="button" onclick="ownerActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs transition">💾 LƯU THÔNG TIN SHOW</button>
                     </div>
                   </div>
                 ` : ''}
