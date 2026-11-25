@@ -14,7 +14,7 @@ import { renderCrewBoardTabHtml } from './ui/crewBoard.ui.js';
 import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
 import {
-  renderQuickExpenseBubbleHtml
+  renderQuickExpenseBubbleHtml,
   renderPinModalHtml,
   renderCrewPassModalHtml,
   renderFormModalHtml,
