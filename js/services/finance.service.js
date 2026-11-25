@@ -154,3 +154,46 @@ export function calculateCrewShowMetrics(sh) {
   const isSettled = meta.ctpStatus === 'settled';
   return { ctpItem, meta, grossCtp, selfExpense, netPocket, isSettled, pendingCtpDebt: isSettled ? 0 : Math.max(0, grossCtp) };
 }
+
+export async function addQuickShowExpenseToCtp({ showId, title, amount, payerId }) {
+  const cleanTitle = String(title || '').trim();
+  const numAmount = Number(amount) || 0;
+  if (!showId || !cleanTitle || numAmount <= 0) {
+    throw new Error('Thiếu thông tin show, nội dung hoặc số tiền');
+  }
+
+  const targetPayerId = payerId || state.currentUserId;
+  const extraEntry = {
+    id: 'exp_' + Date.now(),
+    name: cleanTitle,
+    amount: numAmount,
+    payerId: targetPayerId,
+    createdById: state.currentUserId,
+    createdAt: Date.now()
+  };
+
+  if (!state.ctpItems[showId]) state.ctpItems[showId] = { tasks: {}, extras: [] };
+  if (!Array.isArray(state.ctpItems[showId].extras)) state.ctpItems[showId].extras = [];
+  state.ctpItems[showId].extras.push(extraEntry);
+
+  saveCtpState(true);
+
+  if (targetPayerId && targetPayerId !== state.currentUserId) {
+    const payerRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', targetPayerId);
+    const curPayerShow = state.ctpItems[showId] || { tasks: {}, extras: [] };
+    const nextExtras = Array.isArray(curPayerShow.extras) ? curPayerShow.extras : [];
+    await setDoc(
+      payerRef,
+      {
+        items: {
+          [showId]: {
+            tasks: curPayerShow.tasks || {},
+            extras: nextExtras
+          }
+        },
+        updatedAt: Date.now()
+      },
+      { merge: true }
+    );
+  }
+}
