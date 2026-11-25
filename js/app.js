@@ -47,8 +47,8 @@ function getTomorrowShowsList() {
   );
 }
 
-function parseFlexibleMoneyInput(rawInput) {
-  const cleaned = String(rawInput ?? '')
+function parseFlexibleMoneyToken(rawToken) {
+  const cleaned = String(rawToken ?? '')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '')
@@ -60,8 +60,7 @@ function parseFlexibleMoneyInput(rawInput) {
   if (suffixMatch) {
     const num = parseFloat(suffixMatch[1].replace(',', '.'));
     if (Number.isNaN(num) || num <= 0) return 0;
-    const mult = suffixMatch[2] === 'k' ? 1000 : 1000000;
-    return Math.round(num * mult);
+    return Math.round(num * (suffixMatch[2] === 'k' ? 1000 : 1000000));
   }
 
   const digitsOnly = cleaned.replace(/[^0-9]/g, '');
@@ -69,6 +68,37 @@ function parseFlexibleMoneyInput(rawInput) {
   const val = parseInt(digitsOnly, 10) || 0;
   if (val <= 0) return 0;
   return val < 1000 ? val * 1000 : val;
+}
+
+function parseQuickExpenseLine(rawLine, fallbackYear) {
+  const text = String(rawLine || '').trim();
+  if (!text) return { title: '', amount: 0, dayLabel: '' };
+
+  let working = text;
+  let dayLabel = '';
+
+  const dateMatch = working.match(/(?:^|\s)(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)(?=\s|$)/);
+  if (dateMatch) {
+    dayLabel = dateMatch[1];
+    working = (working.slice(0, dateMatch.index) + ' ' + working.slice(dateMatch.index + dateMatch[0].length))
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  let amount = 0;
+  const moneyMatch = working.match(/(?:^|\s)([0-9]+(?:[.,][0-9]+)?\s*(?:k|tr|m|đ|vnd|vnđ)?)(?=\s|$)/i);
+  if (moneyMatch) {
+    amount = parseFlexibleMoneyToken(moneyMatch[1]);
+    if (amount > 0) {
+      working = (working.slice(0, moneyMatch.index) + ' ' + working.slice(moneyMatch.index + moneyMatch[0].length))
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+  }
+
+  const baseTitle = working.replace(/^[-–•:]+|[-–•:]+$/g, '').trim() || 'Chi phí phát sinh';
+  const title = dayLabel ? `${baseTitle} (${dayLabel})` : baseTitle;
+  return { title, amount, dayLabel, year: fallbackYear };
 }
 
 function buildZaloTomorrowText() {
