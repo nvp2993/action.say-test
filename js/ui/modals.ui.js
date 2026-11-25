@@ -975,3 +975,141 @@ export function renderClientDebtBillModalHtml() {
     </div>
   `;
 }
+
+function getTodayActiveShowsForUser() {
+  const uid = state.currentUserId;
+  if (!uid) return [];
+  const d = new Date();
+  const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  return (state.shows || []).filter(sh => {
+    if (!sh || sh.isCancelled || sh.isHold || !sh.startDate) return false;
+    const endIso = sh.endDate || sh.startDate;
+    const isToday = sh.startDate <= todayIso && endIso >= todayIso;
+    if (!isToday) return false;
+    const inCrew = sh.ownerId === uid || (Array.isArray(sh.memberIds) && sh.memberIds.includes(uid));
+    return inCrew;
+  });
+}
+
+export function renderQuickExpenseBubbleHtml() {
+  if (!state.currentUserId || state.isBackendPortal || state.activeTab === 'ctp' || state.activeTab === 'owner_stats') {
+    return '';
+  }
+
+  const todayShows = getTodayActiveShowsForUser();
+  const q = state.quickExpenseModal;
+
+  const bubbleBtn = `
+    <button
+      type="button"
+      onclick="appActions.openQuickExpenseModal()"
+      title="Note nhanh chi phí show hôm nay"
+      class="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-full bg-slate-950 hover:bg-slate-800 active:scale-95 text-amber-400 border border-amber-400/40 shadow-xl flex items-center justify-center transition"
+    >
+      <span class="text-base leading-none">💸</span>
+      ${todayShows.length > 0 ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white font-mono font-black text-[10px] flex items-center justify-center">${todayShows.length}</span>` : ''}
+    </button>
+  `;
+
+  if (!q) return bubbleBtn;
+
+  const activeShow = todayShows.find(s => s.id === q.showId) || todayShows[0] || null;
+  const participantIds = activeShow
+    ? Array.from(new Set([...(activeShow.memberIds || []), activeShow.ownerId].filter(Boolean)))
+    : [];
+  const selectedPayerId = participantIds.includes(q.payerId) ? q.payerId : (participantIds[0] || state.currentUserId);
+  const quickTags = ['Cà phê', 'Ăn trưa', 'Xăng/Phí', 'Gửi xe'];
+
+  return `
+    ${bubbleBtn}
+    <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4">
+      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl">
+        <div class="flex items-start justify-between gap-2 pb-2 border-b border-slate-100">
+          <div>
+            <div class="text-[9.5px] font-black tracking-wider text-emerald-700 uppercase">SHOW ĐANG ĐI HÔM NAY</div>
+            <h3 class="font-black text-sm text-slate-900 mt-0.5">💸 Note nhanh chi phí vào CTP</h3>
+          </div>
+          <button type="button" onclick="appActions.closeQuickExpenseModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 flex items-center justify-center">✕</button>
+        </div>
+
+        ${todayShows.length === 0 ? `
+          <div class="py-6 px-3 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 font-semibold">
+            Hôm nay bạn không có show nào đang chạy.
+          </div>
+        ` : `
+          <div class="space-y-1.5">
+            <label class="block text-[10px] font-black text-slate-500 uppercase">1. Chọn show hôm nay</label>
+            <div class="flex flex-wrap gap-1.5">
+              ${todayShows.map(sh => {
+                const picked = activeShow && sh.id === activeShow.id;
+                return `
+                  <button
+                    type="button"
+                    onclick="appActions.selectQuickExpenseShow('${escapeHtml(sh.id)}')"
+                    class="px-3 py-1.5 rounded-xl text-[11px] font-extrabold border transition ${
+                      picked
+                        ? 'bg-slate-900 text-amber-300 border-slate-900'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }"
+                  >${escapeHtml(sh.location || 'Show')}</button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-[10px] font-black text-slate-500 uppercase">2. Nội dung &amp; Số tiền</label>
+            <div class="flex flex-wrap gap-1">
+              ${quickTags.map(tag => `
+                <button
+                  type="button"
+                  onclick="appActions.setQuickExpenseTag('${escapeHtml(tag)}')"
+                  class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] transition"
+                >${escapeHtml(tag)}</button>
+              `).join('')}
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input
+                id="quick-exp-title"
+                type="text"
+                value="${escapeHtml(q.title || '')}"
+                oninput="appActions.updateQuickExpenseField('title', this.value)"
+                placeholder="VD: Cà phê"
+                class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 focus:outline-none focus:border-slate-900"
+              />
+              <input
+                id="quick-exp-amount"
+                type="text"
+                inputmode="text"
+                value="${escapeHtml(q.amountRaw || '')}"
+                oninput="appActions.updateQuickExpenseField('amountRaw', this.value)"
+                placeholder="VD: 100k hoặc 100000"
+                class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-slate-900 focus:outline-none focus:border-slate-900"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-[10px] font-black text-slate-500 uppercase">3. Người trả (nhảy vào CTP người đó)</label>
+            <select
+              onchange="appActions.updateQuickExpenseField('payerId', this.value)"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 focus:outline-none focus:border-slate-900"
+            >
+              ${participantIds.map(mid => {
+                const mem = getMember(mid);
+                return `<option value="${escapeHtml(mid)}" ${selectedPayerId === mid ? 'selected' : ''}>${escapeHtml(mem.name)}</option>`;
+              }).join('')}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onclick="appActions.submitQuickExpense()"
+            class="w-full py-3 rounded-2xl bg-slate-950 hover:bg-slate-900 text-amber-400 font-black text-xs uppercase tracking-wide transition"
+          >💾 Lưu vào CTP</button>
+        `}
+      </div>
+    </div>
+  `;
+}
