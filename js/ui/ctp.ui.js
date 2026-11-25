@@ -1,19 +1,19 @@
 import { state } from '../state/store.js';
 import { escapeHtml, formatDayMonth, getMember, getShowDays, buildVietQrUrl, getBankName } from '../utils/helpers.js';
 import { getVisiblePartnerText } from '../services/show.service.js';
-import { getCombinedCtpShows, getDefaultRateForTask } from '../services/finance.service.js';
+import { getCombinedCtpShows, getDefaultRateForTask, getMemberExtrasForShow } from '../services/finance.service.js';
 import { renderUnifiedDateBarHtml } from './header.ui.js';
 
 function shouldCountShowMoney(sh) {
   return !sh?.isHold || Boolean(sh?.countHoldForBilling);
 }
 
-function getShowRawTotal(sh, item) {
+function getShowRawTotal(sh, item, myExtras) {
   const activeTaskSum = Object.entries(item?.tasks || {}).reduce(
     (s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s,
     0
   );
-  const extraSum = (item?.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+  const extraSum = (myExtras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
   return activeTaskSum + extraSum;
 }
 
@@ -22,14 +22,16 @@ function cleanHoldTitle(loc) {
 }
 
 export function renderCtpTabHtml() {
-  const curMem = getMember(state.currentUserId);
+  const uid = state.currentUserId;
+  const curMem = getMember(uid);
   const filteredShows = getCombinedCtpShows();
   let grandTotal = 0;
 
   filteredShows.forEach(sh => {
     if (!shouldCountShowMoney(sh)) return;
     const it = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
-    grandTotal += getShowRawTotal(sh, it);
+    const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
+    grandTotal += getShowRawTotal(sh, it, myExtras);
   });
 
   return `
@@ -45,7 +47,7 @@ export function renderCtpTabHtml() {
             <span class="text-[10px] font-bold text-slate-500 shrink-0">Chủ show:</span>
             <select onchange="ctpActions.setOwner(this.value)" class="flex-1 min-w-0 px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold">
               <option value="all">Tất cả Chủ Show</option>
-              ${state.members.filter(m => m.id !== state.currentUserId).map(m => `<option value="${m.id}" ${state.ctpOwnerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+              ${state.members.filter(m => m.id !== uid).map(m => `<option value="${m.id}" ${state.ctpOwnerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
             </select>
           </div>
           <div onclick="appActions.toggleHideMoneyMode()" class="text-right bg-emerald-50 px-3 py-1 rounded-2xl border border-emerald-200 shrink-0 cursor-pointer">
@@ -64,9 +66,10 @@ export function renderCtpTabHtml() {
           </div>
         ` : filteredShows.map((sh, idx) => {
           const item = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
+          const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
           const days = getShowDays(sh);
           const owner = getMember(sh.ownerId);
-          const rawTotal = getShowRawTotal(sh, item);
+          const rawTotal = getShowRawTotal(sh, item, myExtras);
           const isCounted = shouldCountShowMoney(sh);
           const subTotal = isCounted ? rawTotal : 0;
           const isPrivateShow = Boolean(sh.hidePartner || sh.isPrivate);
@@ -138,7 +141,7 @@ export function renderCtpTabHtml() {
                     <span class="text-[10px] font-black text-slate-400 uppercase">Phát Sinh:</span>
                     <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-white/90 border border-slate-200 text-indigo-600 rounded-xl text-[10px] font-black">Thêm phí</button>
                   </div>
-                  ${(item.extras || []).map((ex, exIdx) => `
+                  ${myExtras.map((ex, exIdx) => `
                     <div class="flex items-center gap-1.5">
                       <input type="text" value="${escapeHtml(ex.name || '')}" oninput="ctpActions.saveExtraField('${sh.id}',${exIdx}, 'name', this)" placeholder="Tên phí..." class="flex-1 min-w-0 px-2.5 py-1.5 bg-white/90 border rounded-xl text-xs font-bold" />
                       <input type="tel" inputmode="numeric" value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}" oninput="ctpActions.saveExtraField('${sh.id}',${exIdx}, 'amount', this)" placeholder="Số tiền" class="w-28 sm:w-32 px-2.5 py-1.5 bg-white/90 border rounded-xl text-xs font-mono font-black text-right shrink-0" />
