@@ -271,4 +271,11 @@ export async function saveQuickShowExpensesBatch({ showId, entries = [], deleted
   };
 
   await Promise.all(
-    Array.
+    Array.from(touchedPayers)
+      .filter(pid => pid && pid !== state.currentUserId)
+      .map(pid => {
+        const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', pid);
+        return setDoc(ref, payload, { merge: true });
+      })
+  );
+}
