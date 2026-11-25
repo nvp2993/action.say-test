@@ -1161,9 +1161,14 @@ export function renderQuickExpenseBubbleHtml() {
                     <div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80">
                       <div class="min-w-0 flex-1">
                         <div class="font-bold text-slate-900 truncate">${escapeHtml(ex.name || '')}</div>
-                        <div class="text-[10px] text-slate-500 font-semibold">
+                        <div class="text-[10px] text-slate-500 font-semibold flex items-center flex-wrap gap-1">
                           <span class="font-mono font-extrabold text-emerald-700">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
-                          ${payerMem ? ` • <b>${escapeHtml(payerMem.name)}</b>` : ''}
+                          ${payerMem ? `<span>• <b>${escapeHtml(payerMem.name)}</b></span>` : ''}
+                          <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                            ex._bucket === 'owner'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-indigo-100 text-indigo-800'
+                          }">${ex._bucket === 'owner' ? 'Công nợ show' : 'CTP'}</span>
                         </div>
                       </div>
                       <div class="flex items-center gap-1 shrink-0">
