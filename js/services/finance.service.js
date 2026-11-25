@@ -80,14 +80,18 @@ export function findAnyCtpShow(showId) {
 }
 
 export function getCombinedCtpShows() {
+  const uid = state.currentUserId;
   const regular = (state.shows || []).filter(sh => {
     if (!sh || sh.isCancelled || !sh.startDate) return false;
     const [y, m] = sh.startDate.split('-').map(Number);
     if (y !== state.selectedYear || m !== state.ctpMonth) return false;
-    if (!(sh.memberIds || []).includes(state.currentUserId)) return false;
-    if (sh.ownerId === state.currentUserId) return false;
     if (state.ctpOwnerId !== 'all' && sh.ownerId !== state.ctpOwnerId) return false;
-    return true;
+
+    const isCrewMember = (sh.memberIds || []).includes(uid) && sh.ownerId !== uid;
+    const hasMyExpense = Array.isArray(state.ctpItems?.[sh.id]?.extras) &&
+      state.ctpItems[sh.id].extras.some(ex => ex && (ex.payerId === uid || (!ex.payerId && sh.ownerId !== uid)));
+
+    return isCrewMember || hasMyExpense;
   }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
 
   const custom = (state.ctpCustomShows || []).filter(sh => {
@@ -140,15 +144,18 @@ export function calculateOwnerShowMetrics(sh) {
 }
 
 export function calculateCrewShowMetrics(sh) {
+  const uid = state.currentUserId;
   const ctpItem = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
   const taskSum = Object.entries(ctpItem.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
-  const extraBillSum = (ctpItem.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+  const extraBillSum = (ctpItem.extras || [])
+    .filter(ex => ex && (!ex.payerId || ex.payerId === uid))
+    .reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
   const grossCtp = taskSum + extraBillSum;
   const rec = ensureOwnerFinRecord(sh);
-  if (!rec.crewMemberMeta[state.currentUserId]) {
-    rec.crewMemberMeta[state.currentUserId] = { ctpStatus: 'unpaid', selfExpense: 0, selfExpenseNote: '' };
+  if (!rec.crewMemberMeta[uid]) {
+    rec.crewMemberMeta[uid] = { ctpStatus: 'unpaid', selfExpense: 0, selfExpenseNote: '' };
   }
-  const meta = rec.crewMemberMeta[state.currentUserId];
+  const meta = rec.crewMemberMeta[uid];
   const selfExpense = Number(meta.selfExpense) || 0;
   const netPocket = grossCtp - selfExpense;
   const isSettled = meta.ctpStatus === 'settled';
@@ -195,8 +202,10 @@ export async function addQuickShowExpenseToCtp({ showId, title, amount, payerId 
       },
       { merge: true }
     );
+  }
+}
 
-  export async function saveQuickShowExpensesBatch({ showId, entries = [], deletedIds = [] }) {
+export async function saveQuickShowExpensesBatch({ showId, entries = [], deletedIds = [] }) {
   if (!showId) throw new Error('Thiếu showId');
 
   if (!state.ctpItems[showId]) state.ctpItems[showId] = { tasks: {}, extras: [] };
@@ -262,11 +271,4 @@ export async function addQuickShowExpenseToCtp({ showId, title, amount, payerId 
   };
 
   await Promise.all(
-    Array.from(touchedPayers)
-      .filter(pid => pid && pid !== state.currentUserId)
-      .map(pid => {
-        const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', pid);
-        return setDoc(ref, payload, { merge: true });
-      })
-  );
-}
+    Array.
