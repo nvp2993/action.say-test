@@ -1122,7 +1122,7 @@ export function renderQuickExpenseBubbleHtml() {
             </div>
           </div>
 
-          ${showExtras.length > 0 ? `
+         ${showExtras.length > 0 ? `
             <div class="pt-2 border-t border-slate-100 space-y-1.5">
               <div class="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase">
                 <span>Chi phí đã lưu trong show (${showExtras.length})</span>
@@ -1138,11 +1138,6 @@ export function renderQuickExpenseBubbleHtml() {
                         <div class="text-[10px] text-slate-500 font-semibold flex items-center flex-wrap gap-1">
                           <span class="font-mono font-extrabold text-emerald-700">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
                           ${payerMem ? `<span>• <b>${escapeHtml(payerMem.name)}</b></span>` : ''}
-                          <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
-                            ex._bucket === 'owner'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-indigo-100 text-indigo-800'
-                          }">${ex._bucket === 'owner' ? 'Công nợ show' : 'CTP'}</span>
                         </div>
                       </div>
                       <div class="flex items-center gap-1 shrink-0">
@@ -1168,7 +1163,7 @@ export function renderQuickExpenseBubbleHtml() {
             type="button"
             onclick="appActions.submitQuickExpense()"
             class="w-full py-3 rounded-2xl bg-slate-950 hover:bg-slate-900 text-amber-400 font-black text-xs uppercase tracking-wide transition"
-          >💾 Lưu vào CTP</button>
+          >💾 Lưu chi phí</button>
         `}
       </div>
     </div>
