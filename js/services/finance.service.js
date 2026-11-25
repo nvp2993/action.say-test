@@ -293,5 +293,8 @@ export async function saveQuickShowExpensesBatch({ showId, entries = [], deleted
         { merge: true }
       );
     }
+    if (ctpChanged || ownerChanged) {
+    triggerRender();
+  }
   }
 }
