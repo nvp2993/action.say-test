@@ -1046,9 +1046,13 @@ export function renderQuickExpenseBubbleHtml() {
   const selectedPayerId = participantIds.includes(q.payerId) ? q.payerId : (participantIds[0] || state.currentUserId);
   const drafts = Array.isArray(q.drafts) && q.drafts.length ? q.drafts : [{ id: '', title: '', amountRaw: '' }];
 
-  const showExtras = activeShow && Array.isArray(state.ctpItems?.[activeShow.id]?.extras)
-    ? state.ctpItems[activeShow.id].extras.filter(Boolean)
+  const ctpExtras = activeShow && Array.isArray(state.ctpItems?.[activeShow.id]?.extras)
+    ? state.ctpItems[activeShow.id].extras.filter(Boolean).map(x => ({ ...x, _bucket: 'ctp' }))
     : [];
+  const ownerExtras = activeShow && Array.isArray(state.ownerFinanceMap?.[activeShow.id]?.otherExpenses)
+    ? state.ownerFinanceMap[activeShow.id].otherExpenses.filter(Boolean).map(x => ({ ...x, _bucket: 'owner' }))
+    : [];
+  const showExtras = [...ctpExtras, ...ownerExtras];
 
   return `
     ${bubbleBtn}
