@@ -511,8 +511,9 @@ window.appActions = {
   editSavedQuickExpense(expId) {
     const q = state.quickExpenseModal;
     if (!q || !q.showId || !expId) return;
-    const extras = state.ctpItems?.[q.showId]?.extras || [];
-    const target = extras.find(x => x && x.id === expId);
+    const ctpList = state.ctpItems?.[q.showId]?.extras || [];
+    const ownerList = state.ownerFinanceMap?.[q.showId]?.otherExpenses || [];
+    const target = ctpList.find(x => x && x.id === expId) || ownerList.find(x => x && x.id === expId);
     if (!target) return;
     q.drafts = [{
       id: target.id,
