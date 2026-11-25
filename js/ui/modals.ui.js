@@ -415,13 +415,6 @@ export function renderFormModalHtml() {
   const f = state.formModal;
   if (!f) return '';
   const busyMap = getBusyMembersMap(f.startDate, f.endDate, f.showId);
-  const roleIcons = {
-    quay: '🎬',
-    chup: '📷',
-    dung: '✂️',
-    flycam: '🚁',
-    den: '💡'
-  };
 
   return `
     <div onclick="appActions.closeFormModal()" class="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-2 sm:p-4">
@@ -711,12 +704,9 @@ export function renderHoldBellModalHtml() {
   const uid = state.currentUserId;
   const holds = (state.shows || []).filter(s => s && s.isHold && !s.isCancelled);
 
-  // 1. Lịch chờ mình duyệt / chốt (mình là Chủ show)
   const ownerHolds = holds.filter(s => s.ownerId === uid);
-  // 2. Lịch mình đi cùng, chờ Chủ show khác chốt
   const memberHolds = holds.filter(s => s.ownerId !== uid && (s.memberIds || []).includes(uid));
 
-  // Tìm các lịch trùng ngày chưa bấm "Giữ riêng"
   const unconfirmedHolds = ownerHolds.filter(h => !h.holdSplitConfirmed);
   const overlapIds = new Set();
   for (let i = 0; i < unconfirmedHolds.length; i++) {
@@ -974,22 +964,6 @@ export function renderClientDebtBillModalHtml() {
       </div>
     </div>
   `;
-}
-
-function getTodayActiveShowsForUser() {
-  const uid = state.currentUserId;
-  if (!uid) return [];
-  const d = new Date();
-  const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-  return (state.shows || []).filter(sh => {
-    if (!sh || sh.isCancelled || sh.isHold || !sh.startDate) return false;
-    const endIso = sh.endDate || sh.startDate;
-    const isToday = sh.startDate <= todayIso && endIso >= todayIso;
-    if (!isToday) return false;
-    const inCrew = sh.ownerId === uid || (Array.isArray(sh.memberIds) && sh.memberIds.includes(uid));
-    return inCrew;
-  });
 }
 
 function getActiveShowsInPeriodForUser() {
