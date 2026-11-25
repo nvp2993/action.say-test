@@ -47,8 +47,8 @@ function getTomorrowShowsList() {
   );
 }
 
-function parseFlexibleMoneyToken(rawToken) {
-  const cleaned = String(rawToken ?? '')
+function parseFlexibleMoneyInput(rawInput) {
+  const cleaned = String(rawInput ?? '')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '')
@@ -68,37 +68,6 @@ function parseFlexibleMoneyToken(rawToken) {
   const val = parseInt(digitsOnly, 10) || 0;
   if (val <= 0) return 0;
   return val < 1000 ? val * 1000 : val;
-}
-
-function parseQuickExpenseLine(rawLine, fallbackYear) {
-  const text = String(rawLine || '').trim();
-  if (!text) return { title: '', amount: 0, dayLabel: '' };
-
-  let working = text;
-  let dayLabel = '';
-
-  const dateMatch = working.match(/(?:^|\s)(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)(?=\s|$)/);
-  if (dateMatch) {
-    dayLabel = dateMatch[1];
-    working = (working.slice(0, dateMatch.index) + ' ' + working.slice(dateMatch.index + dateMatch[0].length))
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  let amount = 0;
-  const moneyMatch = working.match(/(?:^|\s)([0-9]+(?:[.,][0-9]+)?\s*(?:k|tr|m|đ|vnd|vnđ)?)(?=\s|$)/i);
-  if (moneyMatch) {
-    amount = parseFlexibleMoneyToken(moneyMatch[1]);
-    if (amount > 0) {
-      working = (working.slice(0, moneyMatch.index) + ' ' + working.slice(moneyMatch.index + moneyMatch[0].length))
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
-  }
-
-  const baseTitle = working.replace(/^[-–•:]+|[-–•:]+$/g, '').trim() || 'Chi phí phát sinh';
-  const title = dayLabel ? `${baseTitle} (${dayLabel})` : baseTitle;
-  return { title, amount, dayLabel, year: fallbackYear };
 }
 
 function buildZaloTomorrowText() {
@@ -442,7 +411,7 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
-    openQuickExpenseModal() {
+  openQuickExpenseModal() {
     const d = new Date();
     const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const uid = state.currentUserId;
@@ -543,6 +512,7 @@ window.appActions = {
     if (!q) return;
     if (!q.showId) return showToast('Không có show đang diễn ra để ghi!', 'error');
 
+    const sh = findAnyCtpShow(q.showId);
     const drafts = Array.isArray(q.drafts) ? q.drafts : [];
     const entries = drafts.map((row, idx) => {
       const titleVal = (document.getElementById(`quick-exp-title-${idx}`)?.value ?? row.title ?? '').trim();
@@ -568,16 +538,17 @@ window.appActions = {
         entries: validEntries,
         deletedIds: q.deletedIds || []
       });
-      const payerName = getMember(q.payerId || state.currentUserId).name;
+      const payerId = q.payerId || state.currentUserId;
+      const payerName = getMember(payerId).name;
+      const destLabel = sh && sh.ownerId === payerId ? 'Công nợ show' : `CTP ${payerName}`;
       q.drafts = [{ id: '', title: '', amountRaw: '' }];
       q.deletedIds = [];
       renderApp();
-      showToast(`✅ Đã lưu ${validEntries.length} khoản chi vào CTP ${payerName}!`);
+      showToast(`✅ Đã lưu vào ${destLabel}!`);
     } catch (err) {
       showToast('Lỗi lưu chi phí: ' + (err?.message || err), 'error');
     }
   },
-  
   openZaloTomorrowModal() {
     state.zaloTomorrowModal = true;
     renderApp();
@@ -1075,7 +1046,7 @@ window.ctpActions = {
   addExtraItem(id) {
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
     if (!Array.isArray(state.ctpItems[id].extras)) state.ctpItems[id].extras = [];
-    state.ctpItems[id].extras.push({ name: '', amount: 0 });
+    state.ctpItems[id].extras.push({ name: '', amount: 0, payerId: state.currentUserId });
     saveCtpState();
     renderApp();
   },
@@ -1188,22 +1159,24 @@ window.ctpActions = {
   saveNow() { saveCtpState(true); showToast('💾 Đã lưu CTP lên Cloud!'); },
   generateBill() {
     playStudioSound('lum');
+    const uid = state.currentUserId;
     const shows = getCombinedCtpShows();
     const labelMap = { quay: 'Quay', dung: 'Dựng', chup: 'Chụp', lamhinh: 'Làm hình', flycam: 'Flycam', gimbal: 'Gimbal' };
     let total = 0;
     const rows = shows.map((sh, i) => {
       const it = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
+      const myExtras = sh.ownerId === uid ? [] : (it.extras || []).filter(ex => ex && (!ex.payerId || ex.payerId === uid));
       const activeTasks = Object.entries(it.tasks || {}).filter(([, v]) => v !== null && v !== undefined);
       const taskBulletsCompact = activeTasks.map(([k, v]) => `- ${labelMap[k] || k}: ${formatCompactMoneyPlain(v)}`);
-      const extraBulletsCompact = (it.extras || []).filter(e => Number(e.amount) > 0).map(e => `- ${e.name || 'Phí'}: ${formatCompactMoneyPlain(e.amount)}`);
+      const extraBulletsCompact = myExtras.filter(e => Number(e.amount) > 0).map(e => `- ${e.name || 'Phí'}: ${formatCompactMoneyPlain(e.amount)}`);
       const showSum = activeTasks.reduce((s, [, v]) => s + (Number(v) || 0), 0)
-        + (it.extras || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        + myExtras.reduce((s, e) => s + (Number(e.amount) || 0), 0);
       total += showSum;
       return { stt: i + 1, dateLabel: formatDayMonth(sh.startDate), location: sh.location, taskBulletsCompact, extraBulletsCompact, showSum };
     });
     state.ctpBillModal = {
       month: state.ctpMonth,
-      memberName: getMember(state.currentUserId).name,
+      memberName: getMember(uid).name,
       ownerTitle: state.ctpOwnerId === 'all' ? 'Tất cả' : getMember(state.ctpOwnerId).name,
       rows,
       total
@@ -2352,4 +2325,3 @@ initAuthListener(
     detachFinanceListeners();
   }
 );
-
