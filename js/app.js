@@ -442,25 +442,24 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
-  openQuickExpenseModal() {
+    openQuickExpenseModal() {
     const d = new Date();
     const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const uid = state.currentUserId;
-    const todayShows = (state.shows || []).filter(sh =>
+    const activeShows = (state.shows || []).filter(sh =>
       sh && !sh.isCancelled && !sh.isHold && sh.startDate &&
       sh.startDate <= todayIso && (sh.endDate || sh.startDate) >= todayIso &&
       (sh.ownerId === uid || (Array.isArray(sh.memberIds) && sh.memberIds.includes(uid)))
     );
 
-    const firstShow = todayShows[0] || null;
+    const firstShow = activeShows[0] || null;
     const defaultPayer = firstShow && (firstShow.memberIds || []).includes(uid)
       ? uid
       : (firstShow?.ownerId || uid);
 
     state.quickExpenseModal = {
       showId: firstShow?.id || '',
-      title: '',
-      amountRaw: '',
+      rawNote: '',
       payerId: defaultPayer
     };
     renderApp();
@@ -478,9 +477,17 @@ window.appActions = {
     state.quickExpenseModal.payerId = nextPayer;
     renderApp();
   },
-  setQuickExpenseTag(tag) {
+  selectQuickExpensePayer(payerId) {
     if (!state.quickExpenseModal) return;
-    state.quickExpenseModal.title = tag;
+    state.quickExpenseModal.payerId = payerId;
+    renderApp();
+  },
+  appendQuickExpensePhrase(phrase) {
+    if (!state.quickExpenseModal) return;
+    const el = document.getElementById('quick-exp-note-line');
+    const cur = el ? el.value : (state.quickExpenseModal.rawNote || '');
+    const next = cur && !cur.endsWith(' ') ? `${cur} ${phrase.trim()} ` : `${cur}${phrase}`;
+    state.quickExpenseModal.rawNote = next;
     renderApp();
   },
   updateQuickExpenseField(k, v) {
@@ -490,13 +497,12 @@ window.appActions = {
   async submitQuickExpense() {
     const q = state.quickExpenseModal;
     if (!q) return;
-    const title = (document.getElementById('quick-exp-title')?.value ?? q.title ?? '').trim();
-    const rawText = document.getElementById('quick-exp-amount')?.value ?? q.amountRaw ?? '';
-    const amount = parseFlexibleMoneyInput(rawText);
+    const rawLine = document.getElementById('quick-exp-note-line')?.value ?? q.rawNote ?? '';
+    const { title, amount } = parseQuickExpenseLine(rawLine, state.selectedYear);
 
-    if (!q.showId) return showToast('Không có show hôm nay để ghi!', 'error');
-    if (!title) return showToast('Nhập nội dung chi phí!', 'error');
-    if (amount <= 0) return showToast('Nhập số tiền hợp lệ (VD: 100k hoặc 100000)!', 'error');
+    if (!q.showId) return showToast('Không có show đang diễn ra để ghi!', 'error');
+    if (!rawLine.trim()) return showToast('Gõ nội dung chi phí (VD: ăn sáng 25/7 100k)!', 'error');
+    if (amount <= 0) return showToast('Chưa thấy số tiền hợp lệ (VD: 100k hoặc 100000)!', 'error');
 
     try {
       await addQuickShowExpenseToCtp({
