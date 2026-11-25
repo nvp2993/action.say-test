@@ -1,7 +1,7 @@
 import { state, registerRenderer } from './state/store.js';
 import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin, logoutCurrentUser } from './services/auth.service.js';
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText, cleanupMatchingHoldsForOfficialShow } from './services/show.service.js';
-import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics } from './services/finance.service.js';
+import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics, addQuickShowExpenseToCtp } from './services/finance.service.js';
 import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
 import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain, buildVietQrUrl, escapeHtml } from './utils/helpers.js';
 import { exportShowToAppleCalendar } from './utils/export.js';
@@ -14,6 +14,7 @@ import { renderCrewBoardTabHtml } from './ui/crewBoard.ui.js';
 import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
 import {
+  renderQuickExpenseBubbleHtml
   renderPinModalHtml,
   renderCrewPassModalHtml,
   renderFormModalHtml,
@@ -44,6 +45,30 @@ function getTomorrowShowsList() {
     s && !s.isCancelled && !s.isHold &&
     s.startDate && s.startDate <= tomorrowIso && (s.endDate || s.startDate) >= tomorrowIso
   );
+}
+
+function parseFlexibleMoneyInput(rawInput) {
+  const cleaned = String(rawInput ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/đ|vnd|vnđ/g, '');
+
+  if (!cleaned) return 0;
+
+  const suffixMatch = cleaned.match(/^([0-9]+(?:[.,][0-9]+)?)(k|tr|m)$/);
+  if (suffixMatch) {
+    const num = parseFloat(suffixMatch[1].replace(',', '.'));
+    if (Number.isNaN(num) || num <= 0) return 0;
+    const mult = suffixMatch[2] === 'k' ? 1000 : 1000000;
+    return Math.round(num * mult);
+  }
+
+  const digitsOnly = cleaned.replace(/[^0-9]/g, '');
+  if (!digitsOnly) return 0;
+  const val = parseInt(digitsOnly, 10) || 0;
+  if (val <= 0) return 0;
+  return val < 1000 ? val * 1000 : val;
 }
 
 function buildZaloTomorrowText() {
@@ -364,6 +389,7 @@ function renderApp() {
     ${renderCrewManifestModalHtml()}
     ${renderClientDebtBillModalHtml()}
     ${renderToastHtml()}
+    ${renderQuickExpenseBubbleHtml()}
   `;
   applyCustomLogoToDom();
   scrollActiveMonthIntoView();
@@ -386,6 +412,78 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
+  openQuickExpenseModal() {
+    const d = new Date();
+    const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const uid = state.currentUserId;
+    const todayShows = (state.shows || []).filter(sh =>
+      sh && !sh.isCancelled && !sh.isHold && sh.startDate &&
+      sh.startDate <= todayIso && (sh.endDate || sh.startDate) >= todayIso &&
+      (sh.ownerId === uid || (Array.isArray(sh.memberIds) && sh.memberIds.includes(uid)))
+    );
+
+    const firstShow = todayShows[0] || null;
+    const defaultPayer = firstShow && (firstShow.memberIds || []).includes(uid)
+      ? uid
+      : (firstShow?.ownerId || uid);
+
+    state.quickExpenseModal = {
+      showId: firstShow?.id || '',
+      title: '',
+      amountRaw: '',
+      payerId: defaultPayer
+    };
+    renderApp();
+  },
+  closeQuickExpenseModal() {
+    state.quickExpenseModal = null;
+    renderApp();
+  },
+  selectQuickExpenseShow(showId) {
+    if (!state.quickExpenseModal) return;
+    const sh = (state.shows || []).find(s => s.id === showId);
+    const uid = state.currentUserId;
+    const nextPayer = sh && (sh.memberIds || []).includes(uid) ? uid : (sh?.ownerId || uid);
+    state.quickExpenseModal.showId = showId;
+    state.quickExpenseModal.payerId = nextPayer;
+    renderApp();
+  },
+  setQuickExpenseTag(tag) {
+    if (!state.quickExpenseModal) return;
+    state.quickExpenseModal.title = tag;
+    renderApp();
+  },
+  updateQuickExpenseField(k, v) {
+    if (!state.quickExpenseModal) return;
+    state.quickExpenseModal[k] = v;
+  },
+  async submitQuickExpense() {
+    const q = state.quickExpenseModal;
+    if (!q) return;
+    const title = (document.getElementById('quick-exp-title')?.value ?? q.title ?? '').trim();
+    const rawText = document.getElementById('quick-exp-amount')?.value ?? q.amountRaw ?? '';
+    const amount = parseFlexibleMoneyInput(rawText);
+
+    if (!q.showId) return showToast('Không có show hôm nay để ghi!', 'error');
+    if (!title) return showToast('Nhập nội dung chi phí!', 'error');
+    if (amount <= 0) return showToast('Nhập số tiền hợp lệ (VD: 100k hoặc 100000)!', 'error');
+
+    try {
+      await addQuickShowExpenseToCtp({
+        showId: q.showId,
+        title,
+        amount,
+        payerId: q.payerId || state.currentUserId
+      });
+      const payerName = getMember(q.payerId || state.currentUserId).name;
+      state.quickExpenseModal = null;
+      renderApp();
+      showToast(`✅ Đã ghi "${title}" ${amount.toLocaleString('vi-VN')}đ vào CTP ${payerName}!`);
+    } catch (err) {
+      showToast('Lỗi lưu chi phí: ' + (err?.message || err), 'error');
+    }
+  },
+  
   openZaloTomorrowModal() {
     state.zaloTomorrowModal = true;
     renderApp();
