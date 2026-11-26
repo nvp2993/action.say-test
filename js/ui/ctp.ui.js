@@ -172,7 +172,7 @@ export function renderCtpTabHtml() {
 
   return `
     <div class="flex-1 flex flex-col min-h-0 bg-[#f1f5f9] text-xs">
-      <div class="bg-[#f8fafc] px-3 py-2.5 border-b border-slate-200/90 shrink-0 space-y-2">
+      <div class="bg-[#f8fafc] px-3 py-2 sm:py-2.5 border-b border-slate-200/90 shrink-0 space-y-1.5 sm:space-y-2">
         <div class="flex items-center justify-between gap-2">
           <span class="font-black text-xs text-slate-900 uppercase tracking-tight truncate">💼 CTP (${escapeHtml(curMem.name)})</span>
           <div class="flex items-center gap-2 shrink-0">
@@ -252,11 +252,11 @@ export function renderCtpTabHtml() {
         </aside>
 
         <div id="ctp-shows-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-4">
-          <div class="max-w-6xl mx-auto space-y-3">
-            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-3 pb-2.5 border-b border-slate-200/80 cursor-pointer">
+          <div class="max-w-6xl mx-auto space-y-2.5 sm:space-y-3">
+            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-2 sm:pt-3 pb-2 sm:pb-2.5 border-b border-slate-200/80 cursor-pointer">
               ${ctpStatCards.map(c => `
-                <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
-                  <span class="text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
+                <div class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border shadow-2xs transition ${c.wrapCls}">
+                  <span class="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
                   <span id="${c.id}" class="font-black font-mono tabular-nums text-xs sm:text-sm mt-0.5 block ${c.valCls}">${c.val}</span>
                 </div>
               `).join('')}
@@ -269,7 +269,7 @@ export function renderCtpTabHtml() {
                 <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-full text-xs font-extrabold">Tự note thêm show ngoài</button>
               </div>
             ` : `
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3 items-stretch">
                 ${filteredShows.map((sh) => {
                   const item = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
                   const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
@@ -291,9 +291,9 @@ export function renderCtpTabHtml() {
                   const hasEditingRow = myExtras.some((ex, exIdx) => state.ctpEditingExtraKey === `${sh.id}_${ex.id || exIdx}`);
 
                   return `
-                    <article id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border border-slate-200/90 hover:border-slate-300'} rounded-3xl p-4 shadow-2xs flex flex-col justify-between gap-3 min-w-0 transition-colors">
-                      <div class="space-y-3">
-                        <div class="flex items-start justify-between gap-2 min-h-[54px] -mx-1.5 -mt-1.5 px-3 py-2.5 rounded-2xl ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
+                    <article id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border border-slate-200/90 hover:border-slate-300'} rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xs flex flex-col justify-between gap-2.5 sm:gap-3 min-w-0 transition-colors">
+                      <div class="space-y-2.5 sm:space-y-3">
+                        <div class="flex items-start justify-between gap-2 min-h-[50px] sm:min-h-[54px] -mx-1 -mt-1 sm:-mx-1.5 sm:-mt-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500">
                               <span class="font-mono font-bold text-indigo-600 tabular-nums shrink-0">${dateLabel}</span>
@@ -333,12 +333,12 @@ export function renderCtpTabHtml() {
                               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nhiệm vụ</span>
                               <span class="font-mono font-bold tabular-nums text-[10.5px] text-slate-500">${getShowTaskSum(item).toLocaleString('vi-VN')}đ</span>
                             </div>
-                            <div class="grid grid-cols-3 gap-1">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-1">
                               ${taskList.map(t => {
                                 const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
                                 const val = checked ? item.tasks[t.key] : t.def;
                                 return `
-                                  <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-0.5 transition min-w-0 ${
+                                  <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-1 transition min-w-0 ${
                                     checked
                                       ? 'bg-slate-100 border-slate-300/90 text-slate-900'
                                       : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
@@ -354,7 +354,7 @@ export function renderCtpTabHtml() {
                                         inputmode="numeric"
                                         value="${Number(val).toLocaleString('vi-VN')}"
                                         oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
-                                        class="w-12 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[9.5px] text-slate-900 focus:outline-none"
+                                        class="flex-1 min-w-[44px] bg-transparent text-right font-mono font-extrabold tabular-nums text-[9.5px] text-slate-900 focus:outline-none"
                                       />
                                     ` : ''}
                                   </div>
@@ -366,7 +366,7 @@ export function renderCtpTabHtml() {
                       </div>
 
                       ${isCounted ? `
-                        <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1.5">
+                        <div class="pt-2 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1.5">
                           <div class="flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2 min-w-0">
                               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider shrink-0">Phát sinh</span>
@@ -379,7 +379,7 @@ export function renderCtpTabHtml() {
                             <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition shrink-0">+ Thêm phát sinh</button>
                           </div>
 
-                          <div class="${hasEditingRow ? 'max-h-44' : 'h-[84px]'} overflow-y-auto custom-scroll pr-0.5">
+                          <div class="${hasEditingRow ? 'max-h-44' : myExtras.length === 0 ? 'h-6' : 'max-h-[84px]'} overflow-y-auto custom-scroll pr-0.5">
                             ${myExtras.length === 0 ? `
                               <div class="h-full flex items-center text-[11px] text-slate-400">• Không có phát sinh</div>
                             ` : `
