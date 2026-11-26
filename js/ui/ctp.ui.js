@@ -1,5 +1,5 @@
 import { state } from '../state/store.js';
-import { escapeHtml, formatDayMonth, getMember, getShowDays, buildVietQrUrl, getBankName } from '../utils/helpers.js';
+import { escapeHtml, getMember, getShowDays, buildVietQrUrl, getBankName } from '../utils/helpers.js';
 import { getVisiblePartnerText } from '../services/show.service.js';
 import { getCombinedCtpShows, getDefaultRateForTask, getMemberExtrasForShow, ensureOwnerFinRecord } from '../services/finance.service.js';
 import { renderUnifiedDateBarHtml } from './header.ui.js';
@@ -23,6 +23,75 @@ function getShowRawTotal(sh, item, myExtras) {
 
 function cleanHoldTitle(loc) {
   return String(loc || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim();
+}
+
+function parseDateParts(rawDate) {
+  if (!rawDate) return null;
+  if (rawDate instanceof Date && !Number.isNaN(rawDate.getTime())) {
+    return {
+      day: rawDate.getDate(),
+      month: rawDate.getMonth() + 1,
+      year: rawDate.getFullYear()
+    };
+  }
+  const str = String(rawDate).trim();
+  const isoMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (isoMatch) {
+    return {
+      year: Number(isoMatch[1]),
+      month: Number(isoMatch[2]),
+      day: Number(isoMatch[3])
+    };
+  }
+  const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})(?:[-/](\d{2,4}))?/);
+  if (dmyMatch) {
+    return {
+      day: Number(dmyMatch[1]),
+      month: Number(dmyMatch[2]),
+      year: dmyMatch[3] ? Number(dmyMatch[3]) : Number(state.selectedYear || new Date().getFullYear())
+    };
+  }
+  const dt = new Date(str);
+  if (!Number.isNaN(dt.getTime())) {
+    return {
+      day: dt.getDate(),
+      month: dt.getMonth() + 1,
+      year: dt.getFullYear()
+    };
+  }
+  return null;
+}
+
+function formatShowDateRange(sh, days) {
+  const start = parseDateParts(sh?.startDate);
+  if (!start) return '';
+
+  const totalDays = Math.max(1, Number(days || getShowDays(sh) || 1));
+  let end = parseDateParts(sh?.endDate);
+
+  if (!end) {
+    const startObj = new Date(start.year, start.month - 1, start.day);
+    startObj.setDate(startObj.getDate() + totalDays - 1);
+    end = {
+      day: startObj.getDate(),
+      month: startObj.getMonth() + 1,
+      year: startObj.getFullYear()
+    };
+  }
+
+  const sameDay =
+    totalDays <= 1 ||
+    (start.day === end.day && start.month === end.month && start.year === end.year);
+
+  if (sameDay) {
+    return `${start.day}/${start.month}`;
+  }
+
+  if (start.month === end.month && start.year === end.year) {
+    return `${start.day}-${end.day}/${start.month}`;
+  }
+
+  return `${start.day}/${start.month}-${end.day}/${end.month}`;
 }
 
 export function renderCtpTabHtml() {
@@ -201,10 +270,11 @@ export function renderCtpTabHtml() {
               </div>
             ` : `
               <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
-                ${filteredShows.map((sh, idx) => {
+                ${filteredShows.map((sh) => {
                   const item = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
                   const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
-                  const days = getShowDays(sh);
+                  const days = Math.max(1, Number(getShowDays(sh) || 1));
+                  const dateLabel = formatShowDateRange(sh, days);
                   const owner = getMember(sh.ownerId);
                   const rawTotal = getShowRawTotal(sh, item, myExtras);
                   const isCounted = shouldCountShowMoney(sh);
@@ -223,22 +293,22 @@ export function renderCtpTabHtml() {
                   return `
                     <article id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border border-slate-200/90 hover:border-slate-300'} rounded-3xl p-4 shadow-2xs flex flex-col justify-between gap-3 min-w-0 transition-colors">
                       <div class="space-y-3">
-                        <!-- NỀN TIÊU ĐỀ SHOW HƠI XÁM NHẸ -->
                         <div class="flex items-start justify-between gap-2 min-h-[54px] -mx-1.5 -mt-1.5 px-3 py-2.5 rounded-2xl ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500">
-                              <span class="font-mono font-black text-slate-400 tabular-nums">#${String(idx + 1).padStart(2, '0')}</span>
-                              <span class="font-mono font-bold text-indigo-600 tabular-nums">${formatDayMonth(sh.startDate)} · ${days}n</span>
-                              <span class="text-slate-300">•</span>
-                              <span class="truncate">Chủ: <b class="text-slate-800">${escapeHtml(owner.name)}</b></span>
+                              <span class="font-mono font-bold text-indigo-600 tabular-nums shrink-0">${dateLabel}</span>
+                              <span>•</span>
+                              <span class="font-semibold text-slate-600 tabular-nums shrink-0">${days} ngày</span>
+                              <span>•</span>
+                              <span class="truncate">Chủ show: <b class="text-slate-800">${escapeHtml(owner.name)}</b></span>
                             </div>
                             <h4 class="font-black text-slate-900 text-sm mt-1 truncate" title="${escapeHtml(displayLocation)}${partnerText ? ` (${escapeHtml(partnerText)})` : ''}">
                               ${escapeHtml(displayLocation)}${partnerText ? ` <span class="text-slate-500 font-semibold text-xs">(${escapeHtml(partnerText)})</span>` : ''}
                             </h4>
                           </div>
                           <div class="text-right shrink-0">
-                            <span class="text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 block">${sh.isHold && !sh.countHoldForBilling ? 'Tạm giữ' : 'Tổng show'}</span>
-                            <span id="ctp-show-total-${sh.id}" class="text-sm font-black font-mono tabular-nums ${isCounted ? 'text-slate-950' : 'text-slate-400'}">${subTotal.toLocaleString('vi-VN')}đ</span>
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-500 block">${sh.isHold && !sh.countHoldForBilling ? 'Tạm giữ' : 'TỔNG SHOW'}</span>
+                            <span id="ctp-show-total-${sh.id}" class="text-[15px] font-black font-mono tabular-nums tracking-tight ${isCounted ? 'text-slate-950' : 'text-slate-400'}">${subTotal.toLocaleString('vi-VN')}đ</span>
                           </div>
                         </div>
 
