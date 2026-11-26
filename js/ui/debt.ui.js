@@ -114,9 +114,10 @@ export function renderDebtTabHtml() {
   const uid = state.currentUserId;
   const curMem = getMember(uid);
 
-  // Tính công nợ cộng dồn từ các tháng trước trong cùng năm (m < state.ownerMonth)
+  const prevCarryByBoss = new Map();
   let prevCarryCount = 0;
   let prevCarryAmount = 0;
+
   if (!state.ownerAllMonths && Number(state.ownerMonth) > 1) {
     (state.shows || []).forEach(sh => {
       if (!sh || sh.isCancelled || !sh.startDate) return;
@@ -125,18 +126,35 @@ export function renderDebtTabHtml() {
       if (y !== state.selectedYear || !(m < Number(state.ownerMonth))) return;
       if (!shouldCountShowMoney(sh)) return;
 
-      if (sh.ownerId === uid) {
+      const isOwner = sh.ownerId === uid;
+      const key = isOwner ? `self_owner:${uid}` : `boss:${sh.ownerId || 'unknown'}`;
+      const bossName = isOwner ? `${curMem.name} (Chủ show)` : getMember(sh.ownerId).name;
+
+      let pending = 0;
+      let isUnsettled = false;
+      if (isOwner) {
         const mObj = calculateOwnerShowMetrics(sh);
         if (mObj.rec.status !== 'settled' && mObj.remainingClientDebt > 0) {
-          prevCarryCount++;
-          prevCarryAmount += mObj.remainingClientDebt;
+          pending = mObj.remainingClientDebt;
+          isUnsettled = true;
         }
       } else {
         const cm = calculateCrewShowMetrics(sh);
         if (!cm.isSettled && cm.pendingCtpDebt > 0) {
-          prevCarryCount++;
-          prevCarryAmount += cm.pendingCtpDebt;
+          pending = cm.pendingCtpDebt;
+          isUnsettled = true;
         }
+      }
+
+      if (isUnsettled && pending > 0) {
+        prevCarryCount++;
+        prevCarryAmount += pending;
+        if (!prevCarryByBoss.has(key)) {
+          prevCarryByBoss.set(key, { key, name: bossName, isOwner, count: 0, amount: 0 });
+        }
+        const entry = prevCarryByBoss.get(key);
+        entry.count++;
+        entry.amount += pending;
       }
     });
   }
@@ -206,12 +224,12 @@ export function renderDebtTabHtml() {
   const fmtMoney = (n) => (hide ? '••••••đ' : `${Number(n || 0).toLocaleString('vi-VN')}đ`);
   const fmtCompact = (n) => (hide ? '••••đ' : formatCompactMoneyPlain(n));
 
-  // Gom nhóm đối chiếu theo từng Chủ show trong kỳ
   const bossMap = new Map();
   allInvolved.forEach(sh => {
     const isOwner = sh.ownerId === uid;
     const key = isOwner ? `self_owner:${uid}` : `boss:${sh.ownerId || 'unknown'}`;
     if (!bossMap.has(key)) {
+      const carry = prevCarryByBoss.get(key);
       bossMap.set(key, {
         key,
         name: isOwner ? `${curMem.name} (Chủ show)` : getMember(sh.ownerId).name,
@@ -219,7 +237,9 @@ export function renderDebtTabHtml() {
         showCount: 0,
         unsettledCount: 0,
         billOrProfit: 0,
-        pendingAmount: 0
+        pendingAmount: 0,
+        prevCarryCount: carry ? carry.count : 0,
+        prevCarryAmount: carry ? carry.amount : 0
       });
     }
     const g = bossMap.get(key);
@@ -242,7 +262,27 @@ export function renderDebtTabHtml() {
       }
     }
   });
-  const bossSummaryList = Array.from(bossMap.values()).sort((a, b) => b.pendingAmount - a.pendingAmount || b.showCount - a.showCount);
+
+  prevCarryByBoss.forEach((carry, key) => {
+    if (!bossMap.has(key)) {
+      bossMap.set(key, {
+        key,
+        name: carry.name,
+        isOwner: carry.isOwner,
+        showCount: 0,
+        unsettledCount: 0,
+        billOrProfit: 0,
+        pendingAmount: 0,
+        prevCarryCount: carry.count,
+        prevCarryAmount: carry.amount
+      });
+    }
+  });
+
+  const bossSummaryList = Array.from(bossMap.values()).sort(
+    (a, b) => (b.pendingAmount + b.prevCarryAmount) - (a.pendingAmount + a.prevCarryAmount) || b.showCount - a.showCount
+  );
+  const carryOnlyBossList = Array.from(prevCarryByBoss.values()).sort((a, b) => b.amount - a.amount);
 
   let statCards = [];
   if (filterMode === 'role_owner') {
@@ -324,6 +364,31 @@ export function renderDebtTabHtml() {
 
       <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[336px_minmax(0,1fr)]">
         <aside class="hidden lg:flex flex-col gap-3 p-3.5 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2 text-[11px]">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Số show kỳ này</span>
+              <span class="font-mono font-black text-slate-900">${allInvolved.length} show</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+              <div class="px-2.5 py-1.5 rounded-xl bg-[#f8fafc] border border-slate-200/70 flex items-center justify-between">
+                <span class="text-slate-500 font-semibold">Chủ show</span>
+                <span class="font-mono font-black text-slate-900">${cOwner}</span>
+              </div>
+              <div class="px-2.5 py-1.5 rounded-xl bg-[#f8fafc] border border-slate-200/70 flex items-center justify-between">
+                <span class="text-slate-500 font-semibold">Đi CTP</span>
+                <span class="font-mono font-black text-indigo-700">${cCrew}</span>
+              </div>
+              <div class="px-2.5 py-1.5 rounded-xl bg-[#f8fafc] border border-slate-200/70 flex items-center justify-between">
+                <span class="text-slate-500 font-semibold">Chưa xong</span>
+                <span class="font-mono font-black text-amber-700">${unsettledCount}</span>
+              </div>
+              <div class="px-2.5 py-1.5 rounded-xl bg-[#f8fafc] border border-slate-200/70 flex items-center justify-between">
+                <span class="text-slate-500 font-semibold">Đã xong</span>
+                <span class="font-mono font-black text-emerald-700">${settledCount}</span>
+              </div>
+            </div>
+          </div>
+
           <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2.5">
             <div class="flex items-center justify-between gap-1">
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">ĐỐI CHIẾU THEO CHỦ SHOW</span>
@@ -339,6 +404,7 @@ export function renderDebtTabHtml() {
                 <div class="text-[11px] text-slate-400 py-3 text-center">Không có dữ liệu trong kỳ</div>
               ` : bossSummaryList.map(g => {
                 const isSelected = selectedBossKey === g.key;
+                const combinedPending = g.pendingAmount + g.prevCarryAmount;
                 return `
                   <button
                     type="button"
@@ -351,20 +417,25 @@ export function renderDebtTabHtml() {
                   >
                     <div class="flex items-center justify-between gap-2 text-[11px]">
                       <span class="font-black truncate">${escapeHtml(g.name)}</span>
-                      <span class="font-mono text-[10px] font-bold shrink-0 ${isSelected ? 'text-slate-300' : 'text-slate-500'}">${g.showCount} show</span>
+                      <span class="font-mono text-[10px] font-bold shrink-0 ${isSelected ? 'text-slate-300' : 'text-slate-500'}">${g.showCount} show${g.prevCarryCount > 0 ? ` + ${g.prevCarryCount} cũ` : ''}</span>
                     </div>
                     <div class="flex items-center justify-between gap-2 text-[10px]">
                       <span class="${isSelected ? 'text-amber-300' : 'text-slate-600'} font-semibold">
                         ${g.isOwner ? 'Lãi:' : 'Bill:'} <b class="font-mono tabular-nums">${fmtCompact(g.billOrProfit)}</b>
                       </span>
                       <span class="font-mono font-black tabular-nums shrink-0 ${
-                        g.pendingAmount > 0
+                        combinedPending > 0
                           ? (isSelected ? 'text-rose-300' : 'text-rose-600')
                           : (isSelected ? 'text-emerald-300' : 'text-emerald-700')
                       }">
-                        ${g.pendingAmount > 0 ? `Chờ ${fmtCompact(g.pendingAmount)}` : 'Đã xong ✓'}
+                        ${combinedPending > 0 ? `Chờ ${fmtCompact(combinedPending)}` : 'Đã xong ✓'}
                       </span>
                     </div>
+                    ${g.prevCarryAmount > 0 ? `
+                      <div class="text-[9.5px] font-mono ${isSelected ? 'text-amber-200' : 'text-amber-800'}">
+                        ↳ Cộng dồn tháng trước: +${fmtCompact(g.prevCarryAmount)} (${g.prevCarryCount} show)
+                      </div>
+                    ` : ''}
                   </button>
                 `;
               }).join('')}
@@ -379,14 +450,28 @@ export function renderDebtTabHtml() {
             ${state.ownerAllMonths ? `
               <div class="text-[11px] text-slate-500 py-1">Đang gộp toàn bộ các tháng của năm ${state.selectedYear}.</div>
             ` : prevCarryAmount > 0 ? `
-              <div class="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-1">
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-amber-950">Công nợ treo từ tháng trước</span>
-                  <span class="font-mono font-black text-rose-600">${fmtMoney(prevCarryAmount)}</span>
+              <div class="space-y-2">
+                <div class="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-amber-950">Tổng treo từ tháng trước</span>
+                    <span class="font-mono font-black text-rose-600">${fmtMoney(prevCarryAmount)}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-[10px] text-amber-800">
+                    <span>${prevCarryCount} show chưa hoàn tất</span>
+                    <button type="button" onclick="ownerActions.toggleAllMonths()" class="font-extrabold text-indigo-700 hover:underline">Xem cả năm →</button>
+                  </div>
                 </div>
-                <div class="flex items-center justify-between text-[10px] text-amber-800">
-                  <span>${prevCarryCount} show chưa hoàn tất</span>
-                  <button type="button" onclick="ownerActions.toggleAllMonths()" class="font-extrabold text-indigo-700 hover:underline">Xem cả năm →</button>
+                <div class="space-y-1">
+                  ${carryOnlyBossList.map(c => `
+                    <button
+                      type="button"
+                      onclick="ownerActions.setBossFilter('${escapeHtml(c.key)}')"
+                      class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/80 text-[10.5px] transition"
+                    >
+                      <span class="font-bold text-slate-800 truncate">${escapeHtml(c.name)} <span class="text-slate-400 font-normal">(${c.count} show)</span></span>
+                      <span class="font-mono font-black text-rose-600 shrink-0">${fmtCompact(c.amount)}</span>
+                    </button>
+                  `).join('')}
                 </div>
               </div>
             ` : `
