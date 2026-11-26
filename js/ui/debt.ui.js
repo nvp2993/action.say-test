@@ -192,8 +192,7 @@ export function renderDebtTabHtml() {
         </aside>
 
         <!-- CỘT PHẢI: DANH SÁCH SHOW -->
-        <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3">
-          <div class="max-w-4xl mx-auto space-y-2.5">
+        <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 space-y-2.5">
             <div class="grid lg:hidden grid-cols-2 sm:grid-cols-4 gap-2">
               ${statCards.map(c => `
                 <div class="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs">
@@ -513,7 +512,6 @@ export function renderDebtTabHtml() {
             }).join('')}
           </div>
         </div>
-      </div>
     </div>
   `;
 }
