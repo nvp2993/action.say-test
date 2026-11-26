@@ -1259,8 +1259,6 @@ window.ctpActions = {
       target.name = el.value;
     }
   },
-    saveCtpState();
-  },
   removeExtraItem(id, idx, expId = '') {
     if (!Array.isArray(state.ctpItems[id]?.extras)) return;
     if (expId) {
