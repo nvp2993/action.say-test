@@ -1,12 +1,24 @@
 import { state } from '../state/store.js';
-import { CREW_CTP_STATUS_OPTIONS } from '../config/constants.js';
-import { escapeHtml, getShowDays, getMember, formatCompactMoneyPlain, buildVietQrUrl } from '../utils/helpers.js';
+import { escapeHtml, getMember, getShowDays, buildVietQrUrl, getBankName } from '../utils/helpers.js';
 import { getVisiblePartnerText } from '../services/show.service.js';
-import { getCombinedCtpShows, calculateCrewShowMetrics, getDefaultRateForTask, getMemberExtrasForShow } from '../services/finance.service.js';
+import { getCombinedCtpShows, getDefaultRateForTask, getMemberExtrasForShow, ensureOwnerFinRecord } from '../services/finance.service.js';
 import { renderUnifiedDateBarHtml } from './header.ui.js';
 
 function shouldCountShowMoney(sh) {
   return !sh?.isHold || Boolean(sh?.countHoldForBilling);
+}
+
+function getShowTaskSum(item) {
+  return Object.entries(item?.tasks || {}).reduce(
+    (s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s,
+    0
+  );
+}
+
+function getShowRawTotal(sh, item, myExtras) {
+  const activeTaskSum = getShowTaskSum(item);
+  const extraSum = (myExtras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+  return activeTaskSum + extraSum;
 }
 
 function cleanHoldTitle(loc) {
@@ -82,240 +94,294 @@ function formatShowDateRange(sh, days) {
   return `${start.day}/${start.month}-${end.day}/${end.month}`;
 }
 
-function isShowBodyExpanded(showId) {
-  const collapsedMap = state.ctpCollapsedShowIds || state.ownerCollapsedShowIds || {};
-  if (collapsedMap && typeof collapsedMap === 'object' && collapsedMap[showId]) {
-    return false;
-  }
-  return true;
-}
-
-function formatCleanStatusLabel(label) {
-  return String(label || '')
-    .replace(/^⏳\s*/, '')
-    .replace(/^✅\s*/, '')
-    .replace(/Chủ Show\s*(trả)?/gi, 'trả')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getColoredStatusBtnClass(statusId, isActive) {
-  const isSettled = statusId === 'settled';
-  if (!isActive) {
-    return 'bg-white/85 hover:bg-white text-slate-500 border-slate-200/80 font-medium';
-  }
-  if (isSettled) {
-    return 'bg-emerald-50 text-emerald-800 border-emerald-300/90 font-extrabold shadow-2xs';
-  }
-  return 'bg-amber-50 text-amber-800 border-amber-300/90 font-extrabold shadow-2xs';
-}
-
-function getAllCrewShowsForCurrentMember(uid) {
-  const combined = typeof getCombinedCtpShows === 'function' ? getCombinedCtpShows() : (state.shows || []);
-  return combined.filter(sh => {
-    if (!sh || sh.isCancelled || !sh.startDate) return false;
-    if (!sh.isCustomCtp && sh.ownerId === uid) return false;
-    if (!sh.isCustomCtp && !(sh.memberIds || []).includes(uid)) return false;
-    const [y, m] = sh.startDate.split('-').map(Number);
-    if (y !== state.selectedYear) return false;
-    if (!state.ctpAllMonths && m !== state.ctpMonth) return false;
-    return true;
-  }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
-}
-
 export function renderCtpTabHtml() {
   const uid = state.currentUserId;
   const curMem = getMember(uid);
-  const crewShows = getAllCrewShowsForCurrentMember(uid);
+  const filteredShows = getCombinedCtpShows();
 
-  let billSum = 0, extraSum = 0, pendingSum = 0, settledSum = 0, unsettledCount = 0;
+  let grandTotal = 0;
+  let totalExtraCost = 0;
+  let unpaidCtpSum = 0;
+  let settledCtpSum = 0;
+  let missingTaskShows = [];
+  let holdShowsCount = 0;
 
-  crewShows.forEach(sh => {
-    const cm = calculateCrewShowMetrics(sh);
-    if (!cm.isSettled) unsettledCount++;
-    if (!shouldCountShowMoney(sh)) return;
-
-    billSum += cm.grossCtp;
-    extraSum += cm.extraBillSum;
-    if (cm.isSettled) {
-      settledSum += cm.grossCtp;
-    } else {
-      pendingSum += cm.pendingCtpDebt;
+  filteredShows.forEach(sh => {
+    if (sh.isHold) holdShowsCount++;
+    const it = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
+    const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
+    const activeTasksCount = Object.values(it.tasks || {}).filter(v => v !== null && v !== undefined).length;
+    if (shouldCountShowMoney(sh) && activeTasksCount === 0 && myExtras.length === 0) {
+      missingTaskShows.push(sh);
     }
+
+    if (!shouldCountShowMoney(sh)) return;
+    const extraSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+    const rawTotal = getShowTaskSum(it) + extraSum;
+    grandTotal += rawTotal;
+    totalExtraCost += extraSum;
+
+    const rec = ensureOwnerFinRecord(sh);
+    const isSettled = rec?.crewMemberMeta?.[uid]?.ctpStatus === 'settled';
+    if (isSettled) settledCtpSum += rawTotal;
+    else unpaidCtpSum += rawTotal;
   });
 
-  const filterMode = state.ctpFilterStatus || 'all';
   const hide = Boolean(state.hideMoneyMode);
   const fmtMoney = (n) => (hide ? '••••••đ' : `${Number(n || 0).toLocaleString('vi-VN')}đ`);
 
-  const statCards = [
-    { label: 'TỔNG BILL CTP', val: fmtMoney(billSum), wrapCls: 'bg-slate-900 border-slate-900 text-white', labelCls: 'text-slate-300', valCls: 'text-amber-300' },
-    { label: 'CHI PHÍ PHÁT SINH', val: fmtMoney(extraSum), wrapCls: 'bg-white border-slate-200/90 text-slate-900', labelCls: 'text-slate-400', valCls: 'text-indigo-700' },
-    { label: 'CTP CHƯA NHẬN', val: fmtMoney(pendingSum), wrapCls: 'bg-white border-slate-200/90 text-slate-900', labelCls: 'text-slate-400', valCls: 'text-amber-700' },
-    { label: 'CTP ĐÃ NHẬN', val: fmtMoney(settledSum), wrapCls: 'bg-white border-slate-200/90 text-slate-900', labelCls: 'text-slate-400', valCls: 'text-emerald-700' }
+  const ctpStatCards = [
+    {
+      id: 'ctp-grand-total-display',
+      label: 'TỔNG BILL CTP',
+      val: fmtMoney(grandTotal),
+      wrapCls: 'bg-slate-900 border-slate-900 text-white',
+      labelCls: 'text-slate-300',
+      valCls: 'text-amber-300'
+    },
+    {
+      id: 'ctp-extra-total-display',
+      label: 'CHI PHÍ PHÁT SINH',
+      val: fmtMoney(totalExtraCost),
+      wrapCls: 'bg-white border-slate-200/90 text-slate-900',
+      labelCls: 'text-slate-400',
+      valCls: 'text-indigo-700'
+    },
+    {
+      id: 'ctp-unpaid-total-display',
+      label: 'CTP CHƯA NHẬN',
+      val: fmtMoney(unpaidCtpSum),
+      wrapCls: 'bg-white border-slate-200/90 text-slate-900',
+      labelCls: 'text-slate-400',
+      valCls: 'text-amber-700'
+    },
+    {
+      id: 'ctp-settled-total-display',
+      label: 'CTP ĐÃ NHẬN',
+      val: fmtMoney(settledCtpSum),
+      wrapCls: 'bg-white border-slate-200/90 text-slate-900',
+      labelCls: 'text-slate-400',
+      valCls: 'text-emerald-700'
+    }
   ];
 
-  const filtered = crewShows.filter(sh => {
-    const cm = calculateCrewShowMetrics(sh);
-    if (filterMode === 'unsettled') return !cm.isSettled;
-    if (filterMode === 'settled') return cm.isSettled;
-    return true;
-  });
-
-  const taskKeys = ['quay', 'dung', 'chup', 'lamhinh', 'flycam', 'gimbal'];
-  const taskLabels = { quay: 'Quay', dung: 'Dựng', chup: 'Chụp', lamhinh: 'Hình', flycam: 'Flycam', gimbal: 'Gimbal' };
+  const firstMissingId = missingTaskShows[0]?.id || '';
+  const jumpToFirstMissingJs = firstMissingId
+    ? `const c=document.getElementById('ctp-shows-scroll-list');const t=document.getElementById('ctp-show-card-${escapeHtml(firstMissingId)}');if(c&&t){c.scrollTo({top:Math.max(0,t.offsetTop-c.offsetTop-84),behavior:'smooth'});}`
+    : '';
 
   return `
     <div class="flex-1 flex flex-col min-h-0 bg-[#f1f5f9] text-xs">
       <div class="bg-[#f8fafc] px-3 py-2.5 border-b border-slate-200/90 shrink-0 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <span class="font-black text-xs text-slate-900 uppercase tracking-tight truncate">🧾 CTP: ${escapeHtml(curMem.name)}</span>
-          <div class="flex items-center gap-1.5 shrink-0">
+          <span class="font-black text-xs text-slate-900 uppercase tracking-tight truncate">💼 CTP (${escapeHtml(curMem.name)})</span>
+          <div class="flex items-center gap-2 shrink-0">
             <button type="button" onclick="appActions.toggleHideMoneyMode()" class="px-2.5 py-1 rounded-full bg-slate-200/70 hover:bg-slate-200 text-[10px] font-extrabold text-slate-700 transition">
               ${hide ? '👁️ Hiện tiền' : '🙈 Ẩn tiền'}
             </button>
-            <button type="button" onclick="ctpActions.openCtpBillModal()" class="px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 text-[10px] font-extrabold transition">📤 Gửi Bill</button>
-            <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition">+ Show Ngoài</button>
+            <span class="text-[10px] font-bold text-slate-400">Năm ${state.selectedYear}</span>
           </div>
         </div>
-        <div class="as-ios-seg-bar">
-          ${[
-            { id: 'all', label: `ALL (${crewShows.length})` },
-            { id: 'unsettled', label: 'Chưa nhận' },
-            { id: 'settled', label: 'Đã nhận' }
-          ].map(f => `<button type="button" onclick="ctpActions.setFilterStatus('${f.id}')" class="as-ios-seg-item ${filterMode === f.id ? 'active' : ''}">${f.label}</button>`).join('')}
-        </div>
         ${renderUnifiedDateBarHtml('ctp')}
+        <div class="lg:hidden flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/70">
+          <div class="flex items-center gap-1.5 flex-1 min-w-0">
+            <span class="text-[10px] font-bold text-slate-500 shrink-0">Sếp:</span>
+            <select onchange="ctpActions.setOwner(this.value)" class="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold">
+              <option value="all">Tất cả Sếp</option>
+              ${state.members.filter(m => m.id !== uid).map(m => `<option value="${m.id}" ${state.ctpOwnerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div onclick="appActions.toggleHideMoneyMode()" class="text-right bg-emerald-50 px-3 py-1 rounded-2xl border border-emerald-200 shrink-0 cursor-pointer">
+            <span class="text-[8.5px] text-emerald-700 font-bold uppercase block">Tổng T${state.ctpMonth}</span>
+            <span class="text-xs font-black text-emerald-700 font-mono tabular-nums">${fmtMoney(grandTotal)}</span>
+          </div>
+        </div>
       </div>
 
-      <div id="ctp-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-4">
-        <div class="max-w-6xl mx-auto space-y-3">
-          <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-30 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-3 pb-2.5 border-b border-slate-200/80 cursor-pointer">
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              ${statCards.map(c => `
+      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[336px_minmax(0,1fr)]">
+        <aside class="hidden lg:flex flex-col gap-3 p-3.5 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
+          <div class="p-3.5 rounded-2xl bg-white border border-slate-200/90 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Sếp</label>
+              <span class="text-[10px] font-mono font-bold text-slate-400 tabular-nums">${filteredShows.length} show</span>
+            </div>
+            <select onchange="ctpActions.setOwner(this.value)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-slate-900">
+              <option value="all">Tất cả Sếp</option>
+              ${state.members.filter(m => m.id !== uid).map(m => `<option value="${m.id}" ${state.ctpOwnerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-white border border-slate-200/90 space-y-2">
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Thao tác</div>
+            <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="w-full py-2.5 px-3 rounded-xl border border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 text-slate-800 font-extrabold text-[11px] text-left transition">
+              + Tự note thêm show ngoài lịch
+            </button>
+            ${filteredShows.length > 0 ? `
+              <button type="button" onclick="ctpActions.autoFillFromRoles()" class="w-full py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 font-extrabold text-[11px] text-left transition">
+                ⚡ Tự điền CTP theo vai trò đã gắn
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-white border border-slate-200/90 space-y-2">
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Kiểm tra tháng T${state.ctpMonth}</div>
+            <div class="space-y-1.5 text-[11px]">
+              <div class="flex items-center justify-between px-2.5 py-2 rounded-xl ${missingTaskShows.length > 0 ? 'bg-rose-50 border border-rose-200 text-rose-800' : 'bg-slate-50 border border-slate-200/70 text-slate-700'}">
+                <span class="font-bold">Chưa nhập nhiệm vụ</span>
+                ${missingTaskShows.length > 0 ? `
+                  <button type="button" onclick="${jumpToFirstMissingJs}" class="px-2 py-0.5 rounded-lg bg-rose-600 text-white font-mono font-black text-[10px]">
+                    ${missingTaskShows.length} show →
+                  </button>
+                ` : `<span class="font-mono font-black text-[10.5px] text-emerald-700">0 ✓</span>`}
+              </div>
+              <div class="flex items-center justify-between px-2.5 py-2 rounded-xl bg-slate-50 border border-slate-200/70 text-slate-700">
+                <span class="font-bold">Lịch giữ chỗ</span>
+                <span class="font-mono font-black text-[10.5px] text-amber-700 tabular-nums">${holdShowsCount} show</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-0.5">
+            <button type="button" onclick="ctpActions.saveNow()" class="w-full py-3 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition">
+              💾 LƯU CTP LÊN CLOUD
+            </button>
+            <button type="button" onclick="ctpActions.generateBill()" class="w-full py-3.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase shadow-xs transition">
+              🔥 LỤM (TỔNG HỢP BILL)
+            </button>
+          </div>
+        </aside>
+
+        <div id="ctp-shows-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-4">
+          <div class="max-w-6xl mx-auto space-y-3">
+            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-3 pb-2.5 border-b border-slate-200/80 cursor-pointer">
+              ${ctpStatCards.map(c => `
                 <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
                   <span class="text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
-                  <span class="font-black font-mono tabular-nums text-xs sm:text-sm mt-0.5 block ${c.valCls}">${c.val}</span>
+                  <span id="${c.id}" class="font-black font-mono tabular-nums text-xs sm:text-sm mt-0.5 block ${c.valCls}">${c.val}</span>
                 </div>
               `).join('')}
             </div>
-          </div>
 
-          ${filtered.length === 0 ? `
-            <div class="text-center py-12 bg-white rounded-3xl border border-slate-200 mx-auto max-w-sm space-y-3 p-4">
-              <div class="text-3xl">📭</div>
-              <div class="text-slate-800 font-bold text-xs">Chưa có show CTP nào trong mục lọc này (${unsettledCount} show chờ nhận)</div>
-              <div class="flex items-center justify-center gap-2">
-                <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2 rounded-full bg-slate-950 text-white font-extrabold text-xs">+ Show Ngoài</button>
+            ${filteredShows.length === 0 ? `
+              <div class="text-center py-12 bg-white rounded-3xl border border-slate-200 mx-auto max-w-sm space-y-3 p-4">
+                <div class="text-3xl">📭</div>
+                <div class="text-slate-800 font-bold text-xs">Chưa có show nào trong tháng T${state.ctpMonth}</div>
+                <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-full text-xs font-extrabold">Tự note thêm show ngoài</button>
               </div>
-            </div>
-          ` : `
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
-              ${filtered.map((sh) => {
-                const expanded = isShowBodyExpanded(sh.id);
-                const days = Math.max(1, Number(getShowDays(sh) || 1));
-                const dateLabel = formatShowDateRange(sh, days);
-                const partnerText = getVisiblePartnerText(sh);
-                const isCounted = shouldCountShowMoney(sh);
-                const displayLocation = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
-                const holdCardStyle = sh.isHold
-                  ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"'
-                  : '';
-                const holdCardCls = sh.isHold
-                  ? 'rounded-3xl p-4 space-y-3 shadow-2xs'
-                  : 'bg-white rounded-3xl border border-slate-200/90 hover:border-slate-300 p-4 space-y-3 shadow-2xs transition-colors';
-                const holdBillingBarHtml = sh.isHold ? `
-                  <div onclick="event.stopPropagation(); ctpActions.toggleHoldBilling('${sh.id}')" class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border cursor-pointer transition select-none ${
-                    sh.countHoldForBilling
-                      ? 'bg-emerald-50/95 border-emerald-300 text-emerald-900'
-                      : 'bg-white/90 border-amber-300/80 text-amber-900 hover:bg-white'
-                  }">
-                    <span class="text-[10.5px] font-extrabold truncate">
-                      ${sh.countHoldForBilling ? '💰 Đang tính tiền lịch giữ' : '💵 Tính tiền lịch giữ (0đ)'}
-                    </span>
-                    <div class="w-8 h-4.5 rounded-full p-0.5 transition-colors shrink-0 ${sh.countHoldForBilling ? 'bg-emerald-500' : 'bg-slate-300'}">
-                      <div class="w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${sh.countHoldForBilling ? 'translate-x-3.5' : 'translate-x-0'}"></div>
-                    </div>
-                  </div>
-                ` : '';
+            ` : `
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
+                ${filteredShows.map((sh) => {
+                  const item = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
+                  const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
+                  const days = Math.max(1, Number(getShowDays(sh) || 1));
+                  const dateLabel = formatShowDateRange(sh, days);
+                  const owner = getMember(sh.ownerId);
+                  const rawTotal = getShowRawTotal(sh, item, myExtras);
+                  const isCounted = shouldCountShowMoney(sh);
+                  const subTotal = isCounted ? rawTotal : 0;
+                  const partnerText = getVisiblePartnerText(sh);
+                  const displayLocation = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
+                  const myExtrasSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
 
-                const cm = calculateCrewShowMetrics(sh);
-                const owner = getMember(sh.ownerId);
-                const bossLabel = sh.isCustomCtp ? (sh.customBossName || 'Show ngoài') : owner.name;
-                const linkedTasks = state.ctpItems?.[sh.id]?.tasks || {};
-                const myExtras = getMemberExtrasForShow(sh.id, uid);
-                const myExtrasSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+                  const taskList = ['quay', 'dung', 'chup', 'lamhinh', 'flycam', 'gimbal'].map(k => ({
+                    key: k,
+                    label: { quay: 'Quay', dung: 'Dựng', chup: 'Chụp', lamhinh: 'Hình', flycam: 'Flycam', gimbal: 'Gimbal' }[k],
+                    def: getDefaultRateForTask(k, sh)
+                  }));
+                  const hasEditingRow = myExtras.some((ex, exIdx) => state.ctpEditingExtraKey === `${sh.id}_${ex.id || exIdx}`);
 
-                return `
-                  <article id="ctp-show-card-${escapeHtml(sh.id)}" ${holdCardStyle} class="${holdCardCls} flex flex-col justify-between min-w-0">
-                    <div class="space-y-3">
-                      <div onclick="ctpActions.toggleExpandShow('${sh.id}')" class="flex items-start justify-between gap-2.5 min-h-[54px] -mx-1.5 -mt-1.5 px-3 py-2.5 rounded-2xl cursor-pointer ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
-                        <div class="min-w-0 flex-1">
-                          <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500 whitespace-nowrap overflow-hidden">
-                            <span class="font-mono font-bold text-indigo-600 tabular-nums shrink-0">${dateLabel}</span>
-                            <span>•</span>
-                            <span class="font-semibold text-slate-600 tabular-nums shrink-0">${days}n</span>
-                            <span>•</span>
-                            <span class="truncate">Sếp: <b class="text-slate-800">${escapeHtml(bossLabel)}</b></span>
+                  return `
+                    <article id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border border-slate-200/90 hover:border-slate-300'} rounded-3xl p-4 shadow-2xs flex flex-col justify-between gap-3 min-w-0 transition-colors">
+                      <div class="space-y-3">
+                        <div class="flex items-start justify-between gap-2 min-h-[54px] -mx-1.5 -mt-1.5 px-3 py-2.5 rounded-2xl ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
+                          <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500">
+                              <span class="font-mono font-bold text-indigo-600 tabular-nums shrink-0">${dateLabel}</span>
+                              <span>•</span>
+                              <span class="font-semibold text-slate-600 tabular-nums shrink-0">${days}n</span>
+                              <span>•</span>
+                              <span class="truncate">Sếp: <b class="text-slate-800">${escapeHtml(owner.name)}</b></span>
+                            </div>
+                            <h4 class="font-black text-slate-900 text-sm mt-1 truncate" title="${escapeHtml(displayLocation)}${partnerText ? ` (${escapeHtml(partnerText)})` : ''}">
+                              ${escapeHtml(displayLocation)}${partnerText ? ` <span class="text-slate-500 font-semibold text-xs">(${escapeHtml(partnerText)})</span>` : ''}
+                            </h4>
                           </div>
-                          <h4 class="font-black text-slate-900 text-sm mt-1 truncate" title="${escapeHtml(displayLocation)}${partnerText ? ` (${escapeHtml(partnerText)})` : ''}">
-                            ${escapeHtml(displayLocation)}${partnerText ? ` <span class="text-slate-500 font-semibold text-xs">(${escapeHtml(partnerText)})</span>` : ''}
-                          </h4>
-                        </div>
-                        <div class="text-right shrink-0">
-                          <span class="text-[9px] font-black uppercase tracking-wider text-slate-500 block">${sh.isHold && !sh.countHoldForBilling ? 'Tạm giữ' : 'TỔNG SHOW'}</span>
-                          <span class="text-[15px] font-mono font-black tabular-nums tracking-tight ${isCounted ? 'text-slate-950' : 'text-slate-400'} block">${isCounted ? fmtMoney(cm.grossCtp) : '0đ'}</span>
-                        </div>
-                      </div>
-
-                      ${holdBillingBarHtml}
-
-                      ${expanded ? `
-                        <div class="space-y-3">
-                          <div class="grid grid-cols-2 gap-1 p-0.5 rounded-xl bg-[#f8fafc] border border-slate-200/80">
-                            ${CREW_CTP_STATUS_OPTIONS.map(s => `<button type="button" onclick="ctpActions.setCtpStatus('${sh.id}', '${s.id}')" class="py-1 px-2 rounded-lg text-[10.5px] border truncate transition ${getColoredStatusBtnClass(s.id, cm.meta.ctpStatus === s.id)}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
+                          <div class="text-right shrink-0">
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-500 block">${sh.isHold && !sh.countHoldForBilling ? 'Tạm giữ' : 'TỔNG SHOW'}</span>
+                            <span id="ctp-show-total-${sh.id}" class="text-[15px] font-black font-mono tabular-nums tracking-tight ${isCounted ? 'text-slate-950' : 'text-slate-400'}">${subTotal.toLocaleString('vi-VN')}đ</span>
                           </div>
+                        </div>
 
+                        ${sh.isHold ? `
+                          <div onclick="ctpActions.toggleHoldBilling('${sh.id}')" class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border cursor-pointer transition select-none ${
+                            sh.countHoldForBilling
+                              ? 'bg-emerald-50/95 border-emerald-300 text-emerald-900'
+                              : 'bg-white/90 border-amber-300/80 text-amber-900 hover:bg-white'
+                          }">
+                            <span class="text-[10.5px] font-extrabold truncate">
+                              ${sh.countHoldForBilling ? '💰 Đang tính tiền lịch giữ' : '💵 Tính tiền lịch giữ (0đ)'}
+                            </span>
+                            <div class="w-8 h-4.5 rounded-full p-0.5 transition-colors shrink-0 ${sh.countHoldForBilling ? 'bg-emerald-500' : 'bg-slate-300'}">
+                              <div class="w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${sh.countHoldForBilling ? 'translate-x-3.5' : 'translate-x-0'}"></div>
+                            </div>
+                          </div>
+                        ` : ''}
+
+                        ${isCounted ? `
                           <div class="space-y-1.5">
-                            <div class="flex items-center justify-between gap-2">
-                              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">CTP</span>
-                              <span class="font-mono font-bold tabular-nums text-[10.5px] text-slate-500">${cm.taskSum.toLocaleString('vi-VN')}đ</span>
+                            <div class="flex items-center justify-between">
+                              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nhiệm vụ</span>
+                              <span class="font-mono font-bold tabular-nums text-[10.5px] text-slate-500">${getShowTaskSum(item).toLocaleString('vi-VN')}đ</span>
                             </div>
                             <div class="grid grid-cols-3 gap-1">
-                              ${taskKeys.map(tk => {
-                                const active = linkedTasks[tk] !== undefined && linkedTasks[tk] !== null;
-                                const tVal = active ? linkedTasks[tk] : getDefaultRateForTask(tk, sh);
+                              ${taskList.map(t => {
+                                const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
+                                const val = checked ? item.tasks[t.key] : t.def;
                                 return `
                                   <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-0.5 transition min-w-0 ${
-                                    active
+                                    checked
                                       ? 'bg-slate-100 border-slate-300/90 text-slate-900'
                                       : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
                                   }">
-                                    <button type="button" onclick="ctpActions.toggleSyncedCtpTask('${sh.id}', '${tk}')" class="text-left text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
-                                      ${taskLabels[tk]}
-                                    </button>
-                                    ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ctpActions.handleSyncedCtpTaskInput('${sh.id}', '${tk}', this)" class="w-12 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[9.5px] text-slate-900 focus:outline-none" />` : ''}
+                                    <button
+                                      type="button"
+                                      onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
+                                      class="text-left text-[10px] truncate ${checked ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}"
+                                    >${t.label}</button>
+                                    ${checked ? `
+                                      <input
+                                        type="tel"
+                                        inputmode="numeric"
+                                        value="${Number(val).toLocaleString('vi-VN')}"
+                                        oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
+                                        class="w-12 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[9.5px] text-slate-900 focus:outline-none"
+                                      />
+                                    ` : ''}
                                   </div>
                                 `;
                               }).join('')}
                             </div>
                           </div>
+                        ` : ''}
+                      </div>
 
-                          <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1.5">
-                            <div class="flex items-center justify-between gap-2">
-                              <div class="flex items-center gap-2 min-w-0">
-                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider shrink-0">PHÁT SINH</span>
-                                ${myExtras.length > 0 ? `
-                                  <span id="ctp-show-extra-sum-${sh.id}" class="font-mono font-black tabular-nums text-[10.5px] text-emerald-700 shrink-0">
-                                    ${myExtrasSum.toLocaleString('vi-VN')}đ
-                                  </span>
-                                ` : ''}
-                              </div>
-                              <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition shrink-0">+ Thêm phát sinh</button>
+                      ${isCounted ? `
+                        <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1.5">
+                          <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider shrink-0">Phát sinh</span>
+                              ${myExtras.length > 0 ? `
+                                <span id="ctp-show-extra-sum-${sh.id}" class="font-mono font-black tabular-nums text-[10.5px] text-emerald-700 shrink-0">
+                                  ${myExtrasSum.toLocaleString('vi-VN')}đ
+                                </span>
+                              ` : ''}
                             </div>
+                            <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition shrink-0">+ Thêm phát sinh</button>
+                          </div>
 
+                          <div class="${hasEditingRow ? 'max-h-44' : 'h-[84px]'} overflow-y-auto custom-scroll pr-0.5">
                             ${myExtras.length === 0 ? `
-                              <div class="text-[11px] text-slate-400 py-0.5">• Không có phát sinh</div>
+                              <div class="h-full flex items-center text-[11px] text-slate-400">• Không có phát sinh</div>
                             ` : `
                               <ul class="divide-y divide-slate-100">
                                 ${myExtras.map((ex, exIdx) => {
@@ -333,7 +399,7 @@ export function renderCtpTabHtml() {
                                             oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
                                             onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
                                             placeholder="Tên khoản chi..."
-                                            class="flex-1 min-w-0 px-2.5 py-1 bg-[#f8fafc] border border-slate-300 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+                                            class="flex-1 min-w-0 px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
                                           />
                                         </div>
                                         <div class="flex items-center justify-end gap-1">
@@ -344,7 +410,7 @@ export function renderCtpTabHtml() {
                                             oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
                                             onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
                                             placeholder="Số tiền"
-                                            class="w-24 px-2 py-1 bg-[#f8fafc] border border-slate-300 rounded-lg text-[11px] font-mono font-black tabular-nums text-emerald-700 text-right focus:outline-none focus:border-slate-900"
+                                            class="w-24 px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-mono font-black tabular-nums text-slate-900 text-right focus:outline-none focus:border-slate-900"
                                           />
                                           <button
                                             type="button"
@@ -391,144 +457,95 @@ export function renderCtpTabHtml() {
                           </div>
                         </div>
                       ` : ''}
-                    </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            `}
 
-                    ${expanded ? `
-                      <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-2.5">
-                        <div class="flex items-center justify-between text-xs font-mono tabular-nums">
-                          <div>
-                            <span class="text-[9px] font-sans font-black text-slate-400 uppercase tracking-wider block">CTP + PS</span>
-                            <span class="font-black text-slate-900">${cm.taskSum.toLocaleString('vi-VN')}đ + ${cm.extraBillSum.toLocaleString('vi-VN')}đ</span>
-                          </div>
-                          <div class="text-right">
-                            <span class="text-[9px] font-sans font-black text-slate-400 uppercase tracking-wider block">TỔNG BILL</span>
-                            <span class="text-[14px] font-black text-emerald-700">${cm.grossCtp.toLocaleString('vi-VN')}đ</span>
-                          </div>
-                        </div>
-
-                        <div class="flex items-center gap-1.5">
-                          <button type="button" onclick="ctpActions.toggleExpandShow('${sh.id}')" class="px-2.5 py-2 rounded-xl bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/90 text-slate-700 font-bold text-[11px] transition">Thu gọn ▲</button>
-                          <button type="button" onclick="ctpActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-[11px] transition">💾 LƯU</button>
-                        </div>
-                      </div>
-                    ` : `
-                      <div class="pt-2 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} flex items-center justify-between text-[11px]">
-                        <span class="text-slate-400 font-semibold">Đã thu gọn</span>
-                        <button type="button" onclick="ctpActions.toggleExpandShow('${sh.id}')" class="font-bold text-slate-700 hover:text-slate-950">Mở rộng ▼</button>
-                      </div>
-                    `}
-                  </article>
-                `;
-              }).join('')}
-            </div>
-          `}
+            ${filteredShows.length > 0 ? `
+              <div class="lg:hidden space-y-2 pb-2">
+                <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="w-full py-3 rounded-3xl border-2 border-dashed border-slate-300 bg-white text-slate-700 font-extrabold text-xs">Tự note thêm Show ngoài lịch</button>
+                <button type="button" onclick="ctpActions.autoFillFromRoles()" class="w-full py-2.5 rounded-3xl bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs">⚡ Tự điền nhanh CTP theo vai trò đã gắn</button>
+              </div>
+            ` : ''}
+          </div>
         </div>
+      </div>
+
+      <div class="lg:hidden p-3 bg-[#f8fafc] border-t border-slate-200/90 shrink-0 flex items-center gap-2">
+        <button type="button" onclick="ctpActions.saveNow()" class="px-4 py-3.5 rounded-2xl bg-slate-900 text-white font-black text-xs">💾 LƯU</button>
+        <button type="button" onclick="ctpActions.generateBill()" class="flex-1 bg-emerald-600 text-white font-black py-3.5 rounded-2xl text-xs uppercase">🔥 LỤM (TỔNG HỢP BILL)</button>
       </div>
     </div>
   `;
 }
 
 export function renderCtpBillModalHtml() {
-  if (!state.ctpBillModalOpen) return '';
-  const uid = state.currentUserId;
-  const curMem = getMember(uid);
-  const allShows = getAllCrewShowsForCurrentMember(uid).filter(sh => shouldCountShowMoney(sh));
-
-  const bossOptionsMap = new Map();
-  allShows.forEach(sh => {
-    const key = sh.isCustomCtp ? `custom:${sh.customBossName || 'Ngoài'}` : `member:${sh.ownerId}`;
-    const label = sh.isCustomCtp ? (sh.customBossName || 'Show ngoài') : getMember(sh.ownerId).name;
-    if (!bossOptionsMap.has(key)) bossOptionsMap.set(key, label);
-  });
-
-  const selectedBoss = state.ctpBillBossFilter || 'all';
-  const billShows = allShows.filter(sh => {
-    const cm = calculateCrewShowMetrics(sh);
-    if (cm.isSettled) return false;
-    if (selectedBoss === 'all') return true;
-    const key = sh.isCustomCtp ? `custom:${sh.customBossName || 'Ngoài'}` : `member:${sh.ownerId}`;
-    return key === selectedBoss;
-  });
-
-  const totalAmount = billShows.reduce((sum, sh) => sum + calculateCrewShowMetrics(sh).pendingCtpDebt, 0);
-  const periodLabel = state.ctpAllMonths ? `Năm ${state.selectedYear}` : `T${state.ctpMonth}/${state.selectedYear}`;
-  const noteText = `CTP ${curMem.name} ${periodLabel}`.trim();
-  const qrUrl = totalAmount > 0 && typeof buildVietQrUrl === 'function'
-    ? buildVietQrUrl(curMem, totalAmount, noteText)
-    : '';
+  const bm = state.ctpBillModal;
+  if (!bm) return '';
+  const prof = state.memberProfiles?.[state.currentUserId] || {};
+  const memberNickname = (bm.memberName || prof.fullName || '').trim();
+  const bankHolderName = (prof.fullName || bm.memberName || '').trim().toUpperCase();
+  const qrUrl = prof.bankAcc ? buildVietQrUrl(prof.bankBin, prof.bankAcc) : '';
 
   return `
-    <div onclick="ctpActions.closeCtpBillModal()" class="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 space-y-3 max-h-[90vh] flex flex-col">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 shrink-0">
+    <div onclick="ctpActions.closeBillModal()" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2.5 sm:p-4">
+      <div onclick="event.stopPropagation()" id="ctp-bill-capture-area" class="bg-white w-full max-w-2xl rounded-3xl p-3 sm:p-5 space-y-2.5 text-xs shadow-2xl flex flex-col max-h-[90dvh]">
+        <div class="flex justify-between items-center border-b pb-2 shrink-0">
           <div>
-            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Tổng hợp thanh toán</span>
-            <h3 class="text-base font-black text-slate-900">🧾 BILL CTP: ${escapeHtml(curMem.name)}</h3>
+            <h3 class="font-black text-sm text-slate-900">BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}</h3>
+            <p class="text-[11px] text-slate-500">Nhân sự: <b>${escapeHtml(memberNickname)}</b> • Sếp: <b class="text-emerald-700">${escapeHtml(bm.ownerTitle)}</b></p>
           </div>
-          <button type="button" onclick="ctpActions.closeCtpBillModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
+          <button type="button" data-html2canvas-ignore="true" onclick="ctpActions.closeBillModal()" class="w-8 h-8 rounded-full bg-slate-100">✕</button>
         </div>
 
-        ${bossOptionsMap.size > 1 ? `
-          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-            <button type="button" onclick="ctpActions.setCtpBillBossFilter('all')" class="px-2.5 py-1 rounded-full text-[10.5px] font-extrabold border shrink-0 ${selectedBoss === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-[#f8fafc] text-slate-600 border-slate-200'}">
-              Tất cả Sếp
-            </button>
-            ${Array.from(bossOptionsMap.entries()).map(([key, label]) => `
-              <button type="button" onclick="ctpActions.setCtpBillBossFilter('${escapeHtml(key)}')" class="px-2.5 py-1 rounded-full text-[10.5px] font-extrabold border shrink-0 ${selectedBoss === key ? 'bg-slate-900 text-white border-slate-900' : 'bg-[#f8fafc] text-slate-600 border-slate-200'}">
-                ${escapeHtml(label)}
-              </button>
-            `).join('')}
+        <div class="flex-1 min-h-0 overflow-auto border border-slate-300 rounded-2xl">
+          <table class="w-full border-collapse text-[11px]">
+            <thead class="sticky top-0 bg-[#107c41] text-white font-extrabold text-[10px] uppercase">
+              <tr>
+                <th class="py-2 px-1 border">STT</th><th class="py-2 px-1 border">NGÀY</th><th class="py-2 px-1.5 border text-left">SHOW</th>
+                <th class="py-2 px-1.5 border text-left">NHIỆM VỤ</th><th class="py-2 px-1 border text-left">PHÁT SINH</th><th class="py-2 px-1.5 border text-right">TỔNG</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              ${bm.rows.map(r => `
+                <tr>
+                  <td class="py-1.5 px-1 border text-center">${r.stt}</td>
+                  <td class="py-1.5 px-1 border text-center font-mono">${escapeHtml(r.dateLabel)}</td>
+                  <td class="py-1.5 px-1.5 border font-bold">${escapeHtml(r.location)}</td>
+                  <td class="py-1.5 px-1.5 border">${r.taskBulletsCompact.map(escapeHtml).join('<br/>') || '-'}</td>
+                  <td class="py-1.5 px-1 border">${r.extraBulletsCompact.map(escapeHtml).join('<br/>') || '-'}</td>
+                  <td class="py-1.5 px-1.5 border text-right font-mono font-black text-emerald-700">${r.showSum.toLocaleString('vi-VN')}đ</td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot>
+              <tr class="bg-slate-900 text-white font-mono font-black">
+                <td colspan="5" class="py-2 px-2 text-right text-amber-300">TỔNG CỘNG:</td>
+                <td class="py-2 px-1.5 text-right text-emerald-400">${bm.total.toLocaleString('vi-VN')}đ</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        ${qrUrl ? `
+          <div class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
+            <div class="text-[11px] space-y-0.5">
+              <div class="font-black text-slate-900 uppercase">💳 QUÉT MÃ VIETQR THANH TOÁN CTP</div>
+              <div>Ngân hàng: <b>${escapeHtml(getBankName(prof.bankBin))}</b></div>
+              <div>Chủ TK: <b class="uppercase">${escapeHtml(bankHolderName)}</b></div>
+              <div>Số TK: <b class="font-mono text-indigo-700">${escapeHtml(prof.bankAcc)}</b></div>
+            </div>
+            <img src="${qrUrl}" alt="VietQR" class="vietqr-img-el w-24 h-24 object-contain bg-white p-1 rounded-xl border border-slate-200" />
           </div>
         ` : ''}
 
-        <div id="ctp-bill-capture-area" class="flex-1 min-h-0 overflow-y-auto custom-scroll bg-[#f8fafc] rounded-2xl border border-slate-200/90 p-3.5 space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-200/80 pb-2">
-            <div>
-              <div class="text-xs font-black text-slate-900 uppercase">BẢNG KÊ CTP • ${escapeHtml(periodLabel)}</div>
-              <div class="text-[11px] text-slate-500 font-semibold">Nhân sự: <b class="text-slate-800">${escapeHtml(curMem.name)}</b></div>
-            </div>
-            <div class="text-right">
-              <span class="text-[9.5px] font-black uppercase text-slate-400 block">Tổng cộng</span>
-              <span class="text-base font-mono font-black tabular-nums text-emerald-700">${totalAmount.toLocaleString('vi-VN')}đ</span>
-            </div>
-          </div>
-
-          ${billShows.length === 0 ? `
-            <div class="text-center py-6 text-xs font-semibold text-slate-500">Không còn khoản CTP chưa nhận trong mục này</div>
-          ` : `
-            <div class="space-y-2">
-              ${billShows.map((sh, idx) => {
-                const cm = calculateCrewShowMetrics(sh);
-                const days = Math.max(1, Number(getShowDays(sh) || 1));
-                const dateLabel = formatShowDateRange(sh, days);
-                const loc = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
-                return `
-                  <div class="bg-white rounded-xl border border-slate-200/80 px-3 py-2 flex items-center justify-between gap-2 text-[11px]">
-                    <div class="min-w-0">
-                      <div class="font-bold text-slate-900 truncate">${idx + 1}. ${escapeHtml(loc)}</div>
-                      <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(dateLabel)} • CTP ${formatCompactMoneyPlain(cm.taskSum)}${cm.extraBillSum > 0 ? ` + PS ${formatCompactMoneyPlain(cm.extraBillSum)}` : ''}</div>
-                    </div>
-                    <span class="font-mono font-black tabular-nums text-slate-900 shrink-0">${cm.pendingCtpDebt.toLocaleString('vi-VN')}đ</span>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          `}
-
-          ${qrUrl ? `
-            <div class="bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col items-center text-center space-y-1.5">
-              <img src="${escapeHtml(qrUrl)}" alt="VietQR" class="w-44 h-44 object-contain rounded-xl" />
-              <div class="text-[11px] font-extrabold text-slate-800">${escapeHtml(curMem.bankName || '')} • ${escapeHtml(curMem.bankAcc || '')}</div>
-              <div class="text-[10px] text-slate-500">${escapeHtml(curMem.bankOwner || curMem.name)}</div>
-            </div>
-          ` : ''}
-        </div>
-
-        <div class="flex items-center gap-2 shrink-0 pt-1">
-          <button type="button" onclick="ctpActions.copyCtpBillText()" class="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs transition">📋 Copy nội dung Bill</button>
-          <button type="button" onclick="ctpActions.closeCtpBillModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">Đóng</button>
+        <div data-html2canvas-ignore="true" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 shrink-0">
+          <button type="button" onclick="ctpActions.captureBillImage()" class="bg-amber-400 text-slate-950 font-black py-2.5 rounded-full text-[11px]">📸 Chụp Ảnh</button>
+          <button type="button" onclick="ctpActions.copyBillText()" class="bg-emerald-600 text-white font-black py-2.5 rounded-full text-[11px]">Copy Zalo</button>
+          <button type="button" onclick="ctpActions.copyExcelTable()" class="bg-indigo-600 text-white font-black py-2.5 rounded-full text-[11px]">Copy Bảng</button>
+          <button type="button" onclick="ctpActions.exportBillExcelFile()" class="bg-slate-100 text-slate-800 border font-black py-2.5 rounded-full text-[11px]">Tải .XLSX</button>
         </div>
       </div>
     </div>
