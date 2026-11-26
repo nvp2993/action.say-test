@@ -207,36 +207,34 @@ export function renderHeaderHtml(totalAlerts = 0) {
 }
 
 export function renderBottomNavHtml() {
+  const isMatrixOrCrew = state.activeTab === 'matrix' || state.activeTab === 'free_finder';
+
   return `
     <nav style="padding-bottom: clamp(2px, env(safe-area-inset-bottom), 10px);" class="bg-white border-t border-slate-200 px-2 sm:px-6 pt-1.5 shrink-0 z-30">
       <div class="max-w-xl sm:max-w-none mx-auto w-full grid grid-cols-[1fr_auto_1fr] sm:flex sm:items-center sm:justify-around items-center gap-1.5 sm:gap-4">
-        <div class="flex items-center justify-around gap-0.5 min-w-0 sm:contents">
-          <button type="button" onclick="appActions.setTab('shows')" class="flex flex-col items-center py-0.5 px-1 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
+        <div class="flex items-center justify-around gap-1 min-w-0 sm:contents">
+          <button type="button" onclick="appActions.setTab('shows')" class="flex flex-col items-center py-0.5 px-1.5 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'shows' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
             <i class="fa-solid fa-table-list text-[11px] sm:text-xs"></i>
-            <span class="text-[8px] sm:text-[10px] tracking-tighter leading-none mt-1">DS SHOW</span>
+            <span class="text-[8.5px] sm:text-[10px] tracking-tighter leading-none mt-1">DS SHOW</span>
           </button>
-          <button type="button" onclick="appActions.setTab('matrix')" class="flex flex-col items-center py-0.5 px-1 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'matrix' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
+          <button type="button" onclick="appActions.setTab('matrix')" class="flex flex-col items-center py-0.5 px-1.5 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${isMatrixOrCrew ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
             <i class="fa-solid fa-calendar-days text-[11px] sm:text-xs"></i>
-            <span class="text-[8px] sm:text-[10px] tracking-tighter leading-none mt-1">CÔNG TÁC T${state.selectedMonth}</span>
+            <span class="text-[8.5px] sm:text-[10px] tracking-tighter leading-none mt-1">CÔNG TÁC T${state.selectedMonth}</span>
           </button>
         </div>
 
-        <button type="button" data-action="open-add-show" onclick="appActions.openAddModal()" class="active:scale-95 text-white font-black px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm flex items-center justify-center gap-1 text-[9.5px] sm:text-xs whitespace-nowrap shrink-0">
+        <button type="button" data-action="open-add-show" onclick="appActions.openAddModal()" class="active:scale-95 text-white font-black px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm flex items-center justify-center gap-1 text-[10px] sm:text-xs whitespace-nowrap shrink-0">
           <i class="fa-solid fa-bolt text-[9px] sm:text-[11px]"></i><span>NỔ SHOW</span>
         </button>
 
-        <div class="flex items-center justify-around gap-0.5 min-w-0 sm:contents">
-          <button type="button" onclick="appActions.setTab('free_finder')" class="flex flex-col items-center py-1 px-1 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'free_finder' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
-            <i class="fa-solid fa-user-check text-[11px] sm:text-xs"></i>
-            <span class="text-[8px] sm:text-[10px] tracking-tighter leading-none mt-1">NS</span>
-          </button>
-          <button type="button" onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-1 px-1 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
+        <div class="flex items-center justify-around gap-1 min-w-0 sm:contents">
+          <button type="button" onclick="appActions.setTab('ctp')" class="flex flex-col items-center py-1 px-1.5 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'ctp' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
             <i class="fa-solid fa-file-invoice-dollar text-[11px] sm:text-xs"></i>
-            <span class="text-[8px] sm:text-[10px] tracking-tighter leading-none mt-1">CTP</span>
+            <span class="text-[8.5px] sm:text-[10px] tracking-tighter leading-none mt-1">CTP</span>
           </button>
-          <button type="button" onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-1 px-1 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
+          <button type="button" onclick="appActions.setTab('owner_stats')" class="flex flex-col items-center py-1 px-1.5 sm:px-2 rounded-xl whitespace-nowrap transition-colors ${state.activeTab === 'owner_stats' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800 font-medium'}">
             <i class="fa-solid fa-wallet text-[11px] sm:text-xs ${state.activeTab === 'owner_stats' ? 'text-amber-500' : ''}"></i>
-            <span class="text-[8px] sm:text-[10px] tracking-tighter leading-none mt-1">CÔNG NỢ</span>
+            <span class="text-[8.5px] sm:text-[10px] tracking-tighter leading-none mt-1">CÔNG NỢ</span>
           </button>
         </div>
       </div>
