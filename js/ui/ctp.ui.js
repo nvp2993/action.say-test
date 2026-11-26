@@ -129,8 +129,8 @@ export function renderCtpTabHtml() {
         </div>
       </div>
 
-      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[284px_minmax(0,1fr)]">
-        <aside class="hidden lg:flex flex-col gap-3 p-3 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
+      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[336px_minmax(0,1fr)]">
+        <aside class="hidden lg:flex flex-col gap-3 p-3.5 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
           <div class="p-3.5 rounded-2xl bg-white border border-slate-200/90 space-y-2">
             <div class="flex items-center justify-between">
               <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Chủ show</label>
@@ -184,7 +184,6 @@ export function renderCtpTabHtml() {
 
         <div id="ctp-shows-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 sm:p-4">
           <div class="max-w-6xl mx-auto space-y-3">
-            <!-- 4 Ô THỐNG KÊ STICKY -->
             <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9]/95 backdrop-blur-xs pb-1.5 cursor-pointer">
               ${ctpStatCards.map(c => `
                 <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
@@ -201,7 +200,6 @@ export function renderCtpTabHtml() {
                 <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-full text-xs font-extrabold">Tự note thêm show ngoài</button>
               </div>
             ` : `
-              <!-- 3 CỘT 1 HÀNG STUDIO LOOKBOOK: ĐẸP, SẠCH, CÂN NHỊP -->
               <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
                 ${filteredShows.map((sh, idx) => {
                   const item = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
@@ -220,13 +218,11 @@ export function renderCtpTabHtml() {
                     label: { quay: 'Quay', dung: 'Dựng', chup: 'Chụp', lamhinh: 'Làm hình', flycam: 'Flycam', gimbal: 'Gimbal' }[k],
                     def: getDefaultRateForTask(k, sh)
                   }));
-                  const activeTasks = taskList.filter(t => item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null);
                   const hasEditingRow = myExtras.some((ex, exIdx) => state.ctpEditingExtraKey === `${sh.id}_${ex.id || exIdx}`);
 
                   return `
                     <article id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border border-slate-200/90 hover:border-slate-300'} rounded-3xl p-4 shadow-2xs flex flex-col justify-between gap-3 min-w-0 transition-colors">
                       <div class="space-y-3">
-                        <!-- HEADER ĐỒNG NHỊP -->
                         <div class="flex items-start justify-between gap-2 min-h-[48px] ${isCounted ? `border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2.5` : ''}">
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500">
@@ -261,54 +257,45 @@ export function renderCtpTabHtml() {
                         ` : ''}
 
                         ${isCounted ? `
-                          <!-- NHIỆM VỤ -->
-                          <div class="space-y-2">
+                          <!-- NHIỆM VỤ: 2 CỘT × 3 HÀNG SẴN, MẶC ĐỊNH KHÔNG TIỀN, CHỌN MỚI HIỆN TIỀN & ĐỔI XÁM NHẸ -->
+                          <div class="space-y-1.5">
                             <div class="flex items-center justify-between">
                               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nhiệm vụ</span>
                               <span class="font-mono font-bold tabular-nums text-[10.5px] text-slate-500">${getShowTaskSum(item).toLocaleString('vi-VN')}đ</span>
                             </div>
-                            <div class="flex flex-wrap gap-1">
+                            <div class="grid grid-cols-2 gap-1.5">
                               ${taskList.map(t => {
                                 const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
+                                const val = checked ? item.tasks[t.key] : t.def;
                                 return `
-                                  <button
-                                    type="button"
-                                    onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
-                                    class="px-2 py-1 rounded-lg text-[10px] font-bold border transition ${
-                                      checked
-                                        ? 'bg-slate-900 text-white border-slate-900'
-                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/80'
-                                    }"
-                                  >${t.label}</button>
-                                `;
-                              }).join('')}
-                            </div>
-
-                            ${activeTasks.length > 0 ? `
-                              <div class="grid grid-cols-2 gap-1.5">
-                                ${activeTasks.map(t => {
-                                  const val = item.tasks[t.key];
-                                  return `
-                                    <label class="flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#f8fafc] border border-slate-200/80 focus-within:border-slate-900 focus-within:bg-white min-w-0 transition">
-                                      <span class="text-[10.5px] font-bold text-slate-700 shrink-0">${t.label}</span>
+                                  <div class="min-h-[34px] rounded-xl border px-2.5 py-1.5 flex items-center justify-between gap-1.5 transition ${
+                                    checked
+                                      ? 'bg-slate-200/80 border-slate-300 text-slate-900'
+                                      : 'bg-white hover:bg-slate-50 border-slate-200/80 text-slate-600'
+                                  }">
+                                    <button
+                                      type="button"
+                                      onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
+                                      class="text-left text-[11px] font-bold truncate ${checked ? 'text-slate-900 font-extrabold' : 'text-slate-600'} ${checked ? '' : 'w-full'}"
+                                    >${t.label}</button>
+                                    ${checked ? `
                                       <input
                                         type="tel"
                                         inputmode="numeric"
                                         value="${Number(val).toLocaleString('vi-VN')}"
                                         oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
-                                        class="w-20 min-w-0 bg-transparent text-right font-mono font-black tabular-nums text-[11px] text-slate-900 focus:outline-none"
+                                        class="w-20 min-w-0 bg-white/80 focus:bg-white px-1.5 py-0.5 rounded-md border border-slate-300/80 text-right font-mono font-black tabular-nums text-[11px] text-slate-900 focus:outline-none"
                                       />
-                                    </label>
-                                  `;
-                                }).join('')}
-                              </div>
-                            ` : ''}
+                                    ` : ''}
+                                  </div>
+                                `;
+                              }).join('')}
+                            </div>
                           </div>
                         ` : ''}
                       </div>
 
                       ${isCounted ? `
-                        <!-- PHÁT SINH KHÓA CHIỀU CAO GỌN ĐỀU, DANH SÁCH GẠCH ĐẦU DÒNG TEXT -->
                         <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1.5">
                           <div class="flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2 min-w-0">
