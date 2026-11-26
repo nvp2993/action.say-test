@@ -22,7 +22,8 @@ import {
   renderHoldComposerModalHtml,
   renderHoldBellModalHtml,
   renderCrewManifestModalHtml,
-  renderClientDebtBillModalHtml
+  renderClientDebtBillModalHtml,
+  renderQuickExpenseModalHtml
 } from './ui/modals.ui.js';
 import { renderAdminPortalHtml } from './ui/admin.ui.js';
 
