@@ -343,11 +343,11 @@ export function renderDebtTabHtml() {
         <div class="flex items-center justify-between gap-2">
           <span class="font-black text-xs text-slate-900 uppercase tracking-tight truncate">👑 CÔNG NỢ: ${escapeHtml(curMem.name)}</span>
           <div class="flex items-center gap-1.5 shrink-0">
-  <button type="button" onclick="appActions.toggleHideMoneyMode()" title="${hide ? 'Hiện tiền' : 'Ẩn tiền'}" aria-label="${hide ? 'Hiện tiền' : 'Ẩn tiền'}" class="w-7 h-7 rounded-full bg-slate-200/70 hover:bg-slate-200 text-xs flex items-center justify-center text-slate-700 transition">
-    ${hide ? '👁️' : '🙈'}
-  </button>
-  <button type="button" onclick="ownerActions.openClientDebtBill()" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition">📤 Gửi Công Nợ</button>
-</div>
+            <button type="button" onclick="appActions.toggleHideMoneyMode()" title="${hide ? 'Hiện tiền' : 'Ẩn tiền'}" aria-label="${hide ? 'Hiện tiền' : 'Ẩn tiền'}" class="w-7 h-7 rounded-full bg-slate-200/70 hover:bg-slate-200 text-xs flex items-center justify-center text-slate-700 transition">
+              ${hide ? '👁️' : '🙈'}
+            </button>
+            <button type="button" onclick="ownerActions.openClientDebtBill()" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition">📤 Gửi Công Nợ</button>
+          </div>
         </div>
         <div class="as-ios-seg-bar">
           ${[
@@ -721,44 +721,44 @@ export function renderDebtTabHtml() {
                                       const payerName = ex.payerId && ex.payerId !== sh.ownerId ? getMember(ex.payerId).name : '';
                                       const rowKey = `${sh.id}_${ex.id || exIdx}`;
                                       const isEditingRow = state.ownerEditingExpenseKey === rowKey;
-                                        if (isEditingRow) {
-  return `
-    <li class="py-1 flex items-center gap-1.5">
-      <div class="flex-1 min-w-0 flex items-center gap-1 p-1 rounded-xl bg-[#f8fafc] border border-slate-200/90">
-        <input
-          id="debt-exp-name-${escapeHtml(rowKey)}"
-          type="text"
-          value="${escapeHtml(ex.name || '')}"
-          oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
-          placeholder="Khoản chi..."
-          class="flex-1 min-w-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
-        />
-        <input
-          type="text"
-          inputmode="decimal"
-          value="${ex.amount ? Number(ex.amount) : ''}"
-          oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
-          placeholder="Số tiền"
-          class="w-20 sm:w-24 shrink-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-emerald-700 text-right focus:outline-none focus:border-slate-900"
-        />
-      </div>
-      <button
-        type="button"
-        onclick="ctpActions.finishEditExtra()"
-        title="Xong"
-        class="px-1 text-emerald-600 hover:text-emerald-700 font-black text-sm shrink-0 transition"
-      >✓</button>
-      <button
-        type="button"
-        onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
-        title="Xóa khoản chi"
-        class="px-1 text-slate-400 hover:text-rose-600 font-bold text-xs shrink-0 transition"
-      >✕</button>
-    </li>
-  `;
-}
+                                      if (isEditingRow) {
+                                        return `
+                                          <li class="py-1 flex items-center gap-1.5">
+                                            <div class="flex-1 min-w-0 flex items-center gap-1 p-1 rounded-xl bg-[#f8fafc] border border-slate-200/90">
+                                              <input
+                                                id="debt-exp-name-${escapeHtml(rowKey)}"
+                                                type="text"
+                                                value="${escapeHtml(ex.name || '')}"
+                                                oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
+                                                onkeydown="if(event.key==='Enter'){event.preventDefault();ownerActions.finishEditOwnerExpense();}"
+                                                placeholder="Khoản chi..."
+                                                class="flex-1 min-w-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+                                              />
+                                              <input
+                                                type="text"
+                                                inputmode="decimal"
+                                                value="${ex.amount ? Number(ex.amount) : ''}"
+                                                oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
+                                                onkeydown="if(event.key==='Enter'){event.preventDefault();ownerActions.finishEditOwnerExpense();}"
+                                                placeholder="Số tiền"
+                                                class="w-20 sm:w-24 shrink-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-rose-600 text-right focus:outline-none focus:border-slate-900"
+                                              />
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onclick="ownerActions.finishEditOwnerExpense()"
+                                              title="Xong"
+                                              class="px-1 text-emerald-600 hover:text-emerald-700 font-black text-sm shrink-0 transition"
+                                            >✓</button>
+                                            <button
+                                              type="button"
+                                              onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
+                                              title="Xóa khoản chi"
+                                              class="px-1 text-slate-400 hover:text-rose-600 font-bold text-xs shrink-0 transition"
+                                            >✕</button>
+                                          </li>
+                                        `;
+                                      }
 
                                       return `
                                         <li class="flex items-center justify-between gap-1.5 py-1">
@@ -771,10 +771,10 @@ export function renderDebtTabHtml() {
                                           </div>
                                           <div class="flex items-center gap-0.5 shrink-0">
                                             <button
-                                                type="button"
-                                                onclick="ownerActions.startEditOwnerExpense('${escapeHtml(rowKey)}', '${sh.id}', '${escapeHtml(ex.id || '')}')"
-                                                class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-                                              >Sửa</button>
+                                              type="button"
+                                              onclick="ownerActions.startEditOwnerExpense('${escapeHtml(rowKey)}', '${sh.id}', '${escapeHtml(ex.id || '')}')"
+                                              class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+                                            >Sửa</button>
                                             <button
                                               type="button"
                                               onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
@@ -861,33 +861,33 @@ export function renderDebtTabHtml() {
                                   <span class="font-mono font-bold tabular-nums text-[10.5px] text-slate-500">${cm.taskSum.toLocaleString('vi-VN')}đ</span>
                                 </div>
                                 <div class="grid grid-cols-3 gap-1">
-  ${taskKeys.map(tk => {
-    const active = linkedTasks[tk] !== undefined && linkedTasks[tk] !== null;
-    const tVal = active ? linkedTasks[tk] : getDefaultRateForTask(tk, sh);
-    return `
-      <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-1 transition min-w-0 ${
-        active
-          ? 'bg-slate-100 border-slate-300/90 text-slate-900'
-          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
-      }">
-        <button type="button" onclick="ownerActions.toggleSyncedCtpTask('${sh.id}', '${tk}')" class="text-left text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
-          ${taskLabels[tk]}
-        </button>
-        ${active ? `
-          <input
-            type="text"
-            inputmode="decimal"
-            value="${formatCompactMoneyPlain(tVal)}"
-            onfocus="this.value='${Number(tVal || 0) || ''}';this.select();"
-            oninput="ownerActions.handleSyncedCtpTaskInput('${sh.id}', '${tk}', this)"
-            onblur="const n=Number(state.ctpItems?.['${sh.id}']?.tasks?.['${tk}']||0);this.value=${formatCompactMoneyPlain.name}(n);"
-            class="flex-1 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[10px] text-slate-900 focus:outline-none"
-          />
-        ` : ''}
-      </div>
-    `;
-  }).join('')}
-</div>
+                                  ${taskKeys.map(tk => {
+                                    const active = linkedTasks[tk] !== undefined && linkedTasks[tk] !== null;
+                                    const tVal = active ? linkedTasks[tk] : getDefaultRateForTask(tk, sh);
+                                    return `
+                                      <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-1 transition min-w-0 ${
+                                        active
+                                          ? 'bg-slate-100 border-slate-300/90 text-slate-900'
+                                          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
+                                      }">
+                                        <button type="button" onclick="ownerActions.toggleSyncedCtpTask('${sh.id}', '${tk}')" class="text-left text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
+                                          ${taskLabels[tk]}
+                                        </button>
+                                        ${active ? `
+                                          <input
+                                            type="text"
+                                            inputmode="decimal"
+                                            value="${formatCompactMoneyPlain(tVal)}"
+                                            onfocus="this.value='${Number(tVal || 0) || ''}';this.select();"
+                                            oninput="ownerActions.handleSyncedCtpTaskInput('${sh.id}', '${tk}', this)"
+                                            onblur="const n=Number(state.ctpItems?.['${sh.id}']?.tasks?.['${tk}']||0);this.value=formatCompactMoneyPlain(n);"
+                                            class="flex-1 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[10px] text-slate-900 focus:outline-none"
+                                          />
+                                        ` : ''}
+                                      </div>
+                                    `;
+                                  }).join('')}
+                                </div>
                               </div>
 
                               <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1.5">
@@ -915,11 +915,11 @@ export function renderDebtTabHtml() {
                                           <li class="py-1 flex items-center gap-1.5">
                                             <div class="flex-1 min-w-0 flex items-center gap-1 p-1 rounded-xl bg-[#f8fafc] border border-slate-200/90">
                                               <input
-                                                id="debt-exp-name-${escapeHtml(rowKey)}"
+                                                id="ctp-extra-name-${escapeHtml(rowKey)}"
                                                 type="text"
                                                 value="${escapeHtml(ex.name || '')}"
-                                                oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
-                                                onkeydown="if(event.key==='Enter'){event.preventDefault();ownerActions.finishEditOwnerExpense();}"
+                                                oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
+                                                onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
                                                 placeholder="Khoản chi..."
                                                 class="flex-1 min-w-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
                                               />
@@ -927,21 +927,21 @@ export function renderDebtTabHtml() {
                                                 type="text"
                                                 inputmode="decimal"
                                                 value="${ex.amount ? Number(ex.amount) : ''}"
-                                                oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
-                                                onkeydown="if(event.key==='Enter'){event.preventDefault();ownerActions.finishEditOwnerExpense();}"
+                                                oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
+                                                onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
                                                 placeholder="Số tiền"
-                                                class="w-20 sm:w-24 shrink-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-rose-600 text-right focus:outline-none focus:border-slate-900"
+                                                class="w-20 sm:w-24 shrink-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-emerald-700 text-right focus:outline-none focus:border-slate-900"
                                               />
                                             </div>
                                             <button
                                               type="button"
-                                              onclick="ownerActions.finishEditOwnerExpense()"
+                                              onclick="ctpActions.finishEditExtra()"
                                               title="Xong"
                                               class="px-1 text-emerald-600 hover:text-emerald-700 font-black text-sm shrink-0 transition"
                                             >✓</button>
                                             <button
                                               type="button"
-                                              onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
+                                              onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
                                               title="Xóa khoản chi"
                                               class="px-1 text-slate-400 hover:text-rose-600 font-bold text-xs shrink-0 transition"
                                             >✕</button>
