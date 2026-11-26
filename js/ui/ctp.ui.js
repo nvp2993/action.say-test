@@ -1,8 +1,8 @@
 import { state } from '../state/store.js';
 import { CREW_CTP_STATUS_OPTIONS } from '../config/constants.js';
-import { escapeHtml, getShowDays, getMember, formatCompactMoneyPlain } from '../utils/helpers.js';
+import { escapeHtml, getShowDays, getMember, formatCompactMoneyPlain, buildVietQrUrl } from '../utils/helpers.js';
 import { getVisiblePartnerText } from '../services/show.service.js';
-import { calculateCrewShowMetrics, getDefaultRateForTask, getMemberExtrasForShow } from '../services/finance.service.js';
+import { getCombinedCtpShows, calculateCrewShowMetrics, getDefaultRateForTask, getMemberExtrasForShow } from '../services/finance.service.js';
 import { renderUnifiedDateBarHtml } from './header.ui.js';
 
 function shouldCountShowMoney(sh) {
@@ -110,19 +110,23 @@ function getColoredStatusBtnClass(statusId, isActive) {
   return 'bg-amber-50 text-amber-800 border-amber-300/90 font-extrabold shadow-2xs';
 }
 
-export function renderCtpTabHtml() {
-  const uid = state.currentUserId;
-  const curMem = getMember(uid);
-
-  const crewShows = (state.shows || []).filter(sh => {
+function getAllCrewShowsForCurrentMember(uid) {
+  const combined = typeof getCombinedCtpShows === 'function' ? getCombinedCtpShows() : (state.shows || []);
+  return combined.filter(sh => {
     if (!sh || sh.isCancelled || !sh.startDate) return false;
-    if (sh.ownerId === uid) return false;
-    if (!(sh.memberIds || []).includes(uid)) return false;
+    if (!sh.isCustomCtp && sh.ownerId === uid) return false;
+    if (!sh.isCustomCtp && !(sh.memberIds || []).includes(uid)) return false;
     const [y, m] = sh.startDate.split('-').map(Number);
     if (y !== state.selectedYear) return false;
     if (!state.ctpAllMonths && m !== state.ctpMonth) return false;
     return true;
   }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+}
+
+export function renderCtpTabHtml() {
+  const uid = state.currentUserId;
+  const curMem = getMember(uid);
+  const crewShows = getAllCrewShowsForCurrentMember(uid);
 
   let billSum = 0, extraSum = 0, pendingSum = 0, settledSum = 0, unsettledCount = 0;
 
@@ -143,7 +147,6 @@ export function renderCtpTabHtml() {
   const filterMode = state.ctpFilterStatus || 'all';
   const hide = Boolean(state.hideMoneyMode);
   const fmtMoney = (n) => (hide ? '••••••đ' : `${Number(n || 0).toLocaleString('vi-VN')}đ`);
-  const fmtCompact = (n) => (hide ? '••••đ' : formatCompactMoneyPlain(n));
 
   const statCards = [
     { label: 'TỔNG BILL CTP', val: fmtMoney(billSum), wrapCls: 'bg-slate-900 border-slate-900 text-white', labelCls: 'text-slate-300', valCls: 'text-amber-300' },
@@ -171,6 +174,7 @@ export function renderCtpTabHtml() {
             <button type="button" onclick="appActions.toggleHideMoneyMode()" class="px-2.5 py-1 rounded-full bg-slate-200/70 hover:bg-slate-200 text-[10px] font-extrabold text-slate-700 transition">
               ${hide ? '👁️ Hiện tiền' : '🙈 Ẩn tiền'}
             </button>
+            <button type="button" onclick="ctpActions.openCtpBillModal()" class="px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 text-[10px] font-extrabold transition">📤 Gửi Bill</button>
             <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition">+ Show Ngoài</button>
           </div>
         </div>
@@ -184,9 +188,9 @@ export function renderCtpTabHtml() {
         ${renderUnifiedDateBarHtml('ctp')}
       </div>
 
-      <div id="ctp-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 sm:p-4">
+      <div id="ctp-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-4">
         <div class="max-w-6xl mx-auto space-y-3">
-          <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-20 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-1 pb-2.5 border-b border-slate-200/80 cursor-pointer">
+          <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-30 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-3 pb-2.5 border-b border-slate-200/80 cursor-pointer">
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
               ${statCards.map(c => `
                 <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
@@ -237,6 +241,7 @@ export function renderCtpTabHtml() {
 
                 const cm = calculateCrewShowMetrics(sh);
                 const owner = getMember(sh.ownerId);
+                const bossLabel = sh.isCustomCtp ? (sh.customBossName || 'Show ngoài') : owner.name;
                 const linkedTasks = state.ctpItems?.[sh.id]?.tasks || {};
                 const myExtras = getMemberExtrasForShow(sh.id, uid);
                 const myExtrasSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
@@ -251,7 +256,7 @@ export function renderCtpTabHtml() {
                             <span>•</span>
                             <span class="font-semibold text-slate-600 tabular-nums shrink-0">${days}n</span>
                             <span>•</span>
-                            <span class="truncate">Sếp: <b class="text-slate-800">${escapeHtml(owner.name)}</b></span>
+                            <span class="truncate">Sếp: <b class="text-slate-800">${escapeHtml(bossLabel)}</b></span>
                           </div>
                           <h4 class="font-black text-slate-900 text-sm mt-1 truncate" title="${escapeHtml(displayLocation)}${partnerText ? ` (${escapeHtml(partnerText)})` : ''}">
                             ${escapeHtml(displayLocation)}${partnerText ? ` <span class="text-slate-500 font-semibold text-xs">(${escapeHtml(partnerText)})</span>` : ''}
@@ -417,6 +422,113 @@ export function renderCtpTabHtml() {
               }).join('')}
             </div>
           `}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function renderCtpBillModalHtml() {
+  if (!state.ctpBillModalOpen) return '';
+  const uid = state.currentUserId;
+  const curMem = getMember(uid);
+  const allShows = getAllCrewShowsForCurrentMember(uid).filter(sh => shouldCountShowMoney(sh));
+
+  const bossOptionsMap = new Map();
+  allShows.forEach(sh => {
+    const key = sh.isCustomCtp ? `custom:${sh.customBossName || 'Ngoài'}` : `member:${sh.ownerId}`;
+    const label = sh.isCustomCtp ? (sh.customBossName || 'Show ngoài') : getMember(sh.ownerId).name;
+    if (!bossOptionsMap.has(key)) bossOptionsMap.set(key, label);
+  });
+
+  const selectedBoss = state.ctpBillBossFilter || 'all';
+  const billShows = allShows.filter(sh => {
+    const cm = calculateCrewShowMetrics(sh);
+    if (cm.isSettled) return false;
+    if (selectedBoss === 'all') return true;
+    const key = sh.isCustomCtp ? `custom:${sh.customBossName || 'Ngoài'}` : `member:${sh.ownerId}`;
+    return key === selectedBoss;
+  });
+
+  const totalAmount = billShows.reduce((sum, sh) => sum + calculateCrewShowMetrics(sh).pendingCtpDebt, 0);
+  const periodLabel = state.ctpAllMonths ? `Năm ${state.selectedYear}` : `T${state.ctpMonth}/${state.selectedYear}`;
+  const noteText = `CTP ${curMem.name} ${periodLabel}`.trim();
+  const qrUrl = totalAmount > 0 && typeof buildVietQrUrl === 'function'
+    ? buildVietQrUrl(curMem, totalAmount, noteText)
+    : '';
+
+  return `
+    <div onclick="ctpActions.closeCtpBillModal()" class="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 space-y-3 max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 shrink-0">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Tổng hợp thanh toán</span>
+            <h3 class="text-base font-black text-slate-900">🧾 BILL CTP: ${escapeHtml(curMem.name)}</h3>
+          </div>
+          <button type="button" onclick="ctpActions.closeCtpBillModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        ${bossOptionsMap.size > 1 ? `
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+            <button type="button" onclick="ctpActions.setCtpBillBossFilter('all')" class="px-2.5 py-1 rounded-full text-[10.5px] font-extrabold border shrink-0 ${selectedBoss === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-[#f8fafc] text-slate-600 border-slate-200'}">
+              Tất cả Sếp
+            </button>
+            ${Array.from(bossOptionsMap.entries()).map(([key, label]) => `
+              <button type="button" onclick="ctpActions.setCtpBillBossFilter('${escapeHtml(key)}')" class="px-2.5 py-1 rounded-full text-[10.5px] font-extrabold border shrink-0 ${selectedBoss === key ? 'bg-slate-900 text-white border-slate-900' : 'bg-[#f8fafc] text-slate-600 border-slate-200'}">
+                ${escapeHtml(label)}
+              </button>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div id="ctp-bill-capture-area" class="flex-1 min-h-0 overflow-y-auto custom-scroll bg-[#f8fafc] rounded-2xl border border-slate-200/90 p-3.5 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-200/80 pb-2">
+            <div>
+              <div class="text-xs font-black text-slate-900 uppercase">BẢNG KÊ CTP • ${escapeHtml(periodLabel)}</div>
+              <div class="text-[11px] text-slate-500 font-semibold">Nhân sự: <b class="text-slate-800">${escapeHtml(curMem.name)}</b></div>
+            </div>
+            <div class="text-right">
+              <span class="text-[9.5px] font-black uppercase text-slate-400 block">Tổng cộng</span>
+              <span class="text-base font-mono font-black tabular-nums text-emerald-700">${totalAmount.toLocaleString('vi-VN')}đ</span>
+            </div>
+          </div>
+
+          ${billShows.length === 0 ? `
+            <div class="text-center py-6 text-xs font-semibold text-slate-500">Không còn khoản CTP chưa nhận trong mục này</div>
+          ` : `
+            <div class="space-y-2">
+              ${billShows.map((sh, idx) => {
+                const cm = calculateCrewShowMetrics(sh);
+                const days = Math.max(1, Number(getShowDays(sh) || 1));
+                const dateLabel = formatShowDateRange(sh, days);
+                const loc = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
+                return `
+                  <div class="bg-white rounded-xl border border-slate-200/80 px-3 py-2 flex items-center justify-between gap-2 text-[11px]">
+                    <div class="min-w-0">
+                      <div class="font-bold text-slate-900 truncate">${idx + 1}. ${escapeHtml(loc)}</div>
+                      <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(dateLabel)} • CTP ${formatCompactMoneyPlain(cm.taskSum)}${cm.extraBillSum > 0 ? ` + PS ${formatCompactMoneyPlain(cm.extraBillSum)}` : ''}</div>
+                    </div>
+                    <span class="font-mono font-black tabular-nums text-slate-900 shrink-0">${cm.pendingCtpDebt.toLocaleString('vi-VN')}đ</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+
+          ${qrUrl ? `
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col items-center text-center space-y-1.5">
+              <img src="${escapeHtml(qrUrl)}" alt="VietQR" class="w-44 h-44 object-contain rounded-xl" />
+              <div class="text-[11px] font-extrabold text-slate-800">${escapeHtml(curMem.bankName || '')} • ${escapeHtml(curMem.bankAcc || '')}</div>
+              <div class="text-[10px] text-slate-500">${escapeHtml(curMem.bankOwner || curMem.name)}</div>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0 pt-1">
+          <button type="button" onclick="ctpActions.copyCtpBillText()" class="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs transition">📋 Copy nội dung Bill</button>
+          <button type="button" onclick="ctpActions.closeCtpBillModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">Đóng</button>
         </div>
       </div>
     </div>
