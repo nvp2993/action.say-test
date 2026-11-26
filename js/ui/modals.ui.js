@@ -417,51 +417,87 @@ export function renderFormModalHtml() {
   const busyMap = getBusyMembersMap(f.startDate, f.endDate, f.showId);
 
   return `
-    <div onclick="appActions.closeFormModal()" class="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-2 sm:p-4">
-      <div onclick="event.stopPropagation()" style="overflow-anchor: none;" class="ios-sheet custom-scroll bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-3 max-h-[92dvh] overflow-y-auto text-xs shadow-2xl">
+    <div onclick="appActions.closeFormModal()" class="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div onclick="event.stopPropagation()" style="overflow-anchor: none;" class="ios-sheet custom-scroll bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-2.5 max-h-[92dvh] overflow-y-auto text-xs shadow-2xl">
         <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
-          <h3 class="font-black text-sm text-slate-900 uppercase">${f.mode === 'edit' ? `✏️ SỬA SHOW #${f.stt || ''}` : '⚡ NỔ SHOW MỚI'}</h3>
-          <button type="button" onclick="appActions.closeFormModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 flex items-center justify-center">✕</button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input type="text" value="${escapeHtml(f.location)}" oninput="appActions.updateFormField('location', this.value)" placeholder="Địa điểm (Hồ Tràm, SG...)" class="px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-indigo-500" />
-          <input type="text" value="${escapeHtml(f.partner)}" oninput="appActions.updateFormField('partner', this.value)" placeholder="Tên show - Đối tác" class="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-500" />
-        </div>
-
-        <label class="flex items-center gap-2 font-bold text-slate-700 cursor-pointer select-none">
-          <input type="checkbox" ${f.hidePartner ? 'checked' : ''} onchange="appActions.updateFormField('hidePartner', this.checked)" class="rounded border-slate-300" />
-          <span>Ẩn đối tác với mọi người, chỉ báo bận lên lịch chung</span>
-        </label>
-
-        <div class="grid grid-cols-2 gap-2.5">
-          <div>
-            <label class="block text-[10.5px] font-extrabold text-slate-700 mb-1">Ngày Bắt Đầu:</label>
-            <input type="date" value="${escapeHtml(f.startDate)}" onchange="appActions.updateFormField('startDate', this.value)" class="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-indigo-500" />
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center text-xs shrink-0">⚡</span>
+            <h3 class="font-black text-sm text-slate-900 uppercase tracking-tight truncate">${f.mode === 'edit' ? `SỬA SHOW #${f.stt || ''}` : 'NỔ SHOW MỚI'}</h3>
           </div>
-          <div>
-            <label class="block text-[10.5px] font-extrabold text-slate-700 mb-1">Ngày Kết Thúc:</label>
-            <input type="date" value="${escapeHtml(f.endDate)}" onchange="appActions.updateFormField('endDate', this.value)" class="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-indigo-500" />
+          <button type="button" onclick="appActions.closeFormModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 flex items-center justify-center shrink-0 transition">✕</button>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-[#f8fafc] border border-slate-200/80 space-y-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            <input
+              type="text"
+              value="${escapeHtml(f.location)}"
+              oninput="appActions.updateFormField('location', this.value)"
+              placeholder="Địa điểm (Hồ Tràm, SG...)"
+              class="h-9 px-3 bg-white border border-slate-200/90 rounded-xl font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900"
+            />
+            <input
+              type="text"
+              value="${escapeHtml(f.partner)}"
+              oninput="appActions.updateFormField('partner', this.value)"
+              placeholder="Tên show - Đối tác"
+              class="h-9 px-3 bg-white border border-slate-200/90 rounded-xl font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-900"
+            />
           </div>
+
+          <label class="flex items-center gap-2 pt-0.5 text-[11px] font-semibold text-slate-600 cursor-pointer select-none">
+            <input type="checkbox" ${f.hidePartner ? 'checked' : ''} onchange="appActions.updateFormField('hidePartner', this.checked)" class="rounded border-slate-300 text-slate-900 focus:ring-0" />
+            <span>Ẩn đối tác với mọi người, chỉ báo bận lên lịch chung</span>
+          </label>
         </div>
 
-        <div>
-          <label class="block text-[10.5px] font-extrabold text-slate-700 mb-1">📌 Chọn Chủ Show (Phụ trách show):</label>
-          <select onchange="appActions.updateFormField('ownerId', this.value)" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl font-bold text-slate-900 bg-white focus:outline-none focus:border-indigo-500">
-            ${state.members.map(m => `<option value="${m.id}" ${f.ownerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
-          </select>
-        </div>
-
-        <div class="space-y-1">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-[11px] font-black text-slate-900">Chọn Nhân Sự &amp; Gắn Vai Trò:</span>
-            <div class="flex items-center gap-2 shrink-0 text-[10.5px] font-bold">
-              <button type="button" onclick="appActions.selectOnlyMeInForm()" class="text-slate-600 hover:text-indigo-600">Chỉ mình tôi</button>
-              <button type="button" onclick="appActions.selectAllMembersInForm()" class="text-indigo-600 hover:text-indigo-800 font-extrabold">Chọn tất cả</button>
+        <div class="p-3 rounded-2xl bg-[#f8fafc] border border-slate-200/80 space-y-2">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[9.5px] font-black text-slate-400 uppercase tracking-wider mb-1">Ngày bắt đầu</label>
+              <input
+                type="date"
+                value="${escapeHtml(f.startDate)}"
+                onchange="appActions.updateFormField('startDate', this.value)"
+                class="w-full h-8 px-2.5 bg-white border border-slate-200/90 rounded-xl font-mono font-bold text-[11px] text-slate-900 focus:outline-none focus:border-slate-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[9.5px] font-black text-slate-400 uppercase tracking-wider mb-1">Ngày kết thúc</label>
+              <input
+                type="date"
+                value="${escapeHtml(f.endDate)}"
+                onchange="appActions.updateFormField('endDate', this.value)"
+                class="w-full h-8 px-2.5 bg-white border border-slate-200/90 rounded-xl font-mono font-bold text-[11px] text-slate-900 focus:outline-none focus:border-slate-900"
+              />
             </div>
           </div>
 
-          <div class="grid grid-cols-3 gap-1.5 bg-slate-50 p-1.5 rounded-2xl border border-slate-200/80">
+          <div>
+            <label class="block text-[9.5px] font-black text-slate-400 uppercase tracking-wider mb-1">Chủ show (Phụ trách)</label>
+            <select
+              onchange="appActions.updateFormField('ownerId', this.value)"
+              class="w-full h-8 px-2.5 bg-white border border-slate-200/90 rounded-xl font-extrabold text-[11.5px] text-slate-900 focus:outline-none focus:border-slate-900"
+            >
+              ${state.members.map(m => `<option value="${m.id}" ${f.ownerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-[#f8fafc] border border-slate-200/80 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Nhân sự &amp; Vai trò</span>
+              <span class="px-1.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 font-mono font-black text-[9.5px]">${f.memberIds.length}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0 text-[10.5px] font-extrabold">
+              <button type="button" onclick="appActions.selectOnlyMeInForm()" class="text-slate-500 hover:text-slate-900 transition">Chỉ mình tôi</button>
+              <span class="text-slate-300">•</span>
+              <button type="button" onclick="appActions.selectAllMembersInForm()" class="text-indigo-600 hover:text-indigo-800 transition">Chọn tất cả</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 items-start">
             ${state.members.map(m => {
               const sel = f.memberIds.includes(m.id);
               const busy = busyMap[m.id];
@@ -470,20 +506,20 @@ export function renderFormModalHtml() {
 
               const cardStyleCls = sel
                 ? (busy
-                    ? 'bg-rose-50/95 border-rose-500 ring-1 ring-rose-300'
-                    : 'bg-indigo-50/90 border-indigo-500')
+                    ? 'bg-rose-50/90 border-rose-400 ring-1 ring-rose-200'
+                    : 'bg-white border-slate-900 ring-1 ring-slate-900/10 shadow-2xs')
                 : (busy
-                    ? 'bg-rose-50/70 border-rose-200'
+                    ? 'bg-rose-50/50 border-rose-200/80 hover:border-rose-300'
                     : 'bg-white border-slate-200/80 hover:border-slate-300');
 
               return `
-                <div onclick="appActions.toggleFormMember('${m.id}')" class="p-1.5 rounded-xl border cursor-pointer transition select-none flex flex-col gap-1 ${cardStyleCls}">
-                  <div class="flex items-center justify-between gap-1">
+                <div onclick="appActions.toggleFormMember('${m.id}')" class="p-2 rounded-xl border cursor-pointer transition select-none flex flex-col gap-1.5 min-w-0 ${cardStyleCls}">
+                  <div class="flex items-center justify-between gap-1 min-w-0">
                     ${renderPillHtml(m.id, 'xs')}
-                    <span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] shrink-0 ${
+                    <span class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 transition ${
                       sel
                         ? (busy ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white')
-                        : 'border border-slate-300 bg-white text-transparent'
+                        : 'border border-slate-300 bg-slate-50 text-transparent'
                     }">✓</span>
                   </div>
 
@@ -491,21 +527,21 @@ export function renderFormModalHtml() {
                     <div class="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold truncate leading-tight ${
                       sel
                         ? 'bg-rose-600 text-white'
-                        : 'text-rose-600'
-                    }">
+                        : 'bg-rose-100/80 text-rose-700'
+                    }" title="Trùng: ${escapeHtml(busy.join(', '))}">
                       ⚠️ ${sel ? 'Trùng: ' : ''}${escapeHtml(busy.join(', '))}
                     </div>
                   ` : ''}
 
-                   ${sel ? `
-                    <div class="flex flex-wrap gap-1 pt-0.5" onclick="event.stopPropagation()">
+                  ${sel ? `
+                    <div class="grid grid-cols-2 gap-1 pt-0.5 border-t border-slate-100" onclick="event.stopPropagation()">
                       ${ROLE_OPTIONS.map(r => {
                         const active = normRoles.includes(r.id);
                         return `
-                          <button type="button" onclick="appActions.toggleMemberRole('${m.id}', '${r.id}')" class="px-1.5 py-[2px] rounded text-[8.5px] font-bold border leading-tight transition ${
+                          <button type="button" onclick="appActions.toggleMemberRole('${m.id}', '${r.id}')" class="px-1 py-[3px] rounded-md text-[9px] font-bold border truncate leading-tight transition ${
                             active
                               ? 'bg-slate-900 text-white border-slate-900'
-                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                              : 'bg-slate-50 text-slate-600 border-slate-200/90 hover:bg-slate-100'
                           }">
                             ${escapeHtml(r.label)}
                           </button>
@@ -519,54 +555,52 @@ export function renderFormModalHtml() {
           </div>
         </div>
 
-        <div style="overflow-anchor: none;" class="p-3.5 rounded-2xl border border-indigo-200/80 bg-indigo-50/90 space-y-2.5">
-          <div class="flex items-start gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
-              🤝
-            </div>
+        <div style="overflow-anchor: none;" class="p-3 rounded-2xl border border-slate-200/80 bg-[#f8fafc] space-y-2">
+          <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <div class="font-black text-slate-900 text-xs leading-tight">Nhân sự ngoài (Freelancer)</div>
-              <div class="text-[10.5px] text-slate-500 mt-0.5 leading-snug">Bão show book thêm người ngoài: ghi tên &amp; chọn vai trò</div>
+              <div class="font-black text-slate-900 text-[11px] leading-tight">🤝 Nhân sự ngoài (Freelancer)</div>
+              <div class="text-[10px] text-slate-500 mt-0.5 truncate">Book thêm người ngoài: ghi tên &amp; chọn vai trò</div>
             </div>
+            <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 active:scale-[0.99] text-slate-900 border border-slate-200/90 font-extrabold text-[10.5px] inline-flex items-center gap-1 shrink-0 shadow-2xs transition">
+              <span>+ Thêm người</span>
+            </button>
           </div>
 
-          <button type="button" onclick="appActions.addExternalCrewDraft()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-extrabold text-[11px] inline-flex items-center gap-1 transition">
-            <span>+ Thêm nhân sự ngoài</span>
-          </button>
-
-          <div id="external-crew-list-box" style="overflow-anchor: none;" class="space-y-2">
-            ${(f.externalCrew || []).map((p, idx) => {
-              const extRoles = Array.isArray(p?.roles) ? p.roles : [];
-              return `
-                <div data-ext-idx="${idx}" class="p-3 rounded-2xl bg-white border border-indigo-100 shadow-2xs space-y-2">
-                  <div class="flex items-center gap-2">
-                    <input type="text" value="${escapeHtml(p?.name || '')}" oninput="appActions.updateExternalCrewName(${idx}, this.value)" placeholder="Nhập tên (VD: Minh Flycam)..." class="flex-1 min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-xs text-slate-800 focus:outline-none focus:border-indigo-500" />
-                    <button type="button" onclick="appActions.removeExternalCrewDraft(${idx})" title="Xóa nhân sự ngoài" class="w-9 h-9 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center shrink-0 transition">
-                      <i class="fa-regular fa-trash-can text-xs"></i>
-                    </button>
+          ${(f.externalCrew || []).length > 0 ? `
+            <div id="external-crew-list-box" style="overflow-anchor: none;" class="space-y-2 pt-0.5">
+              ${(f.externalCrew || []).map((p, idx) => {
+                const extRoles = Array.isArray(p?.roles) ? p.roles : [];
+                return `
+                  <div data-ext-idx="${idx}" class="p-2.5 rounded-xl bg-white border border-slate-200/90 space-y-1.5">
+                    <div class="flex items-center gap-1.5">
+                      <input type="text" value="${escapeHtml(p?.name || '')}" oninput="appActions.updateExternalCrewName(${idx}, this.value)" placeholder="Nhập tên (VD: Minh Flycam)..." class="flex-1 min-w-0 h-8 px-2.5 bg-[#f8fafc] border border-slate-200/90 rounded-lg font-semibold text-[11.5px] text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white" />
+                      <button type="button" onclick="appActions.removeExternalCrewDraft(${idx})" title="Xóa nhân sự ngoài" class="w-8 h-8 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200/80 flex items-center justify-center shrink-0 transition">
+                        <i class="fa-regular fa-trash-can text-[11px]"></i>
+                      </button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1">
+                      ${ROLE_OPTIONS.map(r => {
+                        const active = extRoles.includes(r.label) || extRoles.includes(r.id) || extRoles.map(normalizeRoleName).includes(r.id);
+                        return `
+                          <button type="button" onclick="appActions.toggleExternalCrewRole(${idx}, '${escapeHtml(r.label)}')" class="px-1.5 py-1 rounded-md text-[9.5px] font-bold border truncate transition ${
+                            active
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-slate-50 text-slate-600 border-slate-200/90 hover:bg-slate-100'
+                          }">
+                            ${escapeHtml(r.label)}
+                          </button>
+                        `;
+                      }).join('')}
+                    </div>
                   </div>
-                 <div class="flex flex-wrap gap-1">
-                    ${ROLE_OPTIONS.map(r => {
-                      const active = extRoles.includes(r.label) || extRoles.includes(r.id) || extRoles.map(normalizeRoleName).includes(r.id);
-                      return `
-                        <button type="button" onclick="appActions.toggleExternalCrewRole(${idx}, '${escapeHtml(r.label)}')" class="px-2 py-0.5 rounded-md text-[9.5px] font-bold border transition ${
-                          active
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }">
-                          ${escapeHtml(r.label)}
-                        </button>
-                      `;
-                    }).join('')}
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
         </div>
 
-        ${f.error ? `<div class="text-rose-600 font-bold">${escapeHtml(f.error)}</div>` : ''}
-        <button type="button" onclick="appActions.saveShowForm()" class="w-full bg-slate-950 hover:bg-slate-900 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-sm transition">
+        ${f.error ? `<div class="text-rose-600 font-bold text-[11px] px-1">${escapeHtml(f.error)}</div>` : ''}
+        <button type="button" onclick="appActions.saveShowForm()" class="w-full bg-slate-950 hover:bg-slate-900 active:scale-[0.99] text-white font-black py-3 rounded-2xl text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-sm transition">
           <span>⚡</span>
           <span>${f.mode === 'edit' ? 'LƯU CHỈNH SỬA' : 'NỔ SHOW'}</span>
         </button>
