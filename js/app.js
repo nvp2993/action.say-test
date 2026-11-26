@@ -412,6 +412,47 @@ function scheduleBroadcastAutoHide() {
   }, remaining);
 }
 
+let _liveMarqueeHideTimer = null;
+
+function dismissLiveMarqueeNow() {
+  if (_liveMarqueeHideTimer) {
+    clearTimeout(_liveMarqueeHideTimer);
+    _liveMarqueeHideTimer = null;
+  }
+  const el = document.querySelector('[data-live-marquee="true"]');
+  const key = el?.getAttribute('data-marquee-key') || '';
+  if (key) {
+    try {
+      localStorage.setItem('as_live_marquee_dismissed_2026', key);
+    } catch {}
+  }
+  document.querySelectorAll('[data-live-marquee="true"]').forEach(node => {
+    node.style.display = 'none';
+  });
+}
+
+function scheduleLiveMarqueeAutoHide() {
+  if (_liveMarqueeHideTimer) {
+    clearTimeout(_liveMarqueeHideTimer);
+    _liveMarqueeHideTimer = null;
+  }
+  const el = document.querySelector('[data-live-marquee="true"]');
+  if (!el) return;
+
+  const key = el.getAttribute('data-marquee-key') || '';
+  if (key) {
+    try {
+      if (localStorage.getItem('as_live_marquee_dismissed_2026') === key) {
+        el.style.display = 'none';
+        return;
+      }
+    } catch {}
+  }
+
+  _liveMarqueeHideTimer = setTimeout(() => {
+    dismissLiveMarqueeNow();
+  }, 15000);
+}
 function renderApp() {
   const root = document.getElementById('app');
   if (!root) return;
@@ -490,6 +531,9 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
+  dismissLiveMarquee() {
+    dismissLiveMarqueeNow();
+  },
   dismissBroadcast() {
     hideBroadcastBannerNow();
   },
