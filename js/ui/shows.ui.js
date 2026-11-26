@@ -3,12 +3,6 @@ import { POST_STATUS_OPTIONS } from '../config/constants.js';
 import { escapeHtml, formatDayMonth, getMember, renderPillHtml, formatMemberRolesClean } from '../utils/helpers.js';
 import { canEditShow, getFilteredShows, getVisiblePartnerText } from '../services/show.service.js';
 
-function renderSoftMemberTag(memberId, extraCls = '', extraAttrs = '') {
-  const mem = getMember(memberId);
-  const label = escapeHtml(mem?.name || memberId);
-  return `<span ${extraAttrs} class="inline-flex items-center px-2 py-0.5 rounded-md bg-[#f8fafc] border border-slate-200/90 text-[10px] font-bold text-slate-700 tracking-tight uppercase ${extraCls}">${label}</span>`;
-}
-
 export function renderShowsTabHtml() {
   const filtered = getFilteredShows();
   return `
@@ -27,14 +21,11 @@ export function renderShowsTabHtml() {
             </button>
           </div>
           <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <button type="button" onclick="appActions.setFilterMember('all')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 border transition ${state.filterMemberId === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/90'}">
+            <button type="button" onclick="appActions.setFilterMember('all')" class="px-2.5 py-1 rounded-full text-[9.5px] font-extrabold shrink-0 border transition ${state.filterMemberId === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/90'}">
               Tất cả (${state.members.length})
             </button>
             ${[...state.members].sort((a,b) => (a.id === state.currentUserId ? -1 : b.id === state.currentUserId ? 1 : 0))
-              .map(m => {
-                const active = state.filterMemberId === m.id;
-                return `<button type="button" onclick="appActions.setFilterMember('${m.id}')" class="px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 border transition ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'}">${escapeHtml(m.name)}</button>`;
-              }).join('')}
+              .map(m => renderPillHtml(m.id, 'xs', `shrink-0 cursor-pointer ${state.filterMemberId === m.id ? 'ring-2 ring-slate-900' : 'opacity-90 hover:opacity-100'}`, `onclick="appActions.setFilterMember('${m.id}')"` )).join('')}
           </div>
         </div>
       `}
@@ -89,15 +80,15 @@ export function renderShowsTabHtml() {
                       <td class="py-2.5 px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.endDate)}</td>
                       <td class="py-2.5 px-3 border-r border-slate-200/65">
                         <div class="flex flex-wrap items-center gap-1.5">
-                          ${(sh.memberIds || []).map(mid => renderSoftMemberTag(mid)).join('')}
+                          ${(sh.memberIds || []).map(mid => renderPillHtml(mid, 'xs')).join('')}
                           ${(sh.externalCrew || []).map((p, eIdx) => {
                             const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
-                            return `<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50/80 border border-dashed border-indigo-200 text-indigo-800 font-bold text-[10px]">🤝 ${escapeHtml(extLabel)}</span>`;
+                            return `<span style="background:#4f46e5;color:#fff;border:1px dashed #c7d2fe;" class="inline-flex items-center font-extrabold rounded-full px-2 py-0.5 text-[9px]">🤝 ${escapeHtml(extLabel)}</span>`;
                           }).join('')}
                         </div>
                       </td>
-                      <td class="py-2.5 px-2.5 border-r border-slate-200/65 text-center truncate"><span class="text-[11px] font-semibold text-slate-700">${escapeHtml(owner.name)}</span></td>
-                      <td class="py-2.5 px-2.5 text-center truncate"><span class="text-[11px] font-semibold text-slate-500">${escapeHtml(creator.name)}</span></td>
+                      <td class="py-2.5 px-2.5 border-r border-slate-200/65 text-center truncate"><span class="text-[11px] font-bold text-slate-800">${escapeHtml(owner.name)}</span></td>
+                      <td class="py-2.5 px-2.5 text-center truncate"><span class="text-[11px] font-bold text-indigo-700">${escapeHtml(creator.name)}</span></td>
                     </tr>
                   `;
                 }).join('')}
