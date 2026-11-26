@@ -442,6 +442,9 @@ registerRenderer(renderApp);
 
 window.state = state;
 window.appActions = {
+  dismissBroadcast() {
+    hideBroadcastBannerNow();
+  },
   openQuickExpenseModal() {
     const d = new Date();
     const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
