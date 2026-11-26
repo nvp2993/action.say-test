@@ -359,7 +359,7 @@ export function renderDebtTabHtml() {
         </aside>
 
         <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 sm:p-4">
-          <div class="max-w-5xl mx-auto space-y-3">
+          <div class="max-w-6xl mx-auto space-y-3">
             <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9]/95 backdrop-blur-xs pb-1.5 cursor-pointer">
               ${statCards.map(c => `
                 <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
@@ -379,7 +379,7 @@ export function renderDebtTabHtml() {
                 </div>
               </div>
             ` : `
-              <div class="space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
                 ${filtered.map((sh) => {
                   const isOwner = sh.ownerId === uid;
                   const expanded = state.ownerExpandedShowId === sh.id;
@@ -394,6 +394,7 @@ export function renderDebtTabHtml() {
                   const holdCardCls = sh.isHold
                     ? 'rounded-3xl p-4 space-y-3 shadow-2xs'
                     : 'bg-white rounded-3xl border border-slate-200/90 hover:border-slate-300 p-4 space-y-3 shadow-2xs transition-colors';
+                  const spanCls = expanded ? 'md:col-span-2 xl:col-span-3' : '';
                   const holdBillingBarHtml = sh.isHold ? `
                     <div onclick="event.stopPropagation(); ctpActions.toggleHoldBilling('${sh.id}')" class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border cursor-pointer transition select-none ${
                       sh.countHoldForBilling
@@ -418,7 +419,7 @@ export function renderDebtTabHtml() {
                     const otherExpSum = allExpList.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
 
                     return `
-                      <article id="debt-show-card-${escapeHtml(sh.id)}" ${holdCardStyle} class="${holdCardCls}">
+                      <article id="debt-show-card-${escapeHtml(sh.id)}" ${holdCardStyle} class="${holdCardCls} ${spanCls} min-w-0">
                         <div onclick="ownerActions.toggleExpandShow('${sh.id}')" class="flex items-start justify-between gap-2.5 min-h-[54px] -mx-1.5 -mt-1.5 px-3 py-2.5 rounded-2xl cursor-pointer ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500 flex-wrap">
@@ -634,7 +635,7 @@ export function renderDebtTabHtml() {
                     const myExtrasSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
 
                     return `
-                      <article id="debt-show-card-${escapeHtml(sh.id)}" ${holdCardStyle} class="${holdCardCls}">
+                      <article id="debt-show-card-${escapeHtml(sh.id)}" ${holdCardStyle} class="${holdCardCls} ${spanCls} min-w-0">
                         <div onclick="ownerActions.toggleExpandShow('${sh.id}')" class="flex items-start justify-between gap-2.5 min-h-[54px] -mx-1.5 -mt-1.5 px-3 py-2.5 rounded-2xl cursor-pointer ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500 flex-wrap">
