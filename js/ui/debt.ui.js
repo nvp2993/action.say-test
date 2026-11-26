@@ -481,13 +481,13 @@ export function renderDebtTabHtml() {
           </div>
         </aside>
 
-        <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-4">
-          <div class="max-w-6xl mx-auto space-y-3">
-            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-3 pb-2.5 border-b border-slate-200/80 cursor-pointer">
-              ${statCards.map(c => `
-                <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
-                  <span class="text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
-                  <span class="font-black font-mono tabular-nums text-xs sm:text-sm mt-0.5 block ${c.valCls}">${c.val}</span>
+        <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-2.5 sm:px-4 pb-4">
+          <div class="max-w-6xl mx-auto space-y-2 sm:space-y-3">
+            <div onclick="appActions.toggleHideMoneyMode()" class="sm:sticky sm:top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 bg-[#f1f5f9] sm:-mx-4 sm:px-4 pt-2 sm:pt-3 pb-1.5 sm:pb-2.5 sm:border-b sm:border-slate-200/80 cursor-pointer">
+              ${debtStatCards.map(c => `
+                <div class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border shadow-2xs transition ${c.wrapCls}">
+                  <span class="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
+                  <span id="${c.id}" class="font-black font-mono tabular-nums text-xs sm:text-sm mt-0.5 block ${c.valCls}">${c.val}</span>
                 </div>
               `).join('')}
             </div>
@@ -605,24 +605,34 @@ export function renderDebtTabHtml() {
                                         <span class="font-mono font-black tabular-nums text-[11px] text-slate-900 shrink-0">${memCost.toLocaleString('vi-VN')}đ</span>
                                       </div>
 
-                                      <div class="grid grid-cols-3 gap-1">
-                                        ${taskKeys.map(tk => {
-                                          const active = memTasks[tk] !== undefined && memTasks[tk] !== null;
-                                          const tVal = active ? memTasks[tk] : getDefaultRateForTask(tk, sh);
-                                          return `
-                                            <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-0.5 transition min-w-0 ${
-                                              active
-                                                ? 'bg-slate-100 border-slate-300/90 text-slate-900'
-                                                : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
-                                            }">
-                                              <button type="button" onclick="ownerActions.toggleOwnerCrewTask('${sh.id}', '${mid}', '${tk}')" class="text-left text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
-                                                ${taskLabels[tk]}
-                                              </button>
-                                              ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleOwnerCrewTaskInput('${sh.id}', '${mid}', '${tk}', this)" class="w-14 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[9.5px] text-slate-900 focus:outline-none" />` : ''}
-                                            </div>
-                                          `;
-                                        }).join('')}
-                                      </div>
+<div class="grid grid-cols-3 gap-1">
+  ${taskList.map(t => {
+    const checked = taskMap?.[t.key] !== undefined && taskMap?.[t.key] !== null;
+    const val = checked ? taskMap[t.key] : t.def;
+    return `
+      <div class="h-6 rounded-md border px-1 flex items-center justify-between gap-0.5 transition min-w-0 ${
+        checked
+          ? 'bg-slate-100 border-slate-300/90 text-slate-900'
+          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
+      }">
+        <button
+          type="button"
+          onclick="${onToggleExpr}"
+          class="text-left text-[9.5px] sm:text-[10px] truncate ${checked ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}"
+        >${t.label}</button>
+        ${checked ? `
+          <input
+            type="tel"
+            inputmode="numeric"
+            value="${Number(val).toLocaleString('vi-VN')}"
+            oninput="${onInputExpr}"
+            class="flex-1 min-w-[34px] bg-transparent text-right font-mono font-extrabold tabular-nums text-[8.5px] sm:text-[9.5px] tracking-tighter text-slate-900 focus:outline-none"
+          />
+        ` : ''}
+      </div>
+    `;
+  }).join('')}
+</div>
                                     </div>
                                   `;
                                 }).join('')}
