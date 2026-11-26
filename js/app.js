@@ -14,7 +14,6 @@ import { renderCrewBoardTabHtml } from './ui/crewBoard.ui.js';
 import { renderCtpTabHtml, renderCtpBillModalHtml } from './ui/ctp.ui.js';
 import { renderDebtTabHtml } from './ui/debt.ui.js';
 import {
-  renderQuickExpenseBubbleHtml,
   renderPinModalHtml,
   renderCrewPassModalHtml,
   renderFormModalHtml,
@@ -541,7 +540,6 @@ let main = '';
     ${renderCrewManifestModalHtml()}
     ${renderClientDebtBillModalHtml()}
     ${renderToastHtml()}
-    ${renderQuickExpenseBubbleHtml()}
   `;
   applyCustomLogoToDom();
   scrollActiveMonthIntoView();
