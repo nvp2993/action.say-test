@@ -743,13 +743,13 @@ export function renderDebtTabHtml() {
                                                   placeholder="Số tiền"
                                                   class="w-20 sm:w-24 shrink-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-rose-600 text-right focus:outline-none focus:border-slate-900"
                                                 />
-                                                <button
-                                                  type="button"
-                                                  onclick="ownerActions.finishEditOwnerExpense()"
-                                                  title="Xong"
-                                                  class="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-black text-xs flex items-center justify-center shrink-0 transition"
-                                                >✓</button>
                                               </div>
+                                              <button
+                                                type="button"
+                                                onclick="ownerActions.finishEditOwnerExpense()"
+                                                title="Xong"
+                                                class="px-1 text-emerald-600 hover:text-emerald-700 font-black text-sm shrink-0 transition"
+                                              >✓</button>
                                               <button
                                                 type="button"
                                                 onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
@@ -932,13 +932,13 @@ export function renderDebtTabHtml() {
                                                 placeholder="Số tiền"
                                                 class="w-20 sm:w-24 shrink-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-rose-600 text-right focus:outline-none focus:border-slate-900"
                                               />
-                                              <button
-                                                type="button"
-                                                onclick="ownerActions.finishEditOwnerExpense()"
-                                                title="Xong"
-                                                class="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-black text-xs flex items-center justify-center shrink-0 transition"
-                                              >✓</button>
                                             </div>
+                                            <button
+                                              type="button"
+                                              onclick="ownerActions.finishEditOwnerExpense()"
+                                              title="Xong"
+                                              class="px-1 text-emerald-600 hover:text-emerald-700 font-black text-sm shrink-0 transition"
+                                            >✓</button>
                                             <button
                                               type="button"
                                               onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
