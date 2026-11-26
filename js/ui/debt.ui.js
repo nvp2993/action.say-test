@@ -335,7 +335,7 @@ export function renderDebtTabHtml() {
   });
 
   const taskKeys = ['quay', 'dung', 'chup', 'lamhinh', 'flycam', 'gimbal'];
-  const taskLabels = { quay: 'Quay', dung: 'Dựng', chup: 'Chụp', lamhinh: 'Làm hình', flycam: 'Flycam', gimbal: 'Gimbal' };
+  const taskLabels = { quay: 'Quay', dung: 'Dựng', chup: 'Chụp', lamhinh: 'Hình', flycam: 'Flycam', gimbal: 'Gimbal' };
 
   return `
     <div class="flex-1 flex flex-col min-h-0 bg-[#f1f5f9] text-xs">
