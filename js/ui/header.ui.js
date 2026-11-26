@@ -162,9 +162,9 @@ export function renderHeaderHtml(totalAlerts = 0) {
           </div>
         </div>
 
-        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div class="flex items-center gap-1.5 shrink-0">
           ${state.isAdminMode ? `
-            <button type="button" onclick="appActions.enterBackendPortal()" class="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black flex items-center gap-1">
+            <button type="button" onclick="appActions.enterBackendPortal()" class="px-2 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black flex items-center gap-1">
               <i class="fa-solid fa-shield-halved text-amber-600"></i><span>ADMIN</span>
             </button>
           ` : ''}
@@ -172,16 +172,11 @@ export function renderHeaderHtml(totalAlerts = 0) {
           <button
             type="button"
             onclick="appActions.openQuickExpenseModal ? appActions.openQuickExpenseModal() : (window.quickExpenseActions?.openModal?.())"
-            title="Note nhanh chi phí"
-            class="relative h-8 px-2.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-[10.5px] font-extrabold inline-flex items-center gap-1 shrink-0 transition"
+            title="NOTE PS"
+            class="h-7 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-amber-400/40 text-amber-300 text-[9.5px] font-black tracking-tight inline-flex items-center gap-1 shrink-0 transition"
           >
-            <i class="fa-solid fa-receipt text-[11px] text-amber-400"></i>
-            <span class="hidden sm:inline">Note</span>
-            ${quickNoteCount > 0 ? `
-              <span class="min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-slate-950 font-mono font-black text-[9px] flex items-center justify-center leading-none">
-                ${quickNoteCount}
-              </span>
-            ` : ''}
+            <span>NOTE PS</span>
+            ${quickNoteCount > 0 ? `<span class="px-1 py-[1px] rounded bg-amber-400 text-slate-950 font-mono text-[8.5px] leading-none">${quickNoteCount}</span>` : ''}
           </button>
 
           <button type="button" id="as-header-bell-btn" onclick="holdBellActions.openBellDrawer()" class="relative ${alertCount > 0 ? 'has-alert' : ''}" title="Thông báo & Giữ lịch">
