@@ -1257,11 +1257,66 @@ window.ctpActions = {
     const qrData = await loadQrBitmapIfAvailable(prof, bankHolderName);
     const { ui, mono } = await getPreviewFonts();
 
-    const canvas = document.createElement('canvas');
+    const wrapTextLines = (ctx, text, maxWidth) => {
+      const words = String(text || '').split(/\s+/).filter(Boolean);
+      if (!words.length) return ['-'];
+      const lines = [];
+      let cur = '';
+      words.forEach(w => {
+        const test = cur ? `${cur} ${w}` : w;
+        if (ctx.measureText(test).width <= maxWidth) {
+          cur = test;
+        } else {
+          if (cur) lines.push(cur);
+          cur = w;
+        }
+      });
+      if (cur) lines.push(cur);
+      return lines;
+    };
+
     const W = 940;
-    const rowH = 44;
-    const tableTotalH = 34 + Math.max(1, bm.rows.length) * rowH + 38;
+    const tableX = 28;
+    const tableW = W - 56;
+    const cols = [52, 82, 185, 250, 171, tableW - 52 - 82 - 185 - 250 - 171];
+    const headers = ['STT', 'NGÀY', 'SHOW', 'NHIỆM VỤ', 'PHÁT SINH', 'TỔNG'];
+
+    // Tính chiều cao từng hàng theo số dòng thực tế của NHIỆM VỤ & PHÁT SINH
+    const measCanvas = document.createElement('canvas');
+    const mCtx = measCanvas.getContext('2d');
+    const rowMetrics = (bm.rows || []).map((r, i) => {
+      const taskRawList = Array.isArray(r.taskBullets) && r.taskBullets.length ? r.taskBullets : (r.taskBulletsCompact || []);
+      const extraRawList = Array.isArray(r.extraBullets) && r.extraBullets.length ? r.extraBullets : (r.extraBulletsCompact || []);
+
+      mCtx.font = `500 12px ${ui}`;
+      const taskLines = taskRawList.length
+        ? taskRawList.flatMap(t => wrapTextLines(mCtx, t, cols[3] - 16))
+        : ['-'];
+      const extraLines = extraRawList.length
+        ? extraRawList.flatMap(e => wrapTextLines(mCtx, e, cols[4] - 16))
+        : ['-'];
+      const showLines = wrapTextLines(mCtx, String(r.location || '-'), cols[2] - 16);
+
+      const maxLines = Math.max(1, showLines.length, taskLines.length, extraLines.length);
+      const h = Math.max(40, maxLines * 17 + 14);
+      return {
+        stt: String(r.stt ?? i + 1),
+        dateLabel: String(r.dateLabel || ''),
+        showLines,
+        taskLines,
+        extraLines,
+        totalText: Number(r.showSum || 0).toLocaleString('vi-VN') + 'đ',
+        h
+      };
+    });
+
+    const headerH = 34;
+    const footerH = 38;
+    const rowsH = rowMetrics.reduce((s, m) => s + m.h, 0) || 40;
+    const tableTotalH = headerH + rowsH + footerH;
     const H = 86 + tableTotalH + (qrData ? 148 : 24);
+
+    const canvas = document.createElement('canvas');
     canvas.width = W * 2;
     canvas.height = H * 2;
     const ctx = canvas.getContext('2d');
@@ -1275,25 +1330,34 @@ window.ctpActions = {
     ctx.fillText(`BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}`, 28, 42);
     ctx.fillStyle = '#475569';
     ctx.font = `500 13px ${ui}`;
-    ctx.fillText(`Nhân sự: ${bm.memberName}   •   Chủ show: ${bm.ownerTitle}`, 28, 66);
+    ctx.fillText(`Nhân sự: ${bm.memberName}   •   Sếp: ${bm.ownerTitle}`, 28, 66);
 
-    const tableX = 28, tableY = 86, tableW = W - 56;
-    const cols = [52, 86, 190, 230, 140, tableW - 52 - 86 - 190 - 230 - 140];
-    const headers = ['STT', 'NGÀY', 'SHOW', 'NHIỆM VỤ', 'PHÁT SINH', 'TỔNG'];
-
+    const tableY = 86;
     ctx.save();
     drawRoundedRect(ctx, tableX, tableY, tableW, tableTotalH, 16);
     ctx.clip();
 
+    // Header
     ctx.fillStyle = '#107c41';
-    ctx.fillRect(tableX, tableY, tableW, 34);
+    ctx.fillRect(tableX, tableY, tableW, headerH);
     ctx.fillStyle = '#ffffff';
     ctx.font = `700 11px ${ui}`;
     let cx = tableX;
     headers.forEach((h, idx) => {
+      if (idx > 0) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.beginPath();
+        ctx.moveTo(cx, tableY);
+        ctx.lineTo(cx, tableY + headerH);
+        ctx.stroke();
+      }
       if (idx === 5) {
         ctx.textAlign = 'right';
         ctx.fillText(h, cx + cols[idx] - 10, tableY + 21);
+        ctx.textAlign = 'left';
+      } else if (idx === 0 || idx === 1) {
+        ctx.textAlign = 'center';
+        ctx.fillText(h, cx + cols[idx] / 2, tableY + 21);
         ctx.textAlign = 'left';
       } else {
         ctx.fillText(h, cx + 8, tableY + 21);
@@ -1301,42 +1365,76 @@ window.ctpActions = {
       cx += cols[idx];
     });
 
-    let ry = tableY + 34;
-    bm.rows.forEach((r, i) => {
+    // Rows + đường kẻ ô dọc & ngang
+    let ry = tableY + headerH;
+    rowMetrics.forEach((rm, i) => {
       ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-      ctx.fillRect(tableX, ry, tableW, rowH);
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.strokeRect(tableX, ry, tableW, rowH);
+      ctx.fillRect(tableX, ry, tableW, rm.h);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tableX, ry + rm.h);
+      ctx.lineTo(tableX + tableW, ry + rm.h);
+      ctx.stroke();
 
       let xPos = tableX;
-      const cells = [
-        String(r.stt),
-        String(r.dateLabel || ''),
-        String(r.location || ''),
-        (r.taskBulletsCompact || []).join(', ') || '-',
-        (r.extraBulletsCompact || []).join(', ') || '-',
-        Number(r.showSum || 0).toLocaleString('vi-VN') + 'đ'
-      ];
-      cells.forEach((txt, cIdx) => {
-        if (cIdx === 5) {
+      cols.forEach((colW, cIdx) => {
+        if (cIdx > 0) {
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.beginPath();
+          ctx.moveTo(xPos, ry);
+          ctx.lineTo(xPos, ry + rm.h);
+          ctx.stroke();
+        }
+
+        if (cIdx === 0) {
+          ctx.fillStyle = '#334155';
+          ctx.font = `600 12px ${mono}`;
+          ctx.textAlign = 'center';
+          ctx.fillText(rm.stt, xPos + colW / 2, ry + 22);
+          ctx.textAlign = 'left';
+        } else if (cIdx === 1) {
+          ctx.fillStyle = '#0f172a';
+          ctx.font = `600 12px ${mono}`;
+          ctx.textAlign = 'center';
+          ctx.fillText(rm.dateLabel, xPos + colW / 2, ry + 22);
+          ctx.textAlign = 'left';
+        } else if (cIdx === 2) {
+          ctx.fillStyle = '#0f172a';
+          ctx.font = `700 12px ${ui}`;
+          rm.showLines.forEach((line, lIdx) => {
+            ctx.fillText(line, xPos + 8, ry + 22 + lIdx * 17);
+          });
+        } else if (cIdx === 3) {
+          ctx.fillStyle = '#1e293b';
+          ctx.font = `500 12px ${ui}`;
+          rm.taskLines.forEach((line, lIdx) => {
+            ctx.fillText(line, xPos + 8, ry + 22 + lIdx * 17);
+          });
+        } else if (cIdx === 4) {
+          ctx.fillStyle = '#1e293b';
+          ctx.font = `500 12px ${ui}`;
+          rm.extraLines.forEach((line, lIdx) => {
+            ctx.fillText(line, xPos + 8, ry + 22 + lIdx * 17);
+          });
+        } else if (cIdx === 5) {
           ctx.fillStyle = '#047857';
           ctx.font = `700 12px ${mono}`;
           ctx.textAlign = 'right';
-          ctx.fillText(txt, xPos + cols[cIdx] - 10, ry + 27);
+          ctx.fillText(rm.totalText, xPos + colW - 10, ry + 22);
           ctx.textAlign = 'left';
-        } else {
-          ctx.fillStyle = '#0f172a';
-          ctx.font = cIdx === 2 ? `700 12px ${ui}` : `500 12px ${ui}`;
-          const clipped = txt.length > 36 ? txt.slice(0, 34) + '…' : txt;
-          ctx.fillText(clipped, xPos + 8, ry + 27);
         }
-        xPos += cols[cIdx];
+
+        xPos += colW;
       });
-      ry += rowH;
+
+      ry += rm.h;
     });
 
+    // Footer tổng cộng
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(tableX, ry, tableW, 38);
+    ctx.fillRect(tableX, ry, tableW, footerH);
     ctx.fillStyle = '#fbbf24';
     ctx.font = `700 13px ${mono}`;
     ctx.textAlign = 'right';
@@ -1404,7 +1502,33 @@ window.ctpActions = {
       ctx.restore();
     }
 
-    const ok = downloadCanvasWithVietQrFallback(canvas, `CTP_T${state.ctpMonth}_${state.selectedYear}.png`);
+    const fileName = `CTP_T${state.ctpMonth}_${state.selectedYear}.png`;
+    try {
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+      if (blob && isMobile && typeof File !== 'undefined' && navigator.canShare) {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: fileName });
+          showToast('✅ Đã mở menu chia sẻ — chọn Lưu hình ảnh vào Photos!', 'info');
+          return;
+        }
+      }
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast('✅ Đã xuất ảnh Bill CTP (.PNG) thành công!', 'info');
+        return;
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+    }
+
+    const ok = downloadCanvasWithVietQrFallback(canvas, fileName);
     showToast(ok ? '✅ Đã xuất ảnh Bill CTP (.PNG) thành công!' : 'Lỗi xuất ảnh Bill CTP!', ok ? 'info' : 'error');
   },
   copyBillText() {
