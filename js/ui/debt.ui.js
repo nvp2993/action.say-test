@@ -151,7 +151,7 @@ export function renderDebtTabHtml() {
         ${renderUnifiedDateBarHtml('owner')}
       </div>
 
-      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[270px_minmax(0,1fr)]">
+     <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[400px_minmax(0,1fr)]">
         <!-- CỘT TRÁI (DESKTOP) -->
         <aside class="hidden lg:flex flex-col gap-2.5 p-3 bg-slate-50/90 border-r border-slate-200 overflow-y-auto custom-scroll">
           <div class="grid grid-cols-1 gap-2">
