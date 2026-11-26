@@ -334,33 +334,35 @@ export function renderCtpTabHtml() {
                               <span class="font-mono font-bold tabular-nums text-[10.5px] text-slate-500">${getShowTaskSum(item).toLocaleString('vi-VN')}đ</span>
                             </div>
                             <div class="grid grid-cols-3 gap-1">
-                              ${taskList.map(t => {
-                                const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
-                                const val = checked ? item.tasks[t.key] : t.def;
-                                return `
-                                  <div class="h-6 rounded-md border px-1 flex items-center justify-between gap-0.5 transition min-w-0 ${
-                                    checked
-                                      ? 'bg-slate-100 border-slate-300/90 text-slate-900'
-                                      : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
-                                  }">
-                                    <button
-                                      type="button"
-                                      onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
-                                      class="text-left text-[9.5px] sm:text-[10px] truncate ${checked ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}"
-                                    >${t.label}</button>
-                                    ${checked ? `
-                                      <input
-                                        type="tel"
-                                        inputmode="numeric"
-                                        value="${Number(val).toLocaleString('vi-VN')}"
-                                        oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
-                                        class="flex-1 min-w-[34px] bg-transparent text-right font-mono font-extrabold tabular-nums text-[8.5px] sm:text-[9.5px] tracking-tighter text-slate-900 focus:outline-none"
-                                      />
-                                    ` : ''}
-                                  </div>
-                                `;
-                              }).join('')}
-                            </div>
+  ${taskList.map(t => {
+    const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
+    const val = checked ? item.tasks[t.key] : t.def;
+    return `
+      <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-1 transition min-w-0 ${
+        checked
+          ? 'bg-slate-100 border-slate-300/90 text-slate-900'
+          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
+      }">
+        <button
+          type="button"
+          onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
+          class="text-left text-[10px] truncate ${checked ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}"
+        >${t.label}</button>
+        ${checked ? `
+          <input
+            type="text"
+            inputmode="decimal"
+            value="${formatCompactMoneyPlain(val)}"
+            onfocus="this.value='${Number(val || 0) || ''}';this.select();"
+            oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
+            onblur="const n=Number(state.ctpItems?.['${sh.id}']?.tasks?.['${t.key}']||0);this.value=formatCompactMoneyPlain(n);"
+            class="flex-1 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[10px] text-slate-900 focus:outline-none"
+          />
+        ` : ''}
+      </div>
+    `;
+  }).join('')}
+</div>
                           </div>
                         ` : ''}
                       </div>
