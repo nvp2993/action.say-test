@@ -407,6 +407,37 @@ function renderApp() {
   }
 }
 
+let _broadcastHideTimer = null;
+
+function scheduleBroadcastAutoHide() {
+  if (_broadcastHideTimer) {
+    clearTimeout(_broadcastHideTimer);
+    _broadcastHideTimer = null;
+  }
+
+  const bc = state.studioBroadcast;
+  if (!bc || !bc.enabled || !String(bc.text || '').trim()) return;
+
+  const autoHideMs = 18000;
+  const updatedAt = Number(bc.updatedAt || 0);
+  const elapsed = updatedAt > 0 ? Math.max(0, Date.now() - updatedAt) : 0;
+  const remaining = elapsed < autoHideMs ? (autoHideMs - elapsed) : autoHideMs;
+
+  _broadcastHideTimer = setTimeout(() => {
+    const cur = state.studioBroadcast;
+    if (!cur || !cur.enabled) return;
+    cur.enabled = false;
+    try {
+      localStorage.setItem('as_studio_broadcast_2026', JSON.stringify(cur));
+    } catch {}
+    const broadcastEl = document.querySelector('[data-studio-broadcast], .as-studio-broadcast, #studio-broadcast-banner');
+    if (broadcastEl) {
+      broadcastEl.style.display = 'none';
+    } else {
+      renderApp();
+    }
+  }, remaining);
+}
 registerRenderer(renderApp);
 
 window.state = state;
