@@ -540,6 +540,7 @@ let main = '';
     ${renderHoldBellModalHtml()}
     ${renderCrewManifestModalHtml()}
     ${renderClientDebtBillModalHtml()}
+    ${renderQuickExpenseModalHtml()}
     ${renderToastHtml()}
   `;
   applyCustomLogoToDom();
