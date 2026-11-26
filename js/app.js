@@ -1746,6 +1746,25 @@ window.ctpActions = {
 };
 
 window.ownerActions = {
+  toggleCrewRowExpand(shId, mid) {
+    if (!state.ownerExpandedCrewRows || typeof state.ownerExpandedCrewRows !== 'object') {
+      state.ownerExpandedCrewRows = {};
+    }
+    const key = `${shId}_${mid}`;
+    state.ownerExpandedCrewRows[key] = !state.ownerExpandedCrewRows[key];
+    renderApp();
+  },
+  toggleAllCrewRowsForShow(shId, crewIdsCsv) {
+    if (!state.ownerExpandedCrewRows || typeof state.ownerExpandedCrewRows !== 'object') {
+      state.ownerExpandedCrewRows = {};
+    }
+    const ids = String(crewIdsCsv || '').split(',').filter(Boolean);
+    const anyClosed = ids.some(mid => !state.ownerExpandedCrewRows[`${shId}_${mid}`]);
+    ids.forEach(mid => {
+      state.ownerExpandedCrewRows[`${shId}_${mid}`] = anyClosed;
+    });
+    renderApp();
+  },
   handleOwnerCrewTaskInput(shId, mid, taskKey, el) {
     const num = parseFlexibleMoneyInput(el.value);
     const rec = ensureOwnerFinRecord(shId);
