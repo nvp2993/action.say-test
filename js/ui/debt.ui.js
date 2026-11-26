@@ -433,7 +433,7 @@ export function renderDebtTabHtml() {
                     </div>
                     ${g.prevCarryAmount > 0 ? `
                       <div class="text-[9.5px] font-mono ${isSelected ? 'text-amber-200' : 'text-amber-800'}">
-                        ↳ Cộng dồn tháng trước: +${fmtCompact(g.prevCarryAmount)} (${g.prevCarryCount} show)
+                        ↳ Công nợ Cộng dồn: +${fmtCompact(g.prevCarryAmount)} (${g.prevCarryCount} show)
                       </div>
                     ` : ''}
                   </button>
