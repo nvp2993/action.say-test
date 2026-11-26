@@ -771,10 +771,10 @@ export function renderDebtTabHtml() {
                                           </div>
                                           <div class="flex items-center gap-0.5 shrink-0">
                                             <button
-                                              type="button"
-                                              onclick="ownerActions.startEditOwnerExpense('${escapeHtml(rowKey)}')"
-                                              class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-                                            >Sửa</button>
+                                                type="button"
+                                                onclick="ownerActions.startEditOwnerExpense('${escapeHtml(rowKey)}', '${sh.id}', '${escapeHtml(ex.id || '')}')"
+                                                class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+                                              >Sửa</button>
                                             <button
                                               type="button"
                                               onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
