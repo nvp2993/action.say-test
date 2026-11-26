@@ -90,12 +90,12 @@ function isShowBodyExpanded(showId) {
   return true;
 }
 
-function formatCompactStatusLabel(label) {
+function formatCleanStatusLabel(label) {
   return String(label || '')
     .replace(/^⏳\s*/, '')
     .replace(/^✅\s*/, '')
-    .replace(/Chủ Show trả/gi, 'Chờ Trả')
-    .replace(/Chủ Show/gi, 'Sếp')
+    .replace(/Chủ Show\s*(trả)?/gi, 'trả')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -466,8 +466,8 @@ export function renderDebtTabHtml() {
                             <div class="space-y-3">
                               <div class="space-y-1.5">
                                 <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">TÌNH TRẠNG</span>
-                                <div class="flex items-center gap-1 flex-wrap">
-                                  ${OWNER_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setStatus('${sh.id}', '${s.id}')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition ${m.rec.status === s.id ? 'bg-slate-100 text-slate-900 border-slate-300/90 font-extrabold' : 'bg-slate-50/70 hover:bg-slate-100/80 text-slate-600 border-slate-200/75'}">${escapeHtml(formatCompactStatusLabel(s.label))}</button>`).join('')}
+                                <div class="grid grid-cols-3 gap-1 p-0.5 rounded-xl bg-[#f8fafc] border border-slate-200/80">
+                                  ${OWNER_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setStatus('${sh.id}', '${s.id}')" class="py-1 px-1.5 rounded-lg text-[10px] truncate transition ${m.rec.status === s.id ? 'bg-slate-100 text-slate-900 font-extrabold border border-slate-300/90' : 'text-slate-600 font-medium hover:text-slate-900'}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
                                 </div>
                               </div>
 
@@ -540,7 +540,7 @@ export function renderDebtTabHtml() {
                                       </span>
                                     ` : ''}
                                   </div>
-                                  <button type="button" onclick="ownerActions.addOwnerExpense('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition">+ Thêm phí</button>
+                                  <button type="button" onclick="ownerActions.addOwnerExpense('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition">+ Thêm chi</button>
                                 </div>
 
                                 ${allExpList.length === 0 ? `
@@ -639,7 +639,7 @@ export function renderDebtTabHtml() {
 
                             <div class="flex items-center gap-1.5">
                               <button type="button" onclick="ownerActions.toggleExpandShow('${sh.id}')" class="px-2.5 py-2 rounded-xl bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/90 text-slate-700 font-bold text-[11px] transition">Thu gọn ▲</button>
-                              <button type="button" onclick="ownerActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-[11px] transition">💾 LƯU</button>
+                              <button type="button" onclick="ownerActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-[11px] transition">💾 LƯU SHOW</button>
                             </div>
                           </div>
                         ` : `
@@ -690,8 +690,8 @@ export function renderDebtTabHtml() {
                             <div class="space-y-3">
                               <div class="space-y-1.5">
                                 <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">TÌNH TRẠNG</span>
-                                <div class="flex items-center gap-1 flex-wrap">
-                                  ${CREW_CTP_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setCrewCtpStatus('${sh.id}', '${s.id}')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition ${cm.meta.ctpStatus === s.id ? 'bg-slate-100 text-slate-900 border-slate-300/90 font-extrabold' : 'bg-slate-50/70 hover:bg-slate-100/80 text-slate-600 border-slate-200/75'}">${escapeHtml(formatCompactStatusLabel(s.label))}</button>`).join('')}
+                                <div class="grid grid-cols-2 gap-1 p-0.5 rounded-xl bg-[#f8fafc] border border-slate-200/80">
+                                  ${CREW_CTP_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setCrewCtpStatus('${sh.id}', '${s.id}')" class="py-1 px-2 rounded-lg text-[10.5px] truncate transition ${cm.meta.ctpStatus === s.id ? 'bg-slate-100 text-slate-900 font-extrabold border border-slate-300/90' : 'text-slate-600 font-medium hover:text-slate-900'}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
                                 </div>
                               </div>
 
