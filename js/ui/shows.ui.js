@@ -40,15 +40,15 @@ export function renderShowsTabHtml() {
         </div>
       ` : `
         <div class="flex-1 min-h-0 overflow-auto custom-scroll relative">
-          <table class="w-full border-collapse text-[11px] min-w-[740px]">
+          <table class="w-full sm:table-fixed border-collapse text-[11px] min-w-[740px]">
             <thead class="sticky top-0 z-20">
               <tr class="bg-[#d9ead3] text-slate-800 border-b border-slate-300 font-extrabold text-[10px] uppercase">
                 <th class="py-1.5 px-1.5 border-r border-slate-300 w-9 text-center">STT</th>
                 <th class="sticky left-0 z-20 bg-[#d9ead3] py-1.5 px-2 border-r border-slate-300 text-left w-28 sm:w-36 sticky-col-shadow">THÔNG TIN (ĐỊA ĐIỂM)</th>
-                <th class="py-1.5 px-1.5 border-r border-slate-300 text-left w-20 sm:w-28">TÊN SHOW - ĐỐI TÁC</th>
-                <th class="py-1.5 px-1 border-r border-slate-300 text-center w-12">BĐ</th>
-                <th class="py-1.5 px-1 border-r border-slate-300 text-center w-12">KT</th>
-                <th class="py-1.5 px-2 border-r border-slate-300 text-left min-w-[200px] sm:min-w-[260px]">NHÂN SỰ</th>
+                <th class="py-1.5 px-2 border-r border-slate-300 text-left w-28 sm:w-36">TÊN SHOW - ĐỐI TÁC</th>
+                <th class="py-1.5 px-1 border-r border-slate-300 text-center w-16 sm:w-20">BĐ</th>
+                <th class="py-1.5 px-1 border-r border-slate-300 text-center w-16 sm:w-20">KT</th>
+                <th class="py-1.5 px-2 border-r border-slate-300 text-left min-w-[200px] sm:w-auto">NHÂN SỰ</th>
                 <th class="py-1.5 px-1 border-r border-slate-300 text-center w-16 sm:w-20">CHỦ SHOW</th>
                 <th class="py-1.5 px-1 text-center w-16 sm:w-20">NGƯỜI TẠO</th>
               </tr>
@@ -65,18 +65,18 @@ export function renderShowsTabHtml() {
                   <tr onclick="appActions.openShowDetail('${sh.id}')" class="hover:bg-indigo-50/40 cursor-pointer ${rowCls}">
                     <td class="py-2 px-1.5 border-r border-slate-200 text-center font-mono text-[10px] font-bold text-slate-500">${idx + 1}</td>
                     <td class="sticky left-0 z-10 ${sh.isCancelled ? 'bg-rose-50' : editable ? 'bg-white' : 'bg-slate-50'} py-2 px-2 border-r border-slate-200 font-extrabold text-slate-900 sticky-col-shadow">
-                      <div class="flex items-center gap-1.5">
+                      <div class="flex items-center gap-1.5 min-w-0">
                         <span class="w-2 h-2 rounded-full shrink-0 border border-black/15" style="background-color:${sh.color || '#dbeafe'}"></span>
-                        <span class="truncate max-w-[100px] sm:max-w-[132px] as-loc-text">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>${statusBadge}
+                        <span class="truncate as-loc-text">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>${statusBadge}
                         ${sh.isCancelled ? '<span class="as-badge-cancelled">🚫 ĐÃ HỦY</span>' : ''}
                       </div>
                     </td>
-                    <td class="py-2 px-1.5 border-r border-slate-200 text-slate-700 font-semibold truncate max-w-[82px] sm:max-w-[112px]">
+                    <td class="py-2 px-2 border-r border-slate-200 text-slate-700 font-semibold truncate">
                       ${partner ? escapeHtml(partner) : '<span class="text-slate-300">-</span>'}
                     </td>
                     <td class="py-2 px-1 border-r border-slate-200 text-center font-bold text-slate-700">${formatDayMonth(sh.startDate)}</td>
                     <td class="py-2 px-1 border-r border-slate-200 text-center font-bold text-slate-700">${formatDayMonth(sh.endDate)}</td>
-                    <td class="py-2 px-2 border-r border-slate-200 min-w-[200px] sm:min-w-[260px]">
+                    <td class="py-2 px-2 border-r border-slate-200 min-w-[200px] sm:w-auto">
                       <div class="flex flex-wrap gap-1">
                         ${(sh.memberIds || []).map(mid => renderPillHtml(mid, 'xs')).join('')}
                         ${(sh.externalCrew || []).map((p, eIdx) => {
