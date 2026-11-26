@@ -801,23 +801,33 @@ export function renderDebtTabHtml() {
                                   <span class="font-mono font-bold tabular-nums text-[10.5px] text-slate-500">${cm.taskSum.toLocaleString('vi-VN')}đ</span>
                                 </div>
                                 <div class="grid grid-cols-3 gap-1">
-                                  ${taskKeys.map(tk => {
-                                    const active = linkedTasks[tk] !== undefined && linkedTasks[tk] !== null;
-                                    const tVal = active ? linkedTasks[tk] : getDefaultRateForTask(tk, sh);
-                                    return `
-                                      <div class="h-6 rounded-md border px-1 flex items-center justify-between gap-0.5 transition min-w-0 ${
-                                        active
-                                          ? 'bg-slate-100 border-slate-300/90 text-slate-900'
-                                          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
-                                      }">
-                                        <button type="button" onclick="ownerActions.toggleSyncedCtpTask('${sh.id}', '${tk}')" class="text-left text-[9.5px] sm:text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
-                                          ${taskLabels[tk]}
-                                        </button>
-                                        ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleSyncedCtpTaskInput('${sh.id}', '${tk}', this)" class="flex-1 min-w-[34px] bg-transparent text-right font-mono font-extrabold tabular-nums text-[8.5px] sm:text-[9.5px] tracking-tighter text-slate-900 focus:outline-none" />` : ''}
-                                      </div>
-                                    `;
-                                  }).join('')}
-                                </div>
+  ${taskKeys.map(tk => {
+    const active = linkedTasks[tk] !== undefined && linkedTasks[tk] !== null;
+    const tVal = active ? linkedTasks[tk] : getDefaultRateForTask(tk, sh);
+    return `
+      <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-1 transition min-w-0 ${
+        active
+          ? 'bg-slate-100 border-slate-300/90 text-slate-900'
+          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
+      }">
+        <button type="button" onclick="ownerActions.toggleSyncedCtpTask('${sh.id}', '${tk}')" class="text-left text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
+          ${taskLabels[tk]}
+        </button>
+        ${active ? `
+          <input
+            type="text"
+            inputmode="decimal"
+            value="${formatCompactMoneyPlain(tVal)}"
+            onfocus="this.value='${Number(tVal || 0) || ''}';this.select();"
+            oninput="ownerActions.handleSyncedCtpTaskInput('${sh.id}', '${tk}', this)"
+            onblur="const n=Number(state.ctpItems?.['${sh.id}']?.tasks?.['${tk}']||0);this.value=${formatCompactMoneyPlain.name}(n);"
+            class="flex-1 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[10px] text-slate-900 focus:outline-none"
+          />
+        ` : ''}
+      </div>
+    `;
+  }).join('')}
+</div>
                               </div>
 
                               <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1.5">
