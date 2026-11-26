@@ -498,36 +498,36 @@ export function renderCtpBillModalHtml() {
       .map(s => s.trim())
       .filter(Boolean);
     if (!items.length) return '<span class="text-slate-400">-</span>';
-    return `<div class="space-y-0.5 leading-snug">${items.map(line => `<div>${escapeHtml(line)}</div>`).join('')}</div>`;
+    return `<div class="space-y-0.5 leading-snug whitespace-nowrap">${items.map(line => `<div>${escapeHtml(line)}</div>`).join('')}</div>`;
   };
 
   return `
     <div onclick="ctpActions.closeBillModal()" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2.5 sm:p-4">
       <div onclick="event.stopPropagation()" id="ctp-bill-capture-area" class="bg-white w-full max-w-2xl rounded-3xl p-3 sm:p-5 space-y-2.5 text-xs shadow-2xl flex flex-col max-h-[90dvh]">
-        <div class="flex justify-between items-center border-b border-slate-200 pb-2 shrink-0">
-          <div>
-            <h3 class="font-black text-sm text-slate-900">BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}</h3>
-            <p class="text-[11px] text-slate-500">Nhân sự: <b>${escapeHtml(memberNickname)}</b> • Sếp: <b class="text-emerald-700">${escapeHtml(bm.ownerTitle)}</b></p>
+        <div class="flex justify-between items-center border-b border-slate-200 pb-2 shrink-0 gap-2">
+          <div class="min-w-0">
+            <h3 class="font-black text-sm text-slate-900 truncate">BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}</h3>
+            <p class="text-[11px] text-slate-500 truncate">Nhân sự: <b>${escapeHtml(memberNickname)}</b> • Sếp: <b class="text-emerald-700">${escapeHtml(bm.ownerTitle)}</b></p>
           </div>
-          <button type="button" data-html2canvas-ignore="true" onclick="ctpActions.closeBillModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700">✕</button>
+          <button type="button" data-html2canvas-ignore="true" onclick="ctpActions.closeBillModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 shrink-0">✕</button>
         </div>
 
-        <div class="flex-1 min-h-0 overflow-auto border border-slate-300 rounded-2xl">
-          <table class="ctp-bill-capture-table w-full border-collapse text-[11px]">
+        <div class="flex-1 min-h-0 overflow-auto custom-scroll border border-slate-300 rounded-2xl">
+          <table class="ctp-bill-capture-table w-full min-w-[540px] border-collapse text-[11px]">
             <thead class="sticky top-0 bg-[#107c41] text-white font-extrabold text-[10px] uppercase">
               <tr>
-                <th class="py-2 px-1.5 border border-slate-300 text-center">STT</th>
-                <th class="py-2 px-1.5 border border-slate-300 text-center">NGÀY</th>
-                <th class="py-2 px-2 border border-slate-300 text-left">SHOW</th>
-                <th class="py-2 px-2 border border-slate-300 text-left">NHIỆM VỤ</th>
-                <th class="py-2 px-2 border border-slate-300 text-left">PHÁT SINH</th>
-                <th class="py-2 px-2 border border-slate-300 text-right">TỔNG</th>
+                <th class="py-2 px-1.5 border border-slate-300 text-center whitespace-nowrap">STT</th>
+                <th class="py-2 px-1.5 border border-slate-300 text-center whitespace-nowrap">NGÀY</th>
+                <th class="py-2 px-2 border border-slate-300 text-left whitespace-nowrap">SHOW</th>
+                <th class="py-2 px-2 border border-slate-300 text-left whitespace-nowrap">NHIỆM VỤ</th>
+                <th class="py-2 px-2 border border-slate-300 text-left whitespace-nowrap">PHÁT SINH</th>
+                <th class="py-2 px-2 border border-slate-300 text-right whitespace-nowrap">TỔNG</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 bg-white">
               ${bm.rows.map(r => `
                 <tr>
-                  <td class="py-1.5 px-1.5 border border-slate-300 text-center align-top">${r.stt}</td>
+                  <td class="py-1.5 px-1.5 border border-slate-300 text-center align-top whitespace-nowrap">${r.stt}</td>
                   <td class="py-1.5 px-1.5 border border-slate-300 text-center font-mono align-top whitespace-nowrap">${escapeHtml(r.dateLabel)}</td>
                   <td class="py-1.5 px-2 border border-slate-300 font-bold text-slate-900 align-top">${escapeHtml(r.location)}</td>
                   <td class="py-1.5 px-2 border border-slate-300 text-slate-800 align-top">${renderFullLines(r.taskBullets, r.taskBulletsCompact)}</td>
@@ -538,7 +538,7 @@ export function renderCtpBillModalHtml() {
             </tbody>
             <tfoot>
               <tr class="bg-slate-900 text-white font-mono font-black">
-                <td colspan="5" class="py-2 px-2 border border-slate-700 text-right text-amber-300">TỔNG CỘNG:</td>
+                <td colspan="5" class="py-2 px-2 border border-slate-700 text-right text-amber-300 whitespace-nowrap">TỔNG CỘNG:</td>
                 <td class="py-2 px-2 border border-slate-700 text-right text-emerald-400 whitespace-nowrap">${Number(bm.total || 0).toLocaleString('vi-VN')}đ</td>
               </tr>
             </tfoot>
@@ -546,14 +546,14 @@ export function renderCtpBillModalHtml() {
         </div>
 
         ${qrUrl ? `
-          <div class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
-            <div class="text-[11px] space-y-0.5">
-              <div class="font-black text-slate-900 uppercase">💳 QUÉT MÃ VIETQR THANH TOÁN CTP</div>
-              <div>Ngân hàng: <b>${escapeHtml(getBankName(prof.bankBin))}</b></div>
-              <div>Chủ TK: <b class="uppercase">${escapeHtml(bankHolderName)}</b></div>
-              <div>Số TK: <b class="font-mono text-indigo-700">${escapeHtml(prof.bankAcc)}</b></div>
+          <div class="flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
+            <div class="text-[10.5px] sm:text-[11px] space-y-0.5 min-w-0">
+              <div class="font-black text-slate-900 uppercase whitespace-nowrap">💳 QUÉT MÃ VIETQR THANH TOÁN CTP</div>
+              <div class="truncate">Ngân hàng: <b>${escapeHtml(getBankName(prof.bankBin))}</b></div>
+              <div class="truncate">Chủ TK: <b class="uppercase">${escapeHtml(bankHolderName)}</b></div>
+              <div class="truncate">Số TK: <b class="font-mono text-indigo-700">${escapeHtml(prof.bankAcc)}</b></div>
             </div>
-            <img src="${qrUrl}" alt="VietQR" class="vietqr-img-el w-24 h-24 object-contain bg-white p-1 rounded-xl border border-slate-200" />
+            <img src="${qrUrl}" alt="VietQR" class="vietqr-img-el w-20 h-20 sm:w-24 sm:h-24 object-contain bg-white p-1 rounded-xl border border-slate-200 shrink-0" />
           </div>
         ` : ''}
 
