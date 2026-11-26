@@ -444,40 +444,53 @@ export function renderDebtTabHtml() {
           <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2 text-[11px]">
             <div class="flex items-center justify-between gap-1">
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Công nợ Cộng dồn</span>
-              <span class="font-mono font-bold text-[10px] text-slate-400">${state.ownerAllMonths ? 'Đang xem cả năm' : `T1–T${Math.max(0, Number(state.ownerMonth) - 1)}`}</span>
+              <span class="font-mono font-bold text-[10px] text-slate-400">${state.ownerAllMonths ? `Cả năm ${state.selectedYear}` : `T1–T${Math.max(0, Number(state.ownerMonth) - 1)}`}</span>
             </div>
-            ${state.ownerAllMonths ? `
-              <div class="text-[11px] text-slate-500 py-1">Đang gộp toàn bộ các tháng của năm ${state.selectedYear}.</div>
-            ` : prevCarryAmount > 0 ? `
-              <div class="space-y-2">
-                <div class="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-1">
-                  <div class="flex items-center justify-between">
-                    <span class="font-bold text-amber-950">Tổng treo từ tháng trước</span>
-                    <span class="font-mono font-black text-rose-600">${fmtMoney(prevCarryAmount)}</span>
+            ${(() => {
+              const displayAmount = state.ownerAllMonths ? totalUncollectedToWallet : prevCarryAmount;
+              const displayCount = state.ownerAllMonths ? unsettledCount : prevCarryCount;
+              const displayList = state.ownerAllMonths
+                ? bossSummaryList
+                    .filter(g => g.pendingAmount > 0)
+                    .map(g => ({ key: g.key, name: g.name, count: g.unsettledCount, amount: g.pendingAmount }))
+                    .sort((a, b) => b.amount - a.amount)
+                : carryOnlyBossList;
+
+              if (displayAmount <= 0) {
+                return `
+                  <div class="text-[11px] text-emerald-700 font-semibold py-2 px-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    ✓ ${state.ownerAllMonths ? `Không có công nợ treo trong năm ${state.selectedYear}` : 'Không có công nợ cộng dồn từ tháng trước'}
                   </div>
-                  <div class="flex items-center justify-between text-[10px] text-amber-800">
-                    <span>${prevCarryCount} show chưa hoàn tất</span>
-                    <button type="button" onclick="ownerActions.toggleAllMonths()" class="font-extrabold text-indigo-700 hover:underline">Xem cả năm →</button>
+                `;
+              }
+
+              return `
+                <div class="space-y-2">
+                  <div class="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-1">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-amber-950">${state.ownerAllMonths ? `Tổng treo cả năm ${state.selectedYear}` : 'Tổng treo từ tháng trước'}</span>
+                      <span class="font-mono font-black text-rose-600">${fmtMoney(displayAmount)}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] text-amber-800">
+                      <span>${displayCount} show chưa hoàn tất</span>
+                      ${!state.ownerAllMonths ? `<button type="button" onclick="ownerActions.toggleAllMonths()" class="font-extrabold text-indigo-700 hover:underline">Xem cả năm →</button>` : ''}
+                    </div>
+                  </div>
+                  <div class="space-y-1">
+                    ${displayList.map(c => `
+                      <button
+                        type="button"
+                        onclick="ownerActions.setBossFilter('${escapeHtml(c.key)}')"
+                        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/80 text-[10.5px] transition"
+                      >
+                        <span class="font-bold text-slate-800 truncate">${escapeHtml(c.name)} <span class="text-slate-400 font-normal">(${c.count} show)</span></span>
+                        <span class="font-mono font-black text-rose-600 shrink-0">${fmtCompact(c.amount)}</span>
+                      </button>
+                    `).join('')}
                   </div>
                 </div>
-                <div class="space-y-1">
-                  ${carryOnlyBossList.map(c => `
-                    <button
-                      type="button"
-                      onclick="ownerActions.setBossFilter('${escapeHtml(c.key)}')"
-                      class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/80 text-[10.5px] transition"
-                    >
-                      <span class="font-bold text-slate-800 truncate">${escapeHtml(c.name)} <span class="text-slate-400 font-normal">(${c.count} show)</span></span>
-                      <span class="font-mono font-black text-rose-600 shrink-0">${fmtCompact(c.amount)}</span>
-                    </button>
-                  `).join('')}
-                </div>
-              </div>
-            ` : `
-              <div class="text-[11px] text-emerald-700 font-semibold py-2 px-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                ✓ Không có công nợ cộng dồn từ tháng trước
-              </div>
-            `}
+              `;
+            })()}
           </div>
         </aside>
 
