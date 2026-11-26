@@ -8,15 +8,15 @@ export function renderShowsTabHtml() {
   return `
     <div class="flex-1 flex flex-col min-h-0 bg-[#f1f5f9] text-xs">
       ${state.zenFullscreen ? '' : `
-        <div class="bg-[#f8fafc] px-3 py-2.5 border-b border-slate-200/90 shrink-0 space-y-2">
-          <div class="flex items-center gap-2">
+        <div class="bg-[#f8fafc] px-2.5 sm:px-3 py-2 sm:py-2.5 border-b border-slate-200/90 shrink-0 space-y-2">
+          <div class="flex items-center gap-1.5 sm:gap-2">
             <div class="relative flex-1 min-w-0">
-              <i class="fa-solid fa-magnifying-glass text-slate-400 text-[11px] absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <i class="fa-solid fa-magnifying-glass text-slate-400 text-[11px] absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2"></i>
               <input id="search-input-box" type="text" value="${escapeHtml(state.searchQuery)}" oninput="appActions.onSearchInput(this.value)"
-                placeholder="Tìm Hồ Tràm, Đà Nẵng, Phú Quốc, Golf..." class="w-full pl-8 pr-2.5 py-1.5 bg-white border border-slate-200/90 rounded-xl text-[11.5px] text-slate-800 focus:outline-none focus:border-slate-900" />
+                placeholder="Tìm Hồ Tràm, Đà Nẵng, Phú Quốc, Golf..." class="w-full pl-7 sm:pl-8 pr-2.5 py-1.5 bg-white border border-slate-200/90 rounded-xl text-[11px] sm:text-[11.5px] text-slate-800 focus:outline-none focus:border-slate-900" />
             </div>
-            <button type="button" onclick="appActions.openZaloTomorrowModal()" class="px-3 py-1.5 rounded-xl text-[10.5px] font-extrabold bg-slate-900 hover:bg-slate-800 text-white shrink-0 transition">📋 Điểm danh Mai</button>
-            <button type="button" onclick="appActions.toggleAllMonths()" class="px-3 py-1.5 rounded-xl text-[10.5px] font-bold border shrink-0 transition ${state.filterAllMonthsInList ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'}">
+            <button type="button" onclick="appActions.openZaloTomorrowModal()" class="px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[10.5px] font-extrabold bg-slate-900 hover:bg-slate-800 text-white shrink-0 transition">📋 Điểm danh Mai</button>
+            <button type="button" onclick="appActions.toggleAllMonths()" class="px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[10.5px] font-bold border shrink-0 transition ${state.filterAllMonthsInList ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'}">
               ${state.filterAllMonthsInList ? `Tất cả (${state.shows.length})` : `T${state.selectedMonth} (${filtered.length})`}
             </button>
           </div>
@@ -39,19 +39,19 @@ export function renderShowsTabHtml() {
           </button>
         </div>
       ` : `
-        <div class="flex-1 min-h-0 overflow-auto custom-scroll relative p-2.5 sm:p-3.5">
+        <div class="flex-1 min-h-0 overflow-auto custom-scroll relative p-2 sm:p-3.5">
           <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-            <table class="w-full table-fixed border-collapse text-[11.5px] min-w-[860px]">
+            <table class="w-full table-fixed border-collapse text-[11px] sm:text-[11.5px] min-w-[620px] sm:min-w-[860px]">
               <thead class="sticky top-0 z-20">
-                <tr class="bg-[#f8fafc] text-slate-400 border-b border-slate-200/90 font-black text-[10px] uppercase tracking-wider">
-                  <th class="py-2.5 px-2 border-r border-slate-200/70 w-11 text-center">STT</th>
-                  <th class="sticky left-0 z-20 bg-[#f8fafc] py-2.5 px-3 border-r border-slate-200/70 text-left w-44 sticky-col-shadow">THÔNG TIN (ĐỊA ĐIỂM)</th>
-                  <th class="py-2.5 px-3 border-r border-slate-200/70 text-left w-40">TÊN SHOW - ĐỐI TÁC</th>
-                  <th class="py-2.5 px-2 border-r border-slate-200/70 text-center w-16">BĐ</th>
-                  <th class="py-2.5 px-2 border-r border-slate-200/70 text-center w-16">KT</th>
-                  <th class="py-2.5 px-3 border-r border-slate-200/70 text-left">NHÂN SỰ</th>
-                  <th class="py-2.5 px-2.5 border-r border-slate-200/70 text-center w-24">CHỦ SHOW</th>
-                  <th class="py-2.5 px-2.5 text-center w-24">NGƯỜI TẠO</th>
+                <tr class="bg-[#f8fafc] text-slate-400 border-b border-slate-200/90 font-black text-[9.5px] sm:text-[10px] uppercase tracking-wider">
+                  <th class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/70 w-9 sm:w-11 text-center">STT</th>
+                  <th class="sticky left-0 z-20 bg-[#f8fafc] py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/70 text-left w-32 sm:w-44 sticky-col-shadow">THÔNG TIN (ĐỊA ĐIỂM)</th>
+                  <th class="py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/70 text-left w-28 sm:w-40">TÊN SHOW - ĐỐI TÁC</th>
+                  <th class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/70 text-center w-12 sm:w-16">BĐ</th>
+                  <th class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/70 text-center w-12 sm:w-16">KT</th>
+                  <th class="py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/70 text-left min-w-[140px] sm:min-w-[210px]">NHÂN SỰ</th>
+                  <th class="py-2 sm:py-2.5 px-1.5 sm:px-2.5 border-r border-slate-200/70 text-center w-20 sm:w-24">CHỦ SHOW</th>
+                  <th class="py-2 sm:py-2.5 px-1.5 sm:px-2.5 text-center w-20 sm:w-24">NGƯỜI TẠO</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200/65">
@@ -65,21 +65,21 @@ export function renderShowsTabHtml() {
                   const stickyCellBg = sh.isCancelled ? 'bg-rose-50' : editable ? 'bg-white' : 'bg-[#f8fafc]';
                   return `
                     <tr onclick="appActions.openShowDetail('${sh.id}')" class="hover:bg-[#f1f5f9]/75 cursor-pointer transition-colors ${rowCls}">
-                      <td class="py-2.5 px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[10.5px] font-semibold text-slate-400">${idx + 1}</td>
-                      <td class="sticky left-0 z-10 ${stickyCellBg} py-2.5 px-3 border-r border-slate-200/65 font-bold text-slate-900 sticky-col-shadow">
-                        <div class="flex items-center gap-2 min-w-0">
+                      <td class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[10px] sm:text-[10.5px] font-semibold text-slate-400">${idx + 1}</td>
+                      <td class="sticky left-0 z-10 ${stickyCellBg} py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/65 font-bold text-slate-900 sticky-col-shadow">
+                        <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
                           <span class="w-2 h-2 rounded-full shrink-0 border border-black/15" style="background-color:${sh.color || '#dbeafe'}"></span>
                           <span class="truncate as-loc-text">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>${statusBadge}
                           ${sh.isCancelled ? '<span class="as-badge-cancelled">🚫 ĐÃ HỦY</span>' : ''}
                         </div>
                       </td>
-                      <td class="py-2.5 px-3 border-r border-slate-200/65 text-slate-700 font-medium truncate">
+                      <td class="py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/65 text-slate-700 font-medium truncate">
                         ${partner ? escapeHtml(partner) : '<span class="text-slate-300">—</span>'}
                       </td>
-                      <td class="py-2.5 px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.startDate)}</td>
-                      <td class="py-2.5 px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.endDate)}</td>
-                      <td class="py-2.5 px-3 border-r border-slate-200/65">
-                        <div class="flex flex-wrap items-center gap-1.5">
+                      <td class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[10.5px] sm:text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.startDate)}</td>
+                      <td class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[10.5px] sm:text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.endDate)}</td>
+                      <td class="py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/65">
+                        <div class="flex flex-wrap items-center gap-1 sm:gap-1.5">
                           ${(sh.memberIds || []).map(mid => renderPillHtml(mid, 'xs')).join('')}
                           ${(sh.externalCrew || []).map((p, eIdx) => {
                             const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
@@ -87,8 +87,8 @@ export function renderShowsTabHtml() {
                           }).join('')}
                         </div>
                       </td>
-                      <td class="py-2.5 px-2.5 border-r border-slate-200/65 text-center truncate"><span class="text-[11px] font-bold text-slate-800">${escapeHtml(owner.name)}</span></td>
-                      <td class="py-2.5 px-2.5 text-center truncate"><span class="text-[11px] font-bold text-indigo-700">${escapeHtml(creator.name)}</span></td>
+                      <td class="py-2 sm:py-2.5 px-1.5 sm:px-2.5 border-r border-slate-200/65 text-center truncate"><span class="text-[10.5px] sm:text-[11px] font-bold text-slate-800">${escapeHtml(owner.name)}</span></td>
+                      <td class="py-2 sm:py-2.5 px-1.5 sm:px-2.5 text-center truncate"><span class="text-[10.5px] sm:text-[11px] font-bold text-indigo-700">${escapeHtml(creator.name)}</span></td>
                     </tr>
                   `;
                 }).join('')}
