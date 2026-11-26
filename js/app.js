@@ -1146,6 +1146,13 @@ window.appActions = {
 };
 
 window.ctpActions = {
+  handleTaskPriceInput(id, k, el) {
+    const num = parseFlexibleMoneyInput(el.value);
+    if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
+    state.ctpItems[id].tasks[k] = num;
+    this._refreshLiveTotals(id);
+    saveCtpState();
+  },
   async toggleHoldBilling(showId) {
     const sh = state.shows.find(s => s.id === showId);
     if (!sh) return;
@@ -1739,6 +1746,21 @@ window.ctpActions = {
 };
 
 window.ownerActions = {
+  handleOwnerCrewTaskInput(shId, mid, taskKey, el) {
+    const num = parseFlexibleMoneyInput(el.value);
+    const rec = ensureOwnerFinRecord(shId);
+    if (!rec.crewTasks[mid]) rec.crewTasks[mid] = {};
+    rec.crewTasks[mid][taskKey] = num;
+    this._recalcMemberCost(shId, mid);
+    saveOwnerFinanceState();
+  },
+  handleSyncedCtpTaskInput(shId, taskKey, el) {
+    const num = parseFlexibleMoneyInput(el.value);
+    if (!state.ctpItems[shId]) state.ctpItems[shId] = { tasks: {}, extras: [] };
+    if (!state.ctpItems[shId].tasks) state.ctpItems[shId].tasks = {};
+    state.ctpItems[shId].tasks[taskKey] = num;
+    saveCtpState();
+  },
   setBossFilter(bossKey) {
     const nextKey = bossKey || 'all';
     state.ownerBossFilterKey = state.ownerBossFilterKey === nextKey ? 'all' : nextKey;
