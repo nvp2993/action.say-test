@@ -480,10 +480,37 @@ function renderApp() {
     return;
   }
 
-  let main = '';
+let main = '';
   if (state.activeTab === 'shows') main = renderShowsTabHtml();
-  else if (state.activeTab === 'matrix') main = renderMatrixTabHtml();
-  else if (state.activeTab === 'free_finder') main = renderCrewBoardTabHtml();
+  else if (state.activeTab === 'matrix' || state.activeTab === 'free_finder') {
+    const isCrewView = state.activeTab === 'free_finder';
+    const subBody = isCrewView ? renderCrewBoardTabHtml() : renderMatrixTabHtml();
+    main = `
+      <div class="flex-1 flex flex-col min-h-0">
+        <div class="bg-[#f8fafc] px-2.5 py-1.5 border-b border-slate-200/90 shrink-0 flex items-center justify-center">
+          <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-200/80 border border-slate-300/60 w-full max-w-sm">
+            <button
+              type="button"
+              onclick="appActions.setTab('matrix')"
+              class="flex-1 py-1 px-2.5 rounded-lg text-[11px] font-extrabold transition flex items-center justify-center gap-1.5 ${!isCrewView ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'}"
+            >
+              <i class="fa-solid fa-calendar-days text-[10px] text-indigo-600"></i>
+              <span>Bảng công tác</span>
+            </button>
+            <button
+              type="button"
+              onclick="appActions.setTab('free_finder')"
+              class="flex-1 py-1 px-2.5 rounded-lg text-[11px] font-extrabold transition flex items-center justify-center gap-1.5 ${isCrewView ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'}"
+            >
+              <i class="fa-solid fa-user-check text-[10px] text-emerald-600"></i>
+              <span>Tìm nhân sự rảnh</span>
+            </button>
+          </div>
+        </div>
+        ${subBody}
+      </div>
+    `;
+  }
   else if (state.activeTab === 'ctp') main = renderCtpTabHtml();
   else if (state.activeTab === 'owner_stats') main = renderDebtTabHtml();
 
