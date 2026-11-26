@@ -219,7 +219,7 @@ export function renderCtpTabHtml() {
 
             return `
               <div id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border-slate-200 border'} rounded-3xl p-4 space-y-3">
-                <div class="flex items-start justify-between gap-2 ${isCounted ? `border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2` : ''}">
+                <div class="flex items-start justify-between gap-2 ${isCounted ? `border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2.5` : ''}">
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="px-2 py-0.5 rounded-full bg-white/90 text-slate-600 font-mono font-bold text-[10px] border border-slate-200/80">#${idx + 1}</span>
@@ -256,108 +256,118 @@ export function renderCtpTabHtml() {
                 ` : ''}
 
                 ${isCounted ? `
-                  <div class="flex flex-wrap gap-1.5">
-                    ${taskList.map(t => {
-                      const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
-                      const val = checked ? item.tasks[t.key] : t.def;
-                      return `
-                        <div class="inline-flex flex-col items-start">
-                          <button type="button" onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')" class="px-2.5 py-1 rounded-lg text-[10px] font-bold border leading-tight transition ${checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-white/90 text-slate-700 border-slate-200'}">
-                            ${t.label}
-                          </button>
-                          ${checked ? `<input type="tel" inputmode="numeric" value="${Number(val).toLocaleString('vi-VN')}" oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)" class="mt-1 w-24 px-2 py-0.5 bg-indigo-50 border border-indigo-300 rounded-md text-[10px] font-mono font-bold text-right" />` : ''}
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>
-
-                  <div class="space-y-2 pt-2 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'}">
-                    <div class="flex items-center justify-between gap-2">
-                      <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-black text-slate-500 uppercase">Phát sinh:</span>
-                        ${myExtras.length > 0 ? `
-                          <span id="ctp-show-extra-sum-${sh.id}" class="px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 font-mono font-black text-[10px] text-emerald-700">
-                            ${myExtrasSum.toLocaleString('vi-VN')}đ
-                          </span>
-                        ` : ''}
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
+                    <!-- CỘT TRÁI: NHIỆM VỤ -->
+                    <div class="space-y-2 min-w-0">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-black text-slate-500 uppercase">🎬 Nhiệm vụ:</span>
+                        <span class="font-mono font-bold text-[10px] text-slate-500">${getShowTaskSum(item).toLocaleString('vi-VN')}đ</span>
                       </div>
-                      <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-xl text-[10px] font-black transition">+ Thêm phí</button>
+                      <div class="grid grid-cols-3 gap-1.5">
+                        ${taskList.map(t => {
+                          const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
+                          const val = checked ? item.tasks[t.key] : t.def;
+                          return `
+                            <div class="flex flex-col min-w-0">
+                              <button type="button" onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')" class="w-full px-2 py-1.5 rounded-lg text-[10px] font-bold border leading-tight transition text-center ${checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-slate-50'}">
+                                ${t.label}
+                              </button>
+                              ${checked ? `<input type="tel" inputmode="numeric" value="${Number(val).toLocaleString('vi-VN')}" oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)" class="mt-1 w-full px-2 py-1 bg-indigo-50 border border-indigo-300 rounded-md text-[10px] font-mono font-bold text-right" />` : ''}
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
                     </div>
 
-                    ${myExtras.length === 0 ? `
-                      <div class="text-[11px] text-slate-400 py-0.5">• Chưa có khoản phát sinh nào.</div>
-                    ` : `
-                      <ul class="space-y-1.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 px-3 py-2">
-                        ${myExtras.map((ex, exIdx) => {
-                          const rowKey = `${sh.id}_${ex.id || exIdx}`;
-                          const isEditingRow = state.ctpEditingExtraKey === rowKey;
-                          if (isEditingRow) {
+                    <!-- CỘT PHẢI: CHI PHÍ PHÁT SINH -->
+                    <div class="space-y-2 min-w-0 md:border-l md:pl-3.5 ${sh.isHold ? 'border-amber-200/80' : 'border-slate-200/80'}">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                          <span class="text-[10px] font-black text-slate-500 uppercase">🧾 Phát sinh:</span>
+                          ${myExtras.length > 0 ? `
+                            <span id="ctp-show-extra-sum-${sh.id}" class="px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 font-mono font-black text-[10px] text-emerald-700">
+                              ${myExtrasSum.toLocaleString('vi-VN')}đ
+                            </span>
+                          ` : ''}
+                        </div>
+                        <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-xl text-[10px] font-black transition">+ Thêm phí</button>
+                      </div>
+
+                      ${myExtras.length === 0 ? `
+                        <div class="text-[11px] text-slate-400 py-1.5 px-3 rounded-2xl bg-slate-50/70 border border-dashed border-slate-200">• Chưa có khoản phát sinh nào.</div>
+                      ` : `
+                        <ul class="space-y-1.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 px-3 py-2">
+                          ${myExtras.map((ex, exIdx) => {
+                            const rowKey = `${sh.id}_${ex.id || exIdx}`;
+                            const isEditingRow = state.ctpEditingExtraKey === rowKey;
+                            if (isEditingRow) {
+                              return `
+                                <li class="flex flex-wrap items-center justify-between gap-1.5 py-1 border-b last:border-b-0 border-slate-200/60">
+                                  <div class="flex items-center gap-1.5 flex-1 min-w-[140px]">
+                                    <span class="text-slate-400 font-black select-none">•</span>
+                                    <input
+                                      id="ctp-extra-name-${escapeHtml(rowKey)}"
+                                      type="text"
+                                      value="${escapeHtml(ex.name || '')}"
+                                      oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
+                                      onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
+                                      placeholder="Tên khoản chi..."
+                                      class="flex-1 min-w-0 px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+                                    />
+                                  </div>
+                                  <div class="flex items-center gap-1.5 shrink-0">
+                                    <input
+                                      type="tel"
+                                      inputmode="numeric"
+                                      value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}"
+                                      oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
+                                      onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
+                                      placeholder="Số tiền"
+                                      class="w-28 px-2.5 py-1 bg-emerald-50/80 border border-emerald-300 rounded-lg text-xs font-mono font-black text-emerald-800 text-right focus:outline-none focus:border-emerald-600"
+                                    />
+                                    <button
+                                      type="button"
+                                      onclick="ctpActions.finishEditExtra()"
+                                      class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10.5px] transition"
+                                    >Xong</button>
+                                    <button
+                                      type="button"
+                                      onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
+                                      title="Xóa khoản chi"
+                                      class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 font-bold text-xs flex items-center justify-center transition"
+                                    >✕</button>
+                                  </div>
+                                </li>
+                              `;
+                            }
+
                             return `
                               <li class="flex items-center justify-between gap-2 py-1 border-b last:border-b-0 border-slate-200/60">
-                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0 flex-1 text-xs">
                                   <span class="text-slate-400 font-black select-none">•</span>
-                                  <input
-                                    id="ctp-extra-name-${escapeHtml(rowKey)}"
-                                    type="text"
-                                    value="${escapeHtml(ex.name || '')}"
-                                    oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
-                                    onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
-                                    placeholder="Tên khoản chi..."
-                                    class="flex-1 min-w-0 px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
-                                  />
+                                  <span class="font-semibold text-slate-800 truncate">${escapeHtml(ex.name || 'Khoản phát sinh')}</span>
+                                  <span class="text-slate-300">—</span>
+                                  <span class="font-mono font-black text-emerald-700 shrink-0">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
                                 </div>
-                                <div class="flex items-center gap-1.5 shrink-0">
-                                  <input
-                                    type="tel"
-                                    inputmode="numeric"
-                                    value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}"
-                                    oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
-                                    onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
-                                    placeholder="Số tiền"
-                                    class="w-32 sm:w-36 px-2.5 py-1 bg-emerald-50/80 border border-emerald-300 rounded-lg text-xs font-mono font-black text-emerald-800 text-right focus:outline-none focus:border-emerald-600"
-                                  />
+                                <div class="flex items-center gap-1 shrink-0">
                                   <button
                                     type="button"
-                                    onclick="ctpActions.finishEditExtra()"
-                                    class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10.5px] transition"
-                                  >Xong</button>
+                                    onclick="ctpActions.startEditExtra('${escapeHtml(rowKey)}')"
+                                    class="px-2 py-0.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-[10.5px] font-bold text-slate-700 transition"
+                                  >Sửa</button>
                                   <button
                                     type="button"
                                     onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
                                     title="Xóa khoản chi"
-                                    class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 font-bold text-xs flex items-center justify-center transition"
+                                    class="w-6 h-6 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-400 hover:text-rose-600 font-bold text-[10.5px] flex items-center justify-center transition"
                                   >✕</button>
                                 </div>
                               </li>
                             `;
-                          }
-
-                          return `
-                            <li class="flex items-center justify-between gap-2 py-1 border-b last:border-b-0 border-slate-200/60">
-                              <div class="flex items-center gap-2 min-w-0 flex-1 text-xs">
-                                <span class="text-slate-400 font-black select-none">•</span>
-                                <span class="font-semibold text-slate-800 truncate">${escapeHtml(ex.name || 'Khoản phát sinh')}</span>
-                                <span class="text-slate-300">—</span>
-                                <span class="font-mono font-black text-emerald-700 shrink-0">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
-                              </div>
-                              <div class="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onclick="ctpActions.startEditExtra('${escapeHtml(rowKey)}')"
-                                  class="px-2.5 py-0.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-[10.5px] font-bold text-slate-700 transition"
-                                >Sửa</button>
-                                <button
-                                  type="button"
-                                  onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
-                                  title="Xóa khoản chi"
-                                  class="w-6 h-6 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-400 hover:text-rose-600 font-bold text-[10.5px] flex items-center justify-center transition"
-                                >✕</button>
-                              </div>
-                            </li>
-                          `;
-                        }).join('')}
-                      </ul>
-                    `}
+                          }).join('')}
+                        </ul>
+                      `}
+                    </div>
                   </div>
                 ` : ''}
               </div>
