@@ -129,7 +129,7 @@ export function renderCtpTabHtml() {
         </div>
       </div>
 
-      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[290px_minmax(0,1fr)]">
+      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[310px_minmax(0,1fr)]">
         <aside class="hidden lg:flex flex-col gap-3 p-3 bg-slate-50/95 border-r border-slate-200 overflow-y-auto custom-scroll">
           <div class="p-3.5 rounded-2xl bg-white border border-slate-200/90 space-y-2">
             <div class="flex items-center justify-between">
@@ -183,7 +183,7 @@ export function renderCtpTabHtml() {
         </aside>
 
         <div id="ctp-shows-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3">
-          <div class="max-w-6xl mx-auto space-y-3">
+          <div class="max-w-5xl mx-auto space-y-3">
             <!-- 4 Ô THỐNG KÊ STICKY -->
             <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-100/95 backdrop-blur-xs pb-1.5 cursor-pointer">
               ${ctpStatCards.map(c => `
@@ -201,8 +201,8 @@ export function renderCtpTabHtml() {
                 <button type="button" onclick="ctpActions.openAddCustomShowModal()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-full text-xs font-extrabold">Tự note thêm show ngoài</button>
               </div>
             ` : `
-              <!-- DẠNG 3 CỘT 1 HÀNG TRÊN DESKTOP LỚN, CHIỀU CAO CÂN ĐỐI -->
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
+              <!-- LƯỚI 2 CỘT STUDIO GALLERY: KHÔNG LẶP NHÃN, KHÔNG CẮT CHỮ -->
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
                 ${filteredShows.map((sh, idx) => {
                   const item = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
                   const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
@@ -221,107 +221,107 @@ export function renderCtpTabHtml() {
                     label: { quay: 'Quay', dung: 'Dựng', chup: 'Chụp', lamhinh: 'Làm hình', flycam: 'Flycam', gimbal: 'Gimbal' }[k],
                     def: getDefaultRateForTask(k, sh)
                   }));
-                  const activeTasks = taskList.filter(t => item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null);
                   const hasEditingRow = myExtras.some((ex, exIdx) => state.ctpEditingExtraKey === `${sh.id}_${ex.id || exIdx}`);
 
                   return `
-                    <div id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border-slate-200 border'} rounded-3xl p-3.5 shadow-2xs flex flex-col justify-between gap-2.5 min-w-0">
-                      <div class="space-y-2.5">
-                        <!-- HEADER CỐ ĐỊNH NHỊP -->
-                        <div class="flex items-start justify-between gap-2 min-h-[52px] ${isCounted ? `border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2` : ''}">
-                          <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5 flex-wrap text-[10px]">
-                              <span class="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono font-bold">#${idx + 1}</span>
-                              <span class="font-mono font-bold text-indigo-600">${formatDayMonth(sh.startDate)} (${days}n)</span>
-                              <span class="text-slate-300">•</span>
-                              <span class="text-slate-600 font-semibold truncate">Chủ: <b class="text-slate-800">${escapeHtml(owner.name)}</b></span>
-                              ${sh.isHold ? `<span class="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold">⏳ Giữ lịch</span>` : ''}
-                              ${isPrivateShow ? `<span class="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold">🔒</span>` : ''}
-                            </div>
-                            <h4 class="font-black text-slate-900 text-sm mt-1 truncate" title="${escapeHtml(displayLocation)}${partnerText ? ` (${escapeHtml(partnerText)})` : ''}">
-                              ${escapeHtml(displayLocation)}${partnerText ? `<span class="text-slate-500 font-bold text-xs"> (${escapeHtml(partnerText)})</span>` : ''}
-                            </h4>
+                    <div id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border-slate-200 border'} ${hasEditingRow ? 'xl:col-span-2' : ''} rounded-3xl p-4 space-y-3 shadow-2xs">
+                      <!-- HEADER GỌN 1 KHỐI -->
+                      <div class="flex items-start justify-between gap-2.5 ${isCounted ? `border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2.5` : ''}">
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5 flex-wrap text-[10.5px]">
+                            <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-bold text-[10px]">#${idx + 1}</span>
+                            <span class="font-mono font-bold text-indigo-600">${formatDayMonth(sh.startDate)} (${days}n)</span>
+                            <span class="text-slate-300">•</span>
+                            <span class="text-slate-600 font-semibold">Chủ: <b class="text-slate-900">${escapeHtml(owner.name)}</b></span>
+                            ${sh.isHold ? `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[9.5px] font-extrabold">⏳ Giữ lịch</span>` : ''}
+                            ${isPrivateShow ? `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[9.5px] font-extrabold">🔒 Riêng tư</span>` : ''}
                           </div>
-                          <div class="text-right shrink-0 ${isCounted ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white/90 border-slate-200 text-slate-500'} px-2.5 py-1 rounded-2xl border">
-                            <span class="text-[8px] font-bold uppercase block">${sh.isHold && !sh.countHoldForBilling ? 'Không tính' : 'Tổng Show'}</span>
-                            <span id="ctp-show-total-${sh.id}" class="text-xs font-black font-mono">${subTotal.toLocaleString('vi-VN')}đ</span>
+                          <h4 class="font-black text-slate-900 text-sm mt-1 flex items-center gap-1.5 flex-wrap">
+                            <span>${escapeHtml(displayLocation)}</span>${partnerText ? `<span class="text-slate-500 font-bold text-xs">(${escapeHtml(partnerText)})</span>` : ''}
+                          </h4>
+                        </div>
+                        <div class="text-right shrink-0 ${isCounted ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white/90 border-slate-200 text-slate-500'} px-3 py-1.5 rounded-2xl border">
+                          <span class="text-[8.5px] font-bold uppercase block">${sh.isHold && !sh.countHoldForBilling ? 'Không tính' : 'Tổng Show'}</span>
+                          <span id="ctp-show-total-${sh.id}" class="text-xs font-black font-mono">${subTotal.toLocaleString('vi-VN')}đ</span>
+                        </div>
+                      </div>
+
+                      ${sh.isHold ? `
+                        <div onclick="ctpActions.toggleHoldBilling('${sh.id}')" class="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl border cursor-pointer transition select-none ${
+                          sh.countHoldForBilling
+                            ? 'bg-emerald-50/95 border-emerald-300 text-emerald-900'
+                            : 'bg-white/90 border-amber-300/80 text-amber-900 hover:bg-white'
+                        }">
+                          <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-sm leading-none">${sh.countHoldForBilling ? '💰' : '💵'}</span>
+                            <span class="text-[11px] font-extrabold truncate">
+                              ${sh.countHoldForBilling ? 'Đang tính tiền show này' : 'Tính tiền show này (mặc định 0đ)'}
+                            </span>
+                          </div>
+                          <div class="w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${sh.countHoldForBilling ? 'bg-emerald-500' : 'bg-slate-300'}">
+                            <div class="w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${sh.countHoldForBilling ? 'translate-x-4' : 'translate-x-0'}"></div>
                           </div>
                         </div>
+                      ` : ''}
 
-                        ${sh.isHold ? `
-                          <div onclick="ctpActions.toggleHoldBilling('${sh.id}')" class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border cursor-pointer transition select-none ${
-                            sh.countHoldForBilling
-                              ? 'bg-emerald-50/95 border-emerald-300 text-emerald-900'
-                              : 'bg-white/90 border-amber-300/80 text-amber-900 hover:bg-white'
-                          }">
-                            <span class="text-[10.5px] font-extrabold truncate">
-                              ${sh.countHoldForBilling ? '💰 Đang tính tiền show này' : '💵 Tính tiền show này (0đ)'}
-                            </span>
-                            <div class="w-8 h-4.5 rounded-full p-0.5 transition-colors shrink-0 ${sh.countHoldForBilling ? 'bg-emerald-500' : 'bg-slate-300'}">
-                              <div class="w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${sh.countHoldForBilling ? 'translate-x-3.5' : 'translate-x-0'}"></div>
-                            </div>
-                          </div>
-                        ` : ''}
-
-                        ${isCounted ? `
-                          <!-- NHIỆM VỤ -->
+                      ${isCounted ? `
+                        <div class="space-y-3">
+                          <!-- NHIỆM VỤ: 1 TẦNG DUY NHẤT, KHÔNG TRÙNG NHÃN -->
                           <div class="space-y-1.5">
                             <div class="flex items-center justify-between">
                               <span class="text-[10px] font-black text-slate-400 uppercase">Nhiệm vụ</span>
-                              <span class="font-mono font-bold text-[10px] text-slate-500">${getShowTaskSum(item).toLocaleString('vi-VN')}đ</span>
+                              <span class="font-mono font-bold text-[10.5px] text-slate-500">${getShowTaskSum(item).toLocaleString('vi-VN')}đ</span>
                             </div>
-                            <div class="flex flex-wrap gap-1">
+                            <div class="flex flex-wrap gap-1.5">
                               ${taskList.map(t => {
                                 const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
+                                const val = checked ? item.tasks[t.key] : t.def;
+                                if (!checked) {
+                                  return `
+                                    <button
+                                      type="button"
+                                      onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
+                                      class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition"
+                                    >${t.label}</button>
+                                  `;
+                                }
                                 return `
-                                  <button type="button" onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')" class="px-2 py-1 rounded-lg text-[10px] font-bold border leading-tight transition ${checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}">
-                                    ${t.label}
-                                  </button>
+                                  <div class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-xl bg-slate-900 text-white border border-slate-900 shadow-2xs">
+                                    <button
+                                      type="button"
+                                      onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
+                                      title="Bấm để bỏ chọn ${t.label}"
+                                      class="text-[11px] font-extrabold text-amber-300 hover:text-white transition whitespace-nowrap"
+                                    >${t.label}</button>
+                                    <input
+                                      type="tel"
+                                      inputmode="numeric"
+                                      value="${Number(val).toLocaleString('vi-VN')}"
+                                      oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
+                                      class="w-24 px-1.5 py-0.5 rounded-lg bg-white/15 text-right font-mono font-black text-[11px] text-white focus:bg-white focus:text-slate-900 focus:outline-none transition"
+                                    />
+                                  </div>
                                 `;
                               }).join('')}
                             </div>
+                          </div>
 
-                            ${activeTasks.length > 0 ? `
-                              <div class="grid grid-cols-2 gap-1.5 pt-0.5">
-                                ${activeTasks.map(t => {
-                                  const val = item.tasks[t.key];
-                                  return `
-                                    <label class="flex items-center justify-between gap-1 px-2 py-1 rounded-xl bg-slate-50 border border-slate-200/90 focus-within:border-indigo-400 focus-within:bg-indigo-50/40 min-w-0">
-                                      <span class="text-[10px] font-extrabold text-slate-800 shrink-0">${t.label}</span>
-                                      <input
-                                        type="tel"
-                                        inputmode="numeric"
-                                        value="${Number(val).toLocaleString('vi-VN')}"
-                                        oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
-                                        class="w-20 min-w-0 bg-transparent text-right font-mono font-black text-[11px] text-indigo-700 focus:outline-none"
-                                      />
-                                    </label>
-                                  `;
-                                }).join('')}
+                          <!-- PHÁT SINH: THOÁNG, KHÔNG CẮT DÒNG -->
+                          <div class="pt-2.5 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1.5">
+                            <div class="flex items-center justify-between gap-2">
+                              <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-black text-slate-400 uppercase">Phát sinh</span>
+                                ${myExtras.length > 0 ? `
+                                  <span id="ctp-show-extra-sum-${sh.id}" class="font-mono font-black text-[10.5px] text-emerald-700">
+                                    ${myExtrasSum.toLocaleString('vi-VN')}đ
+                                  </span>
+                                ` : ''}
                               </div>
-                            ` : ''}
-                          </div>
-                        ` : ''}
-                      </div>
-
-                      ${isCounted ? `
-                        <!-- PHÁT SINH KHÓA CHIỀU CAO GỌN ĐỀU -->
-                        <div class="pt-2 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} space-y-1">
-                          <div class="flex items-center justify-between gap-1.5">
-                            <div class="flex items-center gap-1.5 min-w-0">
-                              <span class="text-[10px] font-black text-slate-400 uppercase shrink-0">Phát sinh</span>
-                              ${myExtras.length > 0 ? `
-                                <span id="ctp-show-extra-sum-${sh.id}" class="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 font-mono font-black text-[10px] text-emerald-700 shrink-0">
-                                  ${myExtrasSum.toLocaleString('vi-VN')}đ
-                                </span>
-                              ` : ''}
+                              <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-[10px] font-extrabold transition">+ Thêm phí</button>
                             </div>
-                            <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-lg text-[10px] font-black transition shrink-0">+ Thêm phí</button>
-                          </div>
 
-                          <div class="${hasEditingRow ? 'max-h-40' : 'h-[76px]'} overflow-y-auto custom-scroll pr-0.5">
                             ${myExtras.length === 0 ? `
-                              <div class="h-full flex items-center text-[11px] text-slate-400">• Không có phát sinh</div>
+                              <div class="text-[11px] text-slate-400">• Không có phát sinh</div>
                             ` : `
                               <ul class="divide-y divide-slate-100">
                                 ${myExtras.map((ex, exIdx) => {
@@ -329,8 +329,8 @@ export function renderCtpTabHtml() {
                                   const isEditingRow = state.ctpEditingExtraKey === rowKey;
                                   if (isEditingRow) {
                                     return `
-                                      <li class="py-1 space-y-1">
-                                        <div class="flex items-center gap-1.5">
+                                      <li class="flex flex-wrap items-center justify-between gap-1.5 py-1.5">
+                                        <div class="flex items-center gap-1.5 flex-1 min-w-[150px]">
                                           <span class="text-slate-400 font-black select-none">•</span>
                                           <input
                                             id="ctp-extra-name-${escapeHtml(rowKey)}"
@@ -339,10 +339,10 @@ export function renderCtpTabHtml() {
                                             oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
                                             onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
                                             placeholder="Tên khoản chi..."
-                                            class="flex-1 min-w-0 px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+                                            class="flex-1 min-w-0 px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
                                           />
                                         </div>
-                                        <div class="flex items-center justify-end gap-1">
+                                        <div class="flex items-center gap-1.5 shrink-0">
                                           <input
                                             type="tel"
                                             inputmode="numeric"
@@ -350,18 +350,18 @@ export function renderCtpTabHtml() {
                                             oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
                                             onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
                                             placeholder="Số tiền"
-                                            class="w-24 px-2 py-1 bg-emerald-50 border border-emerald-300 rounded-lg text-[11px] font-mono font-black text-emerald-800 text-right focus:outline-none focus:border-emerald-600"
+                                            class="w-32 px-2.5 py-1 bg-emerald-50 border border-emerald-300 rounded-lg text-xs font-mono font-black text-emerald-800 text-right focus:outline-none focus:border-emerald-600"
                                           />
                                           <button
                                             type="button"
                                             onclick="ctpActions.finishEditExtra()"
-                                            class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] transition"
+                                            class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10.5px] transition"
                                           >Xong</button>
                                           <button
                                             type="button"
                                             onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
                                             title="Xóa khoản chi"
-                                            class="w-6 h-6 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 font-bold text-[10px] flex items-center justify-center transition"
+                                            class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 font-bold text-xs flex items-center justify-center transition"
                                           >✕</button>
                                         </div>
                                       </li>
@@ -369,24 +369,24 @@ export function renderCtpTabHtml() {
                                   }
 
                                   return `
-                                    <li class="flex items-center justify-between gap-1.5 py-1">
-                                      <div class="flex items-center gap-1 min-w-0 flex-1 text-[11px]">
-                                        <span class="text-slate-400 font-black select-none shrink-0">•</span>
+                                    <li class="flex items-center justify-between gap-2 py-1.5">
+                                      <div class="flex items-center gap-1.5 min-w-0 flex-1 text-xs">
+                                        <span class="text-slate-400 font-black select-none">•</span>
                                         <span class="font-semibold text-slate-800 truncate">${escapeHtml(ex.name || 'Khoản phát sinh')}</span>
-                                        <span class="text-slate-300 shrink-0">—</span>
+                                        <span class="text-slate-300">—</span>
                                         <span class="font-mono font-black text-emerald-700 shrink-0">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
                                       </div>
                                       <div class="flex items-center gap-1 shrink-0">
                                         <button
                                           type="button"
                                           onclick="ctpActions.startEditExtra('${escapeHtml(rowKey)}')"
-                                          class="px-1.5 py-0.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[9.5px] font-bold text-slate-600 transition"
+                                          class="px-2 py-0.5 rounded-md text-[10.5px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
                                         >Sửa</button>
                                         <button
                                           type="button"
                                           onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
                                           title="Xóa khoản chi"
-                                          class="w-5 h-5 rounded bg-slate-50 hover:bg-rose-50 border border-slate-200 text-slate-400 hover:text-rose-600 font-bold text-[9.5px] flex items-center justify-center transition"
+                                          class="w-6 h-6 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 font-bold text-[10.5px] flex items-center justify-center transition"
                                         >✕</button>
                                       </div>
                                     </li>
