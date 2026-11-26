@@ -1,7 +1,7 @@
 import { state, registerRenderer } from './state/store.js';
 import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin, logoutCurrentUser } from './services/auth.service.js';
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText, cleanupMatchingHoldsForOfficialShow } from './services/show.service.js';
-import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics, saveQuickShowExpensesBatch } from './services/finance.service.js';
+import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, getMemberExtrasForShow, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics, saveQuickShowExpensesBatch } from './services/finance.service.js';
 import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
 import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain, buildVietQrUrl, escapeHtml } from './utils/helpers.js';
 import { exportShowToAppleCalendar } from './utils/export.js';
@@ -362,6 +362,15 @@ function renderApp() {
     return;
   }
 
+  const activeEl = document.activeElement;
+  const focusMeta = (activeEl && activeEl.id && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'))
+    ? {
+        id: activeEl.id,
+        selStart: typeof activeEl.selectionStart === 'number' ? activeEl.selectionStart : null,
+        selEnd: typeof activeEl.selectionEnd === 'number' ? activeEl.selectionEnd : null
+      }
+    : null;
+
   let main = '';
   if (state.activeTab === 'shows') main = renderShowsTabHtml();
   else if (state.activeTab === 'matrix') main = renderMatrixTabHtml();
@@ -404,6 +413,16 @@ function renderApp() {
   if (prevModalScroll > 0) {
     const nextModalScroll = document.querySelector('.ios-sheet');
     if (nextModalScroll) nextModalScroll.scrollTop = prevModalScroll;
+  }
+
+  if (focusMeta?.id) {
+    const nextEl = document.getElementById(focusMeta.id);
+    if (nextEl && typeof nextEl.focus === 'function') {
+      nextEl.focus({ preventScroll: true });
+      if (focusMeta.selStart !== null && focusMeta.selEnd !== null && typeof nextEl.setSelectionRange === 'function') {
+        try { nextEl.setSelectionRange(focusMeta.selStart, focusMeta.selEnd); } catch {}
+      }
+    }
   }
 }
 
@@ -1023,6 +1042,16 @@ window.ctpActions = {
   },
   setMonth(m) { state.ctpMonth = Number(m); renderApp(); },
   setOwner(o) { state.ctpOwnerId = o; renderApp(); },
+  focusShow(id) {
+    renderApp();
+    requestAnimationFrame(() => {
+      const container = document.getElementById('ctp-shows-scroll-list');
+      const target = document.getElementById(`ctp-show-card-${id}`);
+      if (container && target) {
+        container.scrollTo({ top: Math.max(0, target.offsetTop - container.offsetTop - 8), behavior: 'smooth' });
+      }
+    });
+  },
   toggleTask(id, k) {
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
     if (!state.ctpItems[id].tasks) state.ctpItems[id].tasks = {};
@@ -1046,42 +1075,87 @@ window.ctpActions = {
   addExtraItem(id) {
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
     if (!Array.isArray(state.ctpItems[id].extras)) state.ctpItems[id].extras = [];
-    state.ctpItems[id].extras.push({ name: '', amount: 0, payerId: state.currentUserId });
+    state.ctpItems[id].extras.push({
+      id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name: '',
+      amount: 0,
+      payerId: state.currentUserId
+    });
     saveCtpState();
     renderApp();
   },
-  saveExtraField(id, idx, f, el) {
-    const val = f === 'amount' ? (parseInt(String(el.value).replace(/\D/g, ''), 10) || 0) : el.value;
-    state.ctpItems[id].extras[idx][f] = val;
+  saveExtraField(id, idx, f, el, expId = '') {
+    if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
+    if (!Array.isArray(state.ctpItems[id].extras)) state.ctpItems[id].extras = [];
+    const list = state.ctpItems[id].extras;
+    const target = expId ? list.find(x => x && x.id === expId) : list[idx];
+    if (!target) return;
+
     if (f === 'amount') {
+      const val = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+      target.amount = val;
       el.value = val ? val.toLocaleString('vi-VN') : '';
       this._refreshLiveTotals(id);
+      saveCtpState();
+    } else {
+      target.name = el.value;
+      saveCtpState();
     }
-    saveCtpState();
   },
-  removeExtraItem(id, idx) {
-    state.ctpItems[id].extras.splice(idx, 1);
+  removeExtraItem(id, idx, expId = '') {
+    if (!state.ctpItems[id] || !Array.isArray(state.ctpItems[id].extras)) return;
+    if (expId) {
+      state.ctpItems[id].extras = state.ctpItems[id].extras.filter(x => x && x.id !== expId);
+    } else {
+      state.ctpItems[id].extras.splice(idx, 1);
+    }
     saveCtpState();
     renderApp();
   },
   _refreshLiveTotals(showId) {
+    const uid = state.currentUserId;
     const it = state.ctpItems[showId] || { tasks: {}, extras: [] };
     const taskSum = Object.entries(it.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
-    const extraSum = (it.extras || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+    const myExtras = getMemberExtrasForShow(showId, uid);
+    const extraSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
     const sub = taskSum + extraSum;
     const showEl = document.getElementById(`ctp-show-total-${showId}`);
     if (showEl) showEl.textContent = sub.toLocaleString('vi-VN') + 'đ';
 
+    const showExtraEl = document.getElementById(`ctp-show-extra-total-${showId}`);
+    if (showExtraEl) showExtraEl.textContent = extraSum.toLocaleString('vi-VN') + 'đ';
+
     let grand = 0;
+    let totalExtras = 0;
+    let pendingSum = 0;
+    let settledSum = 0;
+
     getCombinedCtpShows().forEach(sh => {
+      if (sh?.isHold && !sh?.countHoldForBilling) return;
       const x = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
-      Object.entries(x.tasks || {}).forEach(([, v]) => {
-        if (v !== null && v !== undefined) grand += (Number(v) || 0);
-      });
-      (x.extras || []).forEach(ex => { grand += (Number(ex.amount) || 0); });
+      const tSum = Object.entries(x.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
+      const eList = getMemberExtrasForShow(sh.id, uid);
+      const eSum = eList.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+      const sSum = tSum + eSum;
+
+      grand += sSum;
+      totalExtras += eSum;
+
+      const meta = state.ownerFinanceMap?.[sh.id]?.crewMemberMeta?.[uid] || {};
+      if (meta.ctpStatus === 'settled') settledSum += sSum;
+      else pendingSum += sSum;
     });
-    const grandEl = document.getElementById('ctp-grand-total-display');
-    if (grandEl && !state.hideMoneyMode) grandEl.textContent = grand.toLocaleString('vi-VN') + 'đ';
+
+    if (!state.hideMoneyMode) {
+      const grandEl = document.getElementById('ctp-grand-total-display');
+      if (grandEl) grandEl.textContent = grand.toLocaleString('vi-VN') + 'đ';
+      const extraEl = document.getElementById('ctp-extra-total-display');
+      if (extraEl) extraEl.textContent = totalExtras.toLocaleString('vi-VN') + 'đ';
+      const pendEl = document.getElementById('ctp-pending-total-display');
+      if (pendEl) pendEl.textContent = pendingSum.toLocaleString('vi-VN') + 'đ';
+      const setEl = document.getElementById('ctp-settled-total-display');
+      if (setEl) setEl.textContent = settledSum.toLocaleString('vi-VN') + 'đ';
+    }
   },
   openAddCustomShowModal() {
     const defaultDate = `${state.selectedYear}-${String(state.ctpMonth).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
@@ -1156,7 +1230,11 @@ window.ctpActions = {
     renderApp();
     showToast(count > 0 ? `⚡ Đã tự điền ${count} nhiệm vụ theo vai trò!` : 'ℹ️ Không có nhiệm vụ mới nào cần điền thêm.');
   },
-  saveNow() { saveCtpState(true); showToast('💾 Đã lưu CTP lên Cloud!'); },
+  saveNow() {
+    saveCtpState(true);
+    renderApp();
+    showToast('💾 Đã lưu CTP lên Cloud!');
+  },
   generateBill() {
     playStudioSound('lum');
     const uid = state.currentUserId;
@@ -1165,7 +1243,7 @@ window.ctpActions = {
     let total = 0;
     const rows = shows.map((sh, i) => {
       const it = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
-      const myExtras = sh.ownerId === uid ? [] : (it.extras || []).filter(ex => ex && (!ex.payerId || ex.payerId === uid));
+      const myExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
       const activeTasks = Object.entries(it.tasks || {}).filter(([, v]) => v !== null && v !== undefined);
       const taskBulletsCompact = activeTasks.map(([k, v]) => `- ${labelMap[k] || k}: ${formatCompactMoneyPlain(v)}`);
       const extraBulletsCompact = myExtras.filter(e => Number(e.amount) > 0).map(e => `- ${e.name || 'Phí'}: ${formatCompactMoneyPlain(e.amount)}`);
@@ -1421,6 +1499,13 @@ window.ownerActions = {
   focusShow(id) {
     state.ownerExpandedShowId = id;
     renderApp();
+    requestAnimationFrame(() => {
+      const container = document.getElementById('owner-debt-scroll-list');
+      const target = document.getElementById(`debt-show-card-${id}`);
+      if (container && target) {
+        container.scrollTo({ top: Math.max(0, target.offsetTop - container.offsetTop - 8), behavior: 'smooth' });
+      }
+    });
   },
   setStatus(id, s) { ensureOwnerFinRecord(id).status = s; saveOwnerFinanceState(); renderApp(); },
   setCrewCtpStatus(id, s) {
@@ -1502,21 +1587,44 @@ window.ownerActions = {
   },
   addOwnerExpense(shId) {
     const rec = ensureOwnerFinRecord(shId);
-    rec.otherExpenses.push({ name: '', amount: 0 });
+    rec.otherExpenses.push({
+      id: 'exp_own_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name: '',
+      amount: 0,
+      payerId: state.currentUserId
+    });
     saveOwnerFinanceState();
     renderApp();
   },
-  saveOwnerExpenseField(shId, idx, field, el) {
+  saveOwnerExpenseField(shId, idx, field, el, expId = '') {
     const rec = ensureOwnerFinRecord(shId);
-    if (!rec.otherExpenses[idx]) return;
-    const val = field === 'amount' ? (parseInt(String(el.value).replace(/\D/g, ''), 10) || 0) : el.value;
-    rec.otherExpenses[idx][field] = val;
-    if (field === 'amount') el.value = val ? val.toLocaleString('vi-VN') : '';
-    saveOwnerFinanceState();
+    if (!Array.isArray(rec.otherExpenses)) rec.otherExpenses = [];
+    const target = expId ? rec.otherExpenses.find(x => x && x.id === expId) : rec.otherExpenses[idx];
+    if (!target) return;
+
+    if (field === 'amount') {
+      const val = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+      target.amount = val;
+      el.value = val ? val.toLocaleString('vi-VN') : '';
+      const totalExpEl = document.getElementById(`debt-show-other-exp-total-${shId}`);
+      if (totalExpEl) {
+        const sum = rec.otherExpenses.reduce((s, x) => s + (Number(x?.amount) || 0), 0);
+        totalExpEl.textContent = sum.toLocaleString('vi-VN') + 'đ';
+      }
+      saveOwnerFinanceState();
+    } else {
+      target.name = el.value;
+      saveOwnerFinanceState();
+    }
   },
-  removeOwnerExpense(shId, idx) {
+  removeOwnerExpense(shId, idx, expId = '') {
     const rec = ensureOwnerFinRecord(shId);
-    rec.otherExpenses.splice(idx, 1);
+    if (!Array.isArray(rec.otherExpenses)) return;
+    if (expId) {
+      rec.otherExpenses = rec.otherExpenses.filter(x => x && x.id !== expId);
+    } else {
+      rec.otherExpenses.splice(idx, 1);
+    }
     saveOwnerFinanceState();
     renderApp();
   },
