@@ -391,40 +391,39 @@ export function renderCtpTabHtml() {
                                   const isEditingRow = state.ctpEditingExtraKey === rowKey;
                                   if (isEditingRow) {
                                     return `
-                                      <li class="py-1.5 space-y-1.5">
-                                        <div class="flex items-center gap-1.5">
-                                          <span class="text-slate-400 font-black select-none">•</span>
+                                      <li class="py-1.5">
+                                        <div class="p-2 rounded-xl bg-[#f8fafc] border border-slate-200/90 space-y-1.5">
                                           <input
                                             id="ctp-extra-name-${escapeHtml(rowKey)}"
                                             type="text"
                                             value="${escapeHtml(ex.name || '')}"
                                             oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
                                             onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
-                                            placeholder="Tên khoản chi..."
-                                            class="flex-1 min-w-0 px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+                                            placeholder="Tên khoản chi (Xăng, ăn uống...)"
+                                            class="w-full h-8 px-2.5 bg-white border border-slate-200/90 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
                                           />
-                                        </div>
-                                        <div class="flex items-center justify-end gap-1">
-                                          <input
-                                            type="tel"
-                                            inputmode="numeric"
-                                            value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}"
-                                            oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
-                                            onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
-                                            placeholder="Số tiền"
-                                            class="w-24 px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-mono font-black tabular-nums text-slate-900 text-right focus:outline-none focus:border-slate-900"
-                                          />
-                                          <button
-                                            type="button"
-                                            onclick="ctpActions.finishEditExtra()"
-                                            class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[10px] transition"
-                                          >Xong</button>
-                                          <button
-                                            type="button"
-                                            onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
-                                            title="Xóa khoản chi"
-                                            class="w-6 h-6 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 font-bold text-[10px] flex items-center justify-center transition"
-                                          >✕</button>
+                                          <div class="flex items-center gap-1.5">
+                                            <input
+                                              type="text"
+                                              inputmode="decimal"
+                                              value="${ex.amount ? Number(ex.amount) : ''}"
+                                              oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
+                                              onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
+                                              placeholder="Số tiền (VD: 100k)"
+                                              class="flex-1 min-w-0 h-8 px-2.5 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-emerald-700 focus:outline-none focus:border-slate-900"
+                                            />
+                                            <button
+                                              type="button"
+                                              onclick="ctpActions.finishEditExtra()"
+                                              class="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[10.5px] shrink-0 transition"
+                                            >Xong</button>
+                                            <button
+                                              type="button"
+                                              onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
+                                              title="Xóa khoản chi"
+                                              class="w-8 h-8 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200/90 font-bold text-[10px] flex items-center justify-center shrink-0 transition"
+                                            >✕</button>
+                                          </div>
                                         </div>
                                       </li>
                                     `;
