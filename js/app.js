@@ -1933,37 +1933,38 @@ startEditOwnerExpense(key, shId = '', expId = '') {
     });
   },
 finishEditOwnerExpense() {
-    const activeKey = state.ownerEditingExpenseKey;
-    const meta = state._ownerEditingExpenseMeta;
+  const activeKey = state.ownerEditingExpenseKey;
+  const meta = state._ownerEditingExpenseMeta;
 
-    if (activeKey) {
-      const nameInp = document.getElementById(`debt-exp-name-${activeKey}`);
-      const rowContainer = nameInp?.closest('li') || nameInp?.parentElement?.parentElement;
-      const inputs = rowContainer ? Array.from(rowContainer.querySelectorAll('input')) : [];
-      const amountInp = inputs.find(inp => inp !== nameInp) || null;
+  if (activeKey) {
+    const nameInp = document.getElementById(`debt-exp-name-${activeKey}`);
+    const rowContainer = nameInp?.closest('li') || nameInp?.parentElement?.parentElement;
+    const inputs = rowContainer ? Array.from(rowContainer.querySelectorAll('input')) : [];
+    const amountInp = inputs.find(inp => inp !== nameInp) || null;
 
-      const shId = meta?.shId || '';
-      const expId = meta?.expId || '';
+    const shId = meta?.shId || '';
+    const expId = meta?.expId || '';
 
-      if (shId) {
-        const rec = ensureOwnerFinRecord(shId);
-        if (rec && Array.isArray(rec.otherExpenses)) {
-          const target = expId
-            ? rec.otherExpenses.find(x => x && x.id === expId)
-            : rec.otherExpenses[rec.otherExpenses.length - 1];
-          if (target) {
-            if (nameInp) target.name = String(nameInp.value || '').trim();
-            if (amountInp) target.amount = parseFlexibleMoneyInput(amountInp.value);
-          }
+    if (shId) {
+      const rec = ensureOwnerFinRecord(shId);
+      if (rec && Array.isArray(rec.otherExpenses)) {
+        const target = expId
+          ? rec.otherExpenses.find(x => x && x.id === expId)
+          : rec.otherExpenses[rec.otherExpenses.length - 1];
+        if (target) {
+          if (nameInp) target.name = String(nameInp.value || '').trim();
+          if (amountInp) target.amount = parseFlexibleMoneyInput(amountInp.value);
         }
       }
     }
+  }
 
-    state.ownerEditingExpenseKey = null;
-    state._ownerEditingExpenseMeta = null;
-    saveOwnerFinanceState(true);
-    renderApp();
-  },
+  state.ownerEditingExpenseKey = null;
+  state._ownerEditingExpenseMeta = null;
+  saveOwnerFinanceState(true);
+  renderApp();
+  showToast('✅ Đã lưu khoản chi!');
+},
   addOwnerExpense(shId) {
     const rec = ensureOwnerFinRecord(shId);
     if (!rec) return;
