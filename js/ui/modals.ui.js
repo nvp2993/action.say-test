@@ -985,28 +985,12 @@ function getContrastTextColor(hex) {
   return luma > 0.62 ? '#0f172a' : '#ffffff';
 }
 
-export function renderQuickExpenseBubbleHtml() {
-  if (!state.currentUserId || state.isBackendPortal || state.activeTab === 'ctp' || state.activeTab === 'owner_stats') {
-    return '';
-  }
+export function renderQuickExpenseModalHtml() {
+  if (!state.currentUserId || state.isBackendPortal) return '';
+  const q = state.quickExpenseModal;
+  if (!q) return '';
 
   const activeShows = getActiveShowsInPeriodForUser();
-  const q = state.quickExpenseModal;
-
-  const bubbleBtn = `
-    <button
-      type="button"
-      onclick="appActions.openQuickExpenseModal()"
-      title="Note nhanh chi phí show đang đi"
-      class="fixed bottom-20 right-4 z-[75] w-12 h-12 rounded-full bg-slate-950 hover:bg-slate-800 active:scale-95 text-amber-400 border border-amber-400/40 shadow-xl flex items-center justify-center transition"
-    >
-      <span class="text-base leading-none">💸</span>
-      ${activeShows.length > 0 ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white font-mono font-black text-[10px] flex items-center justify-center">${activeShows.length}</span>` : ''}
-    </button>
-  `;
-
-  if (!q) return bubbleBtn;
-
   const activeShow = activeShows.find(s => s.id === q.showId) || activeShows[0] || null;
   const participantIds = activeShow
     ? Array.from(new Set([...(activeShow.memberIds || []), activeShow.ownerId].filter(Boolean)))
@@ -1023,7 +1007,6 @@ export function renderQuickExpenseBubbleHtml() {
   const showExtras = [...ctpExtras, ...ownerExtras];
 
   return `
-    ${bubbleBtn}
     <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-[80] bg-slate-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4">
       <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl max-h-[90dvh] overflow-y-auto custom-scroll">
         <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
@@ -1120,7 +1103,7 @@ export function renderQuickExpenseBubbleHtml() {
             </div>
           </div>
 
-         ${showExtras.length > 0 ? `
+          ${showExtras.length > 0 ? `
             <div class="pt-2 border-t border-slate-100 space-y-1.5">
               <div class="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase">
                 <span>Chi phí đã lưu trong show (${showExtras.length})</span>
