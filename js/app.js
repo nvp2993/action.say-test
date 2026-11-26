@@ -529,7 +529,6 @@ function renderApp() {
       scheduleLiveMarqueeAutoHide();
     }
   }
-}
 
 registerRenderer(renderApp);
 
