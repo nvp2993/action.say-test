@@ -722,44 +722,42 @@ export function renderDebtTabHtml() {
                                       const rowKey = `${sh.id}_${ex.id || exIdx}`;
                                       const isEditingRow = state.ownerEditingExpenseKey === rowKey;
                                      if (isEditingRow) {
-                                        return `
-                                          <li class="py-1.5">
-                                            <div class="p-2 rounded-xl bg-[#f8fafc] border border-slate-200/90 space-y-1.5">
-                                              <input
-                                                id="debt-exp-name-${escapeHtml(rowKey)}"
-                                                type="text"
-                                                value="${escapeHtml(ex.name || '')}"
-                                                oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
-                                                onkeydown="if(event.key==='Enter'){event.preventDefault();ownerActions.finishEditOwnerExpense();}"
-                                                placeholder="Tên khoản chi (Xăng, ăn uống...)"
-                                                class="w-full h-8 px-2.5 bg-white border border-slate-200/90 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
-                                              />
-                                              <div class="flex items-center gap-1.5">
-                                                <input
-                                                  type="text"
-                                                  inputmode="decimal"
-                                                  value="${ex.amount ? Number(ex.amount) : ''}"
-                                                  oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
-                                                  onkeydown="if(event.key==='Enter'){event.preventDefault();ownerActions.finishEditOwnerExpense();}"
-                                                  placeholder="Số tiền (VD: 100k)"
-                                                  class="flex-1 min-w-0 h-8 px-2.5 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-rose-600 focus:outline-none focus:border-slate-900"
-                                                />
-                                                <button
-                                                  type="button"
-                                                  onclick="ownerActions.finishEditOwnerExpense()"
-                                                  class="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[10.5px] shrink-0 transition"
-                                                >Xong</button>
-                                                <button
-                                                  type="button"
-                                                  onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
-                                                  title="Xóa khoản chi"
-                                                  class="w-8 h-8 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200/90 font-bold text-[10px] flex items-center justify-center shrink-0 transition"
-                                                >✕</button>
-                                              </div>
-                                            </div>
-                                          </li>
-                                        `;
-                                      }
+  return `
+    <li class="py-1">
+      <div class="flex items-center gap-1 p-1 rounded-xl bg-[#f8fafc] border border-slate-200/90">
+        <input
+          id="debt-exp-name-${escapeHtml(rowKey)}"
+          type="text"
+          value="${escapeHtml(ex.name || '')}"
+          oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();ownerActions.finishEditOwnerExpense();}"
+          placeholder="Khoản chi..."
+          class="flex-1 min-w-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+        />
+        <input
+          type="text"
+          inputmode="decimal"
+          value="${ex.amount ? Number(ex.amount) : ''}"
+          oninput="ownerActions.saveOwnerExpenseField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();ownerActions.finishEditOwnerExpense();}"
+          placeholder="Số tiền"
+          class="w-20 sm:w-24 shrink-0 h-7 px-2 bg-white border border-slate-200/90 rounded-lg text-[11px] font-mono font-black tabular-nums text-rose-600 text-right focus:outline-none focus:border-slate-900"
+        />
+        <button
+          type="button"
+          onclick="ownerActions.finishEditOwnerExpense()"
+          class="h-7 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[10px] shrink-0 transition"
+        >Xong</button>
+        <button
+          type="button"
+          onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
+          title="Xóa khoản chi"
+          class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200/90 font-bold text-[10px] flex items-center justify-center shrink-0 transition"
+        >✕</button>
+      </div>
+    </li>
+  `;
+}
 
                                       return `
                                         <li class="flex items-center justify-between gap-1.5 py-1">
