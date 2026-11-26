@@ -257,7 +257,7 @@ export function renderCtpTabHtml() {
                         ` : ''}
 
                         ${isCounted ? `
-                          <!-- NHIỆM VỤ: 2 CỘT × 3 HÀNG SẴN, MẶC ĐỊNH KHÔNG TIỀN, CHỌN MỚI HIỆN TIỀN & ĐỔI XÁM NHẸ -->
+                          <!-- NHIỆM VỤ: 2 CỘT × 3 HÀNG GỌN, KHÔNG BỌC Ô LỒNG TRONG -->
                           <div class="space-y-1.5">
                             <div class="flex items-center justify-between">
                               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nhiệm vụ</span>
@@ -268,7 +268,7 @@ export function renderCtpTabHtml() {
                                 const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
                                 const val = checked ? item.tasks[t.key] : t.def;
                                 return `
-                                  <div class="min-h-[34px] rounded-xl border px-2.5 py-1.5 flex items-center justify-between gap-1.5 transition ${
+                                  <div class="h-7 rounded-lg border px-2 flex items-center justify-between gap-1 transition min-w-0 ${
                                     checked
                                       ? 'bg-slate-200/80 border-slate-300 text-slate-900'
                                       : 'bg-white hover:bg-slate-50 border-slate-200/80 text-slate-600'
@@ -276,7 +276,7 @@ export function renderCtpTabHtml() {
                                     <button
                                       type="button"
                                       onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
-                                      class="text-left text-[11px] font-bold truncate ${checked ? 'text-slate-900 font-extrabold' : 'text-slate-600'} ${checked ? '' : 'w-full'}"
+                                      class="text-left text-[10.5px] truncate ${checked ? 'text-slate-900 font-extrabold shrink-0' : 'text-slate-600 font-bold w-full'}"
                                     >${t.label}</button>
                                     ${checked ? `
                                       <input
@@ -284,7 +284,7 @@ export function renderCtpTabHtml() {
                                         inputmode="numeric"
                                         value="${Number(val).toLocaleString('vi-VN')}"
                                         oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
-                                        class="w-20 min-w-0 bg-white/80 focus:bg-white px-1.5 py-0.5 rounded-md border border-slate-300/80 text-right font-mono font-black tabular-nums text-[11px] text-slate-900 focus:outline-none"
+                                        class="w-20 min-w-0 bg-transparent text-right font-mono font-black tabular-nums text-[10.5px] text-slate-900 focus:outline-none"
                                       />
                                     ` : ''}
                                   </div>
