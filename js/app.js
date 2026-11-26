@@ -1240,7 +1240,6 @@ window.ctpActions = {
     const newId = `exp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     state.ctpItems[id].extras.push({ id: newId, name: '', amount: 0, payerId: state.currentUserId });
     state.ctpEditingExtraKey = `${id}_${newId}`;
-    saveCtpState();
     renderApp();
     requestAnimationFrame(() => {
       const inp = document.getElementById(`ctp-extra-name-${id}_${newId}`);
@@ -1253,13 +1252,13 @@ window.ctpActions = {
     if (!target) return;
 
     if (f === 'amount') {
-      const val = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+      const val = parseFlexibleMoneyInput(el.value);
       target.amount = val;
-      el.value = val ? val.toLocaleString('vi-VN') : '';
       this._refreshLiveTotals(id);
     } else {
       target.name = el.value;
     }
+  },
     saveCtpState();
   },
   removeExtraItem(id, idx, expId = '') {
