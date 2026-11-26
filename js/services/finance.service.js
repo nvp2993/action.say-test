@@ -24,7 +24,11 @@ export function attachFinanceListeners(memberId) {
       if (Array.isArray(d.customShows)) state.ctpCustomShows = d.customShows;
       localStorage.setItem('as_ctp_items_2026', JSON.stringify(state.ctpItems));
       localStorage.setItem('as_ctp_custom_shows_2026', JSON.stringify(state.ctpCustomShows));
-      if (state.activeTab === 'ctp' || state.activeTab === 'owner_stats') triggerRender();
+      const activeTag = document.activeElement?.tagName;
+      const isTypingInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
+      if (!isTypingInput && (state.activeTab === 'ctp' || state.activeTab === 'owner_stats')) {
+        triggerRender();
+      }
     }
   }));
 
@@ -33,7 +37,11 @@ export function attachFinanceListeners(memberId) {
     if (snap.exists() && snap.data()?.map) {
       state.ownerFinanceMap = { ...state.ownerFinanceMap, ...snap.data().map };
       localStorage.setItem('as_owner_finance_2026', JSON.stringify(state.ownerFinanceMap));
-      if (state.activeTab === 'owner_stats') triggerRender();
+      const activeTag = document.activeElement?.tagName;
+      const isTypingInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
+      if (!isTypingInput && state.activeTab === 'owner_stats') {
+        triggerRender();
+      }
     }
   }));
 }
@@ -48,7 +56,7 @@ export function saveCtpState(immediate = false) {
     const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', state.currentUserId);
     await setDoc(ref, { items: state.ctpItems, customShows: state.ctpCustomShows, updatedAt: Date.now() }, { merge: true });
   };
-  if (immediate) push(); else ctpTimer = setTimeout(push, 500);
+  if (immediate) push(); else ctpTimer = setTimeout(push, 600);
 }
 
 export function saveOwnerFinanceState(immediate = false) {
@@ -60,7 +68,7 @@ export function saveOwnerFinanceState(immediate = false) {
     const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'owner_finance_v2', state.currentUserId);
     await setDoc(ref, { map: state.ownerFinanceMap, updatedAt: Date.now() }, { merge: true });
   };
-  if (immediate) push(); else ownerTimer = setTimeout(push, 500);
+  if (immediate) push(); else ownerTimer = setTimeout(push, 600);
 }
 
 export function getDefaultRateForTask(taskKey, sh) {
