@@ -64,6 +64,19 @@ export function renderUnifiedDateBarHtml(mode = 'shows') {
   `;
 }
 
+function getLiveMarqueeKey(badge, sentence) {
+  return `${badge}::${sentence.replace(/<[^>]+>/g, '').trim()}`;
+}
+
+function isLiveMarqueeDismissed(key) {
+  if (!key) return false;
+  try {
+    return localStorage.getItem('as_live_marquee_dismissed_2026') === key;
+  } catch {
+    return false;
+  }
+}
+
 function renderLiveMarqueeHtml() {
   const uid = state.currentUserId;
   const todayIso = getTodayISO();
@@ -85,9 +98,12 @@ function renderLiveMarqueeHtml() {
     sentence = `Hôm nay & Ngày mai không có show — <b class="hl-crew">Tranh thủ trả deadline hoặc nghỉ ngơi, rủ anh em cà phê lụm job thêm đi nhé!!!</b>`;
   }
 
+  const marqueeKey = getLiveMarqueeKey(badge, sentence);
+  if (isLiveMarqueeDismissed(marqueeKey)) return '';
+
   return `
-    <div class="as-live-banner-upgraded">
-      <div class="as-ticker-wrap flex items-center w-full">
+    <div data-live-marquee="true" data-marquee-key="${escapeHtml(marqueeKey)}" class="as-live-banner-upgraded">
+      <div class="as-ticker-wrap flex items-center w-full gap-1.5">
         <div class="as-fixed-badge shrink-0 ${isFree ? 'free-mode' : ''}">
           <span class="${isFree ? 'as-green-pulse-dot' : 'as-red-pulse-dot'}"></span>
           <span>${badge}</span>
@@ -99,11 +115,17 @@ function renderLiveMarqueeHtml() {
             <div class="as-marquee-item whitespace-nowrap shrink-0 pr-8">${sentence}</div>
           </div>
         </div>
+        <button
+          type="button"
+          onclick="appActions.dismissLiveMarquee()"
+          title="Ẩn dòng thông báo"
+          aria-label="Ẩn dòng thông báo"
+          class="w-5 h-5 rounded-full bg-slate-200/90 hover:bg-slate-300 text-slate-700 text-[10px] font-black flex items-center justify-center shrink-0 cursor-pointer transition mr-1"
+        >✕</button>
       </div>
     </div>
   `;
 }
-
 export function renderHeaderHtml(totalAlerts = 0) {
   const curMem = getMember(state.currentUserId);
   const prof = state.memberProfiles?.[state.currentUserId] || {};
