@@ -1930,7 +1930,6 @@ window.ownerActions = {
     const newId = `exp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     rec.otherExpenses.push({ id: newId, name: '', amount: 0, payerId: state.currentUserId });
     state.ownerEditingExpenseKey = `${shId}_${newId}`;
-    saveOwnerFinanceState();
     renderApp();
     requestAnimationFrame(() => {
       const inp = document.getElementById(`debt-exp-name-${shId}_${newId}`);
@@ -1943,9 +1942,8 @@ window.ownerActions = {
     if (!target) return;
 
     if (field === 'amount') {
-      const val = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+      const val = parseFlexibleMoneyInput(el.value);
       target.amount = val;
-      el.value = val ? val.toLocaleString('vi-VN') : '';
       const sh = state.shows.find(s => s.id === shId);
       if (sh) {
         const m = calculateOwnerShowMetrics(sh);
@@ -1960,6 +1958,7 @@ window.ownerActions = {
     } else {
       target.name = el.value;
     }
+  },
     saveOwnerFinanceState();
   },
   removeOwnerExpense(shId, idx, expId = '') {
