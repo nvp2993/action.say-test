@@ -171,10 +171,10 @@ export function renderHeaderHtml(totalAlerts = 0) {
           <span class="flex-1 text-rose-700 font-extrabold">${escapeHtml(state.studioBroadcast.text)}</span>
           <button
             type="button"
-            onclick="appActions.dismissBroadcast()"
+            onclick="if(window.appActions?.dismissBroadcast){window.appActions.dismissBroadcast();}else{document.querySelectorAll('[data-studio-broadcast]').forEach(el=>el.style.display='none');}"
             title="Đóng thông báo"
             aria-label="Đóng thông báo"
-            class="w-5 h-5 rounded-full bg-rose-200/80 hover:bg-rose-300 text-rose-800 text-[10px] font-black flex items-center justify-center shrink-0 transition"
+            class="w-5 h-5 rounded-full bg-rose-200/80 hover:bg-rose-300 text-rose-800 text-[10px] font-black flex items-center justify-center shrink-0 cursor-pointer transition"
           >✕</button>
         </div>
       ` : ''}
