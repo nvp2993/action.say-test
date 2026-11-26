@@ -1418,6 +1418,10 @@ window.ownerActions = {
   toggleAllMonths() { state.ownerAllMonths = !state.ownerAllMonths; renderApp(); },
   setFilterStatus(s) { state.ownerFilterStatus = s; renderApp(); },
   toggleExpandShow(id) { state.ownerExpandedShowId = state.ownerExpandedShowId === id ? null : id; renderApp(); },
+  focusShow(id) {
+    state.ownerExpandedShowId = id;
+    renderApp();
+  },
   setStatus(id, s) { ensureOwnerFinRecord(id).status = s; saveOwnerFinanceState(); renderApp(); },
   setCrewCtpStatus(id, s) {
     const r = ensureOwnerFinRecord(id);
