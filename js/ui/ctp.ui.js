@@ -489,41 +489,57 @@ export function renderCtpBillModalHtml() {
   const bankHolderName = (prof.fullName || bm.memberName || '').trim().toUpperCase();
   const qrUrl = prof.bankAcc ? buildVietQrUrl(prof.bankBin, prof.bankAcc) : '';
 
+  const renderFullLines = (fullArr, compactArr) => {
+    const rawList = Array.isArray(fullArr) && fullArr.length > 0
+      ? fullArr
+      : (Array.isArray(compactArr) ? compactArr : []);
+    const items = rawList
+      .flatMap(x => String(x || '').split(/\n+|,\s*(?=-\s*)/))
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (!items.length) return '<span class="text-slate-400">-</span>';
+    return `<div class="space-y-0.5 leading-snug">${items.map(line => `<div>${escapeHtml(line)}</div>`).join('')}</div>`;
+  };
+
   return `
     <div onclick="ctpActions.closeBillModal()" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2.5 sm:p-4">
       <div onclick="event.stopPropagation()" id="ctp-bill-capture-area" class="bg-white w-full max-w-2xl rounded-3xl p-3 sm:p-5 space-y-2.5 text-xs shadow-2xl flex flex-col max-h-[90dvh]">
-        <div class="flex justify-between items-center border-b pb-2 shrink-0">
+        <div class="flex justify-between items-center border-b border-slate-200 pb-2 shrink-0">
           <div>
             <h3 class="font-black text-sm text-slate-900">BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}</h3>
             <p class="text-[11px] text-slate-500">Nhân sự: <b>${escapeHtml(memberNickname)}</b> • Sếp: <b class="text-emerald-700">${escapeHtml(bm.ownerTitle)}</b></p>
           </div>
-          <button type="button" data-html2canvas-ignore="true" onclick="ctpActions.closeBillModal()" class="w-8 h-8 rounded-full bg-slate-100">✕</button>
+          <button type="button" data-html2canvas-ignore="true" onclick="ctpActions.closeBillModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700">✕</button>
         </div>
 
         <div class="flex-1 min-h-0 overflow-auto border border-slate-300 rounded-2xl">
-          <table class="w-full border-collapse text-[11px]">
+          <table class="ctp-bill-capture-table w-full border-collapse text-[11px]">
             <thead class="sticky top-0 bg-[#107c41] text-white font-extrabold text-[10px] uppercase">
               <tr>
-                <th class="py-2 px-1 border">STT</th><th class="py-2 px-1 border">NGÀY</th><th class="py-2 px-1.5 border text-left">SHOW</th>
-                <th class="py-2 px-1.5 border text-left">NHIỆM VỤ</th><th class="py-2 px-1 border text-left">PHÁT SINH</th><th class="py-2 px-1.5 border text-right">TỔNG</th>
+                <th class="py-2 px-1.5 border border-slate-300 text-center">STT</th>
+                <th class="py-2 px-1.5 border border-slate-300 text-center">NGÀY</th>
+                <th class="py-2 px-2 border border-slate-300 text-left">SHOW</th>
+                <th class="py-2 px-2 border border-slate-300 text-left">NHIỆM VỤ</th>
+                <th class="py-2 px-2 border border-slate-300 text-left">PHÁT SINH</th>
+                <th class="py-2 px-2 border border-slate-300 text-right">TỔNG</th>
               </tr>
             </thead>
-            <tbody class="divide-y">
+            <tbody class="divide-y divide-slate-200 bg-white">
               ${bm.rows.map(r => `
                 <tr>
-                  <td class="py-1.5 px-1 border text-center">${r.stt}</td>
-                  <td class="py-1.5 px-1 border text-center font-mono">${escapeHtml(r.dateLabel)}</td>
-                  <td class="py-1.5 px-1.5 border font-bold">${escapeHtml(r.location)}</td>
-                  <td class="py-1.5 px-1.5 border">${r.taskBulletsCompact.map(escapeHtml).join('<br/>') || '-'}</td>
-                  <td class="py-1.5 px-1 border">${r.extraBulletsCompact.map(escapeHtml).join('<br/>') || '-'}</td>
-                  <td class="py-1.5 px-1.5 border text-right font-mono font-black text-emerald-700">${r.showSum.toLocaleString('vi-VN')}đ</td>
+                  <td class="py-1.5 px-1.5 border border-slate-300 text-center align-top">${r.stt}</td>
+                  <td class="py-1.5 px-1.5 border border-slate-300 text-center font-mono align-top whitespace-nowrap">${escapeHtml(r.dateLabel)}</td>
+                  <td class="py-1.5 px-2 border border-slate-300 font-bold text-slate-900 align-top">${escapeHtml(r.location)}</td>
+                  <td class="py-1.5 px-2 border border-slate-300 text-slate-800 align-top">${renderFullLines(r.taskBullets, r.taskBulletsCompact)}</td>
+                  <td class="py-1.5 px-2 border border-slate-300 text-slate-800 align-top">${renderFullLines(r.extraBullets, r.extraBulletsCompact)}</td>
+                  <td class="py-1.5 px-2 border border-slate-300 text-right font-mono font-black text-emerald-700 align-top whitespace-nowrap">${Number(r.showSum || 0).toLocaleString('vi-VN')}đ</td>
                 </tr>
               `).join('')}
             </tbody>
             <tfoot>
               <tr class="bg-slate-900 text-white font-mono font-black">
-                <td colspan="5" class="py-2 px-2 text-right text-amber-300">TỔNG CỘNG:</td>
-                <td class="py-2 px-1.5 text-right text-emerald-400">${bm.total.toLocaleString('vi-VN')}đ</td>
+                <td colspan="5" class="py-2 px-2 border border-slate-700 text-right text-amber-300">TỔNG CỘNG:</td>
+                <td class="py-2 px-2 border border-slate-700 text-right text-emerald-400 whitespace-nowrap">${Number(bm.total || 0).toLocaleString('vi-VN')}đ</td>
               </tr>
             </tfoot>
           </table>
