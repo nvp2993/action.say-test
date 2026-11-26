@@ -163,34 +163,67 @@ export function renderDebtTabHtml() {
             `).join('')}
           </div>
 
-          <div class="bg-white p-3 rounded-2xl border border-slate-200/80 space-y-1.5 flex-1 min-h-[140px]">
+         <div class="bg-white p-3 rounded-2xl border border-slate-200/80 space-y-2 flex-1 min-h-[160px]">
             <div class="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase">
-              <span>Show trong kỳ</span>
+              <span>📌 CÔNG NỢ TỪNG SHOW</span>
               <span class="font-mono text-slate-700">${filtered.length}</span>
             </div>
-            <div class="space-y-1 max-h-60 overflow-y-auto custom-scroll pr-0.5">
-              ${filtered.map((sh, i) => {
+            <div class="space-y-1.5 max-h-72 overflow-y-auto custom-scroll pr-0.5">
+              ${filtered.length === 0 ? `
+                <div class="text-[11px] text-slate-400 py-3 text-center">Không có show nào trong kỳ.</div>
+              ` : filtered.map((sh, i) => {
                 const active = state.ownerExpandedShowId === sh.id;
                 const loc = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
+                const shIsOwner = sh.ownerId === uid;
+                let subBadge = '';
+                let badgeCls = 'text-slate-500';
+
+                if (!shouldCountShowMoney(sh)) {
+                  subBadge = 'Giữ lịch (0đ)';
+                  badgeCls = 'text-amber-700';
+                } else if (shIsOwner) {
+                  const m = calculateOwnerShowMetrics(sh);
+                  if (m.remainingClientDebt > 0) {
+                    subBadge = `Nợ ${formatCompactMoneyPlain(m.remainingClientDebt)}`;
+                    badgeCls = 'text-rose-600 font-mono font-black';
+                  } else {
+                    subBadge = 'Đã thu xong';
+                    badgeCls = 'text-emerald-700 font-bold';
+                  }
+                } else {
+                  const cm = calculateCrewShowMetrics(sh);
+                  if (cm.pendingCtpDebt > 0) {
+                    subBadge = `Chờ ${formatCompactMoneyPlain(cm.pendingCtpDebt)}`;
+                    badgeCls = 'text-amber-700 font-mono font-black';
+                  } else {
+                    subBadge = 'Đã nhận CTP';
+                    badgeCls = 'text-emerald-700 font-bold';
+                  }
+                }
+
                 return `
                   <button
                     type="button"
-                    onclick="ownerActions.toggleExpandShow('${escapeHtml(sh.id)}')"
-                    class="w-full text-left px-2.5 py-1.5 rounded-xl border text-[11px] transition flex items-center justify-between gap-1.5 ${
+                    onclick="ownerActions.focusShow('${escapeHtml(sh.id)}')"
+                    class="w-full text-left px-2.5 py-2 rounded-xl border transition space-y-0.5 ${
                       active
-                        ? 'bg-slate-900 text-amber-300 border-slate-900 font-extrabold'
-                        : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-slate-200/70 font-semibold'
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-slate-50/90 hover:bg-slate-100 text-slate-800 border-slate-200/80'
                     }"
                   >
-                    <span class="truncate">#${i + 1} • ${escapeHtml(loc || 'Show')}</span>
-                    <span class="font-mono text-[9.5px] shrink-0 opacity-75">${escapeHtml(formatDayMonth(sh.startDate))}</span>
+                    <div class="flex items-center justify-between gap-1.5 text-[11px]">
+                      <span class="font-extrabold truncate">#${i + 1} • ${escapeHtml(loc || 'Show')}</span>
+                      <span class="font-mono text-[9.5px] shrink-0 ${active ? 'text-amber-300' : 'text-slate-400'}">${escapeHtml(formatDayMonth(sh.startDate))}</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-1 text-[10px]">
+                      <span class="${active ? 'text-slate-300' : 'text-slate-500'} truncate">${shIsOwner ? 'Chủ show' : `Chủ: ${escapeHtml(getMember(sh.ownerId).name)}`}</span>
+                      <span class="${active ? 'text-emerald-300 font-mono font-bold' : badgeCls} shrink-0">${subBadge}</span>
+                    </div>
                   </button>
                 `;
               }).join('')}
             </div>
           </div>
-        </aside>
-
         <!-- CỘT PHẢI: DANH SÁCH SHOW -->
         <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 space-y-2.5">
             <div class="grid lg:hidden grid-cols-2 sm:grid-cols-4 gap-2">
