@@ -2,7 +2,7 @@ import { state } from '../state/store.js';
 import { OWNER_STATUS_OPTIONS, CREW_CTP_STATUS_OPTIONS } from '../config/constants.js';
 import { escapeHtml, formatDayMonth, getShowDays, getMember, formatCompactMoneyPlain } from '../utils/helpers.js';
 import { getVisiblePartnerText } from '../services/show.service.js';
-import { calculateOwnerShowMetrics, calculateCrewShowMetrics, getDefaultRateForTask } from '../services/finance.service.js';
+import { calculateOwnerShowMetrics, calculateCrewShowMetrics, getDefaultRateForTask, getMemberExtrasForShow } from '../services/finance.service.js';
 import { renderUnifiedDateBarHtml } from './header.ui.js';
 
 function shouldCountShowMoney(sh) {
@@ -27,7 +27,7 @@ export function renderDebtTabHtml() {
   }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
 
   let ownerPriceSum = 0, ownerExpSum = 0, ownerProfitSum = 0, ownerUnpaidSum = 0;
-  let crewBillSum = 0, crewSelfExpSum = 0, crewPocketSum = 0, crewUnpaidSum = 0;
+  let crewBillSum = 0, crewExtraExpSum = 0, crewPocketSum = 0, crewUnpaidSum = 0;
   let settledNetSum = 0, settledClientPaidSum = 0, settledCrewPaidSum = 0, settledCount = 0;
   let unsettledClientDebtSum = 0, unsettledCrewDebtSum = 0, unsettledCount = 0;
   let cOwner = 0, cCrew = 0;
@@ -59,7 +59,7 @@ export function renderDebtTabHtml() {
       const cm = calculateCrewShowMetrics(sh);
       const isSettled = cm.isSettled;
       crewBillSum += cm.grossCtp;
-      crewSelfExpSum += cm.selfExpense;
+      crewExtraExpSum += cm.extraBillSum;
       crewPocketSum += cm.netPocket;
       crewUnpaidSum += cm.pendingCtpDebt;
 
@@ -89,7 +89,7 @@ export function renderDebtTabHtml() {
   } else if (filterMode === 'role_crew') {
     statCards = [
       { label: '🎬 TỔNG BILL CTP', val: `${crewBillSum.toLocaleString('vi-VN')}đ`, wrapCls: 'bg-slate-900 border-slate-800', labelCls: 'text-slate-300', valCls: 'text-amber-300' },
-      { label: '🧾 CHI PHÍ TỰ TÚC', val: `${crewSelfExpSum.toLocaleString('vi-VN')}đ`, wrapCls: 'bg-rose-50 border-rose-200', labelCls: 'text-rose-700', valCls: 'text-rose-600' },
+      { label: '🧾 CHI PHÍ PHÁT SINH', val: `${crewExtraExpSum.toLocaleString('vi-VN')}đ`, wrapCls: 'bg-indigo-50 border-indigo-200', labelCls: 'text-indigo-700', valCls: 'text-indigo-700' },
       { label: '💎 THỰC NHẬN VỀ', val: `${crewPocketSum >= 0 ? '+' : ''}${crewPocketSum.toLocaleString('vi-VN')}đ`, wrapCls: 'bg-emerald-50 border-emerald-200', labelCls: 'text-emerald-700', valCls: 'text-emerald-700' },
       { label: '⏳ CTP CHƯA NHẬN', val: `${crewUnpaidSum.toLocaleString('vi-VN')}đ`, wrapCls: 'bg-amber-50 border-amber-200', labelCls: 'text-amber-800', valCls: 'text-amber-700' }
     ];
@@ -547,6 +547,8 @@ export function renderDebtTabHtml() {
               const stObj = CREW_CTP_STATUS_OPTIONS.find(o => o.id === cm.meta.ctpStatus) || CREW_CTP_STATUS_OPTIONS[0];
               const owner = getMember(sh.ownerId);
               const linkedTasks = state.ctpItems?.[sh.id]?.tasks || {};
+              const myExtras = getMemberExtrasForShow(sh.id, uid);
+              const myExtrasSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
 
               return `
                 <div id="debt-show-card-${escapeHtml(sh.id)}" ${holdCardStyle} class="${holdCardCls}">
@@ -563,8 +565,8 @@ export function renderDebtTabHtml() {
                     </div>
                     <div class="text-right shrink-0 space-y-0.5">
                       ${isCounted ? `
-                        <div class="text-[10px] font-mono text-slate-500">CTP: <b>${formatCompactMoneyPlain(cm.grossCtp)}</b> • Tự chi: <b class="text-rose-600">${cm.selfExpense ? formatCompactMoneyPlain(cm.selfExpense) : '-'}</b></div>
-                        <div class="text-[10.5px] font-mono font-black text-emerald-700">BỎ TÚI: ${cm.netPocket >= 0 ? '+' : ''}${formatCompactMoneyPlain(cm.netPocket)}</div>
+                        <div class="text-[10px] font-mono text-slate-500">Công: <b>${formatCompactMoneyPlain(cm.taskSum)}</b>${cm.extraBillSum > 0 ? ` • Phát sinh: <b class="text-indigo-700">+${formatCompactMoneyPlain(cm.extraBillSum)}</b>` : ''}</div>
+                        <div class="text-[10.5px] font-mono font-black text-emerald-700">TỔNG CTP: ${formatCompactMoneyPlain(cm.grossCtp)}</div>
                       ` : `
                         <div class="text-[10px] font-bold text-amber-800">Không tính tiền</div>
                         <div class="text-[10.5px] font-mono font-black text-slate-500">0đ</div>
@@ -583,46 +585,128 @@ export function renderDebtTabHtml() {
                         </div>
                       </div>
 
-                      <div class="space-y-1.5">
-                        <div class="flex items-center justify-between gap-2">
-                          <span class="text-[10px] font-black text-slate-500 uppercase">🎬 NHIỆM VỤ CTP (ĐỒNG BỘ TAB TÍNH CTP)</span>
-                          <span class="text-[10px] font-semibold text-slate-400">Chạm để chọn</span>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
+                        <!-- CỘT TRÁI: NHIỆM VỤ CTP -->
+                        <div class="space-y-2 min-w-0">
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="text-[10px] font-black text-slate-500 uppercase">🎬 NHIỆM VỤ CTP:</span>
+                            <span class="font-mono font-bold text-[10px] text-slate-500">${cm.taskSum.toLocaleString('vi-VN')}đ</span>
+                          </div>
+                          <div class="grid grid-cols-3 gap-1.5">
+                            ${taskKeys.map(tk => {
+                              const active = linkedTasks[tk] !== undefined && linkedTasks[tk] !== null;
+                              const tVal = active ? linkedTasks[tk] : getDefaultRateForTask(tk, sh);
+                              return `
+                                <div class="flex flex-col min-w-0">
+                                  <button type="button" onclick="ownerActions.toggleSyncedCtpTask('${sh.id}', '${tk}')" class="w-full py-1.5 px-1.5 rounded-lg text-[10px] font-bold border leading-tight transition text-center ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white/90 text-slate-700 border-slate-200'}">
+                                    ${taskLabels[tk]}
+                                  </button>
+                                  ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleSyncedCtpTaskInput('${sh.id}', '${tk}', this)" class="mt-1 w-full px-1.5 py-1 bg-indigo-50 border border-indigo-300 rounded-md text-[10px] font-mono font-bold text-right" />` : ''}
+                                </div>
+                              `;
+                            }).join('')}
+                          </div>
                         </div>
-                        <div class="grid grid-cols-3 sm:grid-cols-6 gap-1">
-                          ${taskKeys.map(tk => {
-                            const active = linkedTasks[tk] !== undefined && linkedTasks[tk] !== null;
-                            const tVal = active ? linkedTasks[tk] : getDefaultRateForTask(tk, sh);
-                            return `
-                              <div class="flex flex-col">
-                                <button type="button" onclick="ownerActions.toggleSyncedCtpTask('${sh.id}', '${tk}')" class="w-full py-1 px-1.5 rounded-lg text-[9.5px] font-bold border leading-tight transition text-center ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white/90 text-slate-700 border-slate-200'}">
-                                  ${taskLabels[tk]}
-                                </button>
-                                ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleSyncedCtpTaskInput('${sh.id}', '${tk}', this)" class="mt-1 w-full px-1.5 py-0.5 bg-indigo-50 border border-indigo-300 rounded-md text-[9.5px] font-mono font-bold text-right" />` : ''}
-                              </div>
-                            `;
-                          }).join('')}
-                        </div>
-                      </div>
 
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        <div class="min-w-0">
-                          <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">💵 CHI PHÍ CÁ NHÂN TỰ TÚC:</label>
-                          <input type="tel" inputmode="numeric" value="${cm.selfExpense ? cm.selfExpense.toLocaleString('vi-VN') : ''}" oninput="ownerActions.handleCrewSelfExpenseInput('${sh.id}', this)" placeholder="VD: Nhập số tiền.." class="w-full min-w-0 px-3 py-2 bg-rose-50/60 border border-rose-200 rounded-xl font-mono font-black text-right text-xs text-rose-600" />
-                        </div>
-                        <div class="min-w-0">
-                          <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">📝 GHI CHÚ CÁ NHÂN:</label>
-                          <input type="text" value="${escapeHtml(cm.meta.selfExpenseNote || '')}" oninput="ownerActions.handleCrewNoteInput('${sh.id}', this.value)" placeholder="Ghi chú thêm..." class="w-full min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold" />
+                        <!-- CỘT PHẢI: CHI PHÍ PHÁT SINH ĐỒNG BỘ -->
+                        <div class="space-y-2 min-w-0 md:border-l md:pl-3.5 ${sh.isHold ? 'border-amber-200/80' : 'border-slate-200/80'}">
+                          <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                              <span class="text-[10px] font-black text-slate-500 uppercase">🧾 PHÁT SINH (ĐỒNG BỘ CTP):</span>
+                              ${myExtras.length > 0 ? `
+                                <span id="ctp-show-extra-sum-${sh.id}" class="px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 font-mono font-black text-[10px] text-emerald-700">
+                                  ${myExtrasSum.toLocaleString('vi-VN')}đ
+                                </span>
+                              ` : ''}
+                            </div>
+                            <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-xl text-[10px] font-black transition">+ Thêm phí</button>
+                          </div>
+
+                          ${myExtras.length === 0 ? `
+                            <div class="text-[11px] text-slate-400 py-1.5 px-3 rounded-2xl bg-slate-50/70 border border-dashed border-slate-200">• Chưa có khoản phát sinh nào.</div>
+                          ` : `
+                            <ul class="space-y-1.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 px-3 py-2">
+                              ${myExtras.map((ex, exIdx) => {
+                                const rowKey = `${sh.id}_${ex.id || exIdx}`;
+                                const isEditingRow = state.ctpEditingExtraKey === rowKey;
+                                if (isEditingRow) {
+                                  return `
+                                    <li class="flex flex-wrap items-center justify-between gap-1.5 py-1 border-b last:border-b-0 border-slate-200/60">
+                                      <div class="flex items-center gap-1.5 flex-1 min-w-[140px]">
+                                        <span class="text-slate-400 font-black select-none">•</span>
+                                        <input
+                                          id="ctp-extra-name-${escapeHtml(rowKey)}"
+                                          type="text"
+                                          value="${escapeHtml(ex.name || '')}"
+                                          oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'name', this, '${escapeHtml(ex.id || '')}')"
+                                          onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
+                                          placeholder="Tên khoản chi..."
+                                          class="flex-1 min-w-0 px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+                                        />
+                                      </div>
+                                      <div class="flex items-center gap-1.5 shrink-0">
+                                        <input
+                                          type="tel"
+                                          inputmode="numeric"
+                                          value="${ex.amount ? Number(ex.amount).toLocaleString('vi-VN') : ''}"
+                                          oninput="ctpActions.saveExtraField('${sh.id}', ${exIdx}, 'amount', this, '${escapeHtml(ex.id || '')}')"
+                                          onkeydown="if(event.key==='Enter'){event.preventDefault();ctpActions.finishEditExtra();}"
+                                          placeholder="Số tiền"
+                                          class="w-28 px-2.5 py-1 bg-emerald-50/80 border border-emerald-300 rounded-lg text-xs font-mono font-black text-emerald-800 text-right focus:outline-none focus:border-emerald-600"
+                                        />
+                                        <button
+                                          type="button"
+                                          onclick="ctpActions.finishEditExtra()"
+                                          class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10.5px] transition"
+                                        >Xong</button>
+                                        <button
+                                          type="button"
+                                          onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
+                                          title="Xóa khoản chi"
+                                          class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 font-bold text-xs flex items-center justify-center transition"
+                                        >✕</button>
+                                      </div>
+                                    </li>
+                                  `;
+                                }
+
+                                return `
+                                  <li class="flex items-center justify-between gap-2 py-1 border-b last:border-b-0 border-slate-200/60">
+                                    <div class="flex items-center gap-1.5 min-w-0 flex-1 text-xs">
+                                      <span class="text-slate-400 font-black select-none">•</span>
+                                      <span class="font-semibold text-slate-800 truncate">${escapeHtml(ex.name || 'Khoản phát sinh')}</span>
+                                      <span class="text-slate-300">—</span>
+                                      <span class="font-mono font-black text-emerald-700 shrink-0">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                      <button
+                                        type="button"
+                                        onclick="ctpActions.startEditExtra('${escapeHtml(rowKey)}')"
+                                        class="px-2 py-0.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-[10.5px] font-bold text-slate-700 transition"
+                                      >Sửa</button>
+                                      <button
+                                        type="button"
+                                        onclick="ctpActions.removeExtraItem('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
+                                        title="Xóa khoản chi"
+                                        class="w-6 h-6 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-400 hover:text-rose-600 font-bold text-[10.5px] flex items-center justify-center transition"
+                                      >✕</button>
+                                    </div>
+                                  </li>
+                                `;
+                              }).join('')}
+                            </ul>
+                          `}
                         </div>
                       </div>
 
                       <div class="pt-2 border-t ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} flex items-center justify-between text-xs font-mono">
                         <div>
-                          <span class="text-[10px] font-sans font-bold text-slate-400 uppercase block">TỔNG BILL CTP:</span>
-                          <span class="font-black text-slate-900">${cm.grossCtp.toLocaleString('vi-VN')}đ</span>
+                          <span class="text-[10px] font-sans font-bold text-slate-400 uppercase block">NHIỆM VỤ + PHÁT SINH:</span>
+                          <span class="font-black text-slate-900">${cm.taskSum.toLocaleString('vi-VN')}đ + ${cm.extraBillSum.toLocaleString('vi-VN')}đ</span>
                         </div>
                         <div class="text-right">
-                          <span class="text-[10px] font-sans font-bold text-slate-400 uppercase block">💎 BỎ TÚI THỰC NHẬN:</span>
-                          <span class="font-black text-emerald-700">${cm.netPocket >= 0 ? '+' : ''}${cm.netPocket.toLocaleString('vi-VN')}đ</span>
+                          <span class="text-[10px] font-sans font-bold text-slate-400 uppercase block">💎 TỔNG BILL CTP NHẬN:</span>
+                          <span class="font-black text-emerald-700">${cm.grossCtp.toLocaleString('vi-VN')}đ</span>
                         </div>
                       </div>
 
