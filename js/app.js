@@ -482,38 +482,40 @@ function renderApp() {
 
 let main = '';
   if (state.activeTab === 'shows') main = renderShowsTabHtml();
-  else if (state.activeTab === 'matrix') {
+  else if (state.activeTab === 'matrix' || state.activeTab === 'free_finder') {
+    const isCrewView = state.activeTab === 'free_finder';
+    const subBody = isCrewView ? renderCrewBoardTabHtml() : renderMatrixTabHtml();
     main = `
-      <div class="flex-1 flex flex-col min-h-0">
-        <div class="bg-[#f8fafc] px-3 py-1.5 border-b border-slate-200/90 shrink-0 flex items-center justify-between gap-2">
-          <span class="text-[10.5px] font-black text-slate-500 uppercase tracking-wider">Lịch phân công T${state.selectedMonth}</span>
-          <button
-            type="button"
-            onclick="appActions.setTab('free_finder')"
-            class="px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90 text-[10.5px] font-extrabold flex items-center gap-1.5 transition"
-          >
-            <i class="fa-solid fa-user-check text-[9.5px] text-emerald-600"></i>
-            <span>Tìm nhân sự rảnh →</span>
-          </button>
+      <div class="flex-1 flex flex-col min-h-0 bg-[#f8fafc]">
+        <div class="px-3 pt-2 pb-1.5 bg-[#f8fafc] shrink-0 flex items-center justify-center">
+          <div class="inline-flex items-center p-1 rounded-full bg-slate-200/75 border border-slate-200/90 shadow-inner w-full max-w-[300px]">
+            <button
+              type="button"
+              onclick="appActions.setTab('matrix')"
+              class="flex-1 py-1 px-3 rounded-full text-[11px] tracking-tight transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+                !isCrewView
+                  ? 'bg-white text-slate-900 font-black shadow-xs ring-1 ring-slate-900/5'
+                  : 'text-slate-500 hover:text-slate-800 font-semibold'
+              }"
+            >
+              <i class="fa-solid fa-calendar-days text-[10px] ${!isCrewView ? 'text-indigo-600' : 'text-slate-400'}"></i>
+              <span>Bảng công tác</span>
+            </button>
+            <button
+              type="button"
+              onclick="appActions.setTab('free_finder')"
+              class="flex-1 py-1 px-3 rounded-full text-[11px] tracking-tight transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+                isCrewView
+                  ? 'bg-white text-slate-900 font-black shadow-xs ring-1 ring-slate-900/5'
+                  : 'text-slate-500 hover:text-slate-800 font-semibold'
+              }"
+            >
+              <span class="w-1.5 h-1.5 rounded-full ${isCrewView ? 'bg-emerald-500 animate-pulse' : 'bg-emerald-500/70'}"></span>
+              <span>Nhân sự rảnh</span>
+            </button>
+          </div>
         </div>
-        ${renderMatrixTabHtml()}
-      </div>
-    `;
-  }
-  else if (state.activeTab === 'free_finder') {
-    main = `
-      <div class="flex-1 flex flex-col min-h-0">
-        <div class="bg-[#f8fafc] px-3 py-1.5 border-b border-slate-200/90 shrink-0 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onclick="appActions.setTab('matrix')"
-            class="px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 text-slate-800 border border-slate-200/90 text-[10.5px] font-extrabold flex items-center gap-1.5 transition"
-          >
-            <span>← Bảng công tác</span>
-          </button>
-          <span class="text-[10.5px] font-black text-emerald-700 uppercase tracking-wider">Tìm nhân sự rảnh</span>
-        </div>
-        ${renderCrewBoardTabHtml()}
+        ${subBody}
       </div>
     `;
   }
