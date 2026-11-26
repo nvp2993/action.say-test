@@ -243,7 +243,7 @@ export function renderCtpTabHtml() {
 
           <div class="space-y-2 pt-0.5">
             <button type="button" onclick="ctpActions.saveNow()" class="w-full py-3 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition">
-              💾 LƯU CTP
+              💾 LƯU CTP LÊN CLOUD
             </button>
             <button type="button" onclick="ctpActions.generateBill()" class="w-full py-3.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase shadow-xs transition">
               🔥 LỤM (TỔNG HỢP BILL)
@@ -340,13 +340,13 @@ export function renderCtpTabHtml() {
                                 return `
                                   <div class="h-7 rounded-lg border px-2 flex items-center justify-between gap-1 transition min-w-0 ${
                                     checked
-                                      ? 'bg-slate-200/80 border-slate-300 text-slate-900'
-                                      : 'bg-white hover:bg-slate-50 border-slate-200/80 text-slate-600'
+                                      ? 'bg-slate-100 border-slate-300/90 text-slate-900'
+                                      : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
                                   }">
                                     <button
                                       type="button"
                                       onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
-                                      class="text-left text-[10.5px] truncate ${checked ? 'text-slate-900 font-extrabold shrink-0' : 'text-slate-600 font-bold w-full'}"
+                                      class="text-left text-[10.5px] truncate ${checked ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}"
                                     >${t.label}</button>
                                     ${checked ? `
                                       <input
@@ -354,7 +354,7 @@ export function renderCtpTabHtml() {
                                         inputmode="numeric"
                                         value="${Number(val).toLocaleString('vi-VN')}"
                                         oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
-                                        class="w-20 min-w-0 bg-transparent text-right font-mono font-black tabular-nums text-[10.5px] text-slate-900 focus:outline-none"
+                                        class="w-20 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[10.5px] text-slate-900 focus:outline-none"
                                       />
                                     ` : ''}
                                   </div>
