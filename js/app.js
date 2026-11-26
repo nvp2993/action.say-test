@@ -525,6 +525,10 @@ function renderApp() {
   }
 
   scheduleBroadcastAutoHide();
+    if (typeof scheduleLiveMarqueeAutoHide === 'function') {
+      scheduleLiveMarqueeAutoHide();
+    }
+  }
 }
 
 registerRenderer(renderApp);
@@ -532,7 +536,14 @@ registerRenderer(renderApp);
 window.state = state;
 window.appActions = {
   dismissLiveMarquee() {
-    dismissLiveMarqueeNow();
+    if (typeof dismissLiveMarqueeNow === 'function') {
+      dismissLiveMarqueeNow();
+    }
+    try {
+      document.querySelectorAll('[data-live-marquee]').forEach(el => {
+        el.style.display = 'none';
+      });
+    } catch {}
   },
   dismissBroadcast() {
     hideBroadcastBannerNow();
