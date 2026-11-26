@@ -411,6 +411,13 @@ export function renderCrewPassModalHtml() {
   `;
 }
 
+function formatYmdToDmy(ymd) {
+  if (!ymd) return '--/--/----';
+  const parts = String(ymd).split('-');
+  if (parts.length !== 3) return ymd;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
 export function renderFormModalHtml() {
   const f = state.formModal;
   if (!f) return '';
