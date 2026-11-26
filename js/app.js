@@ -1259,6 +1259,19 @@ window.ctpActions = {
       target.name = el.value;
     }
   },
+  saveExtraField(id, idx, f, el, expId = '') {
+    const myList = getMemberExtrasForShow(id, state.currentUserId);
+    const target = expId ? myList.find(x => x.id === expId) : myList[idx];
+    if (!target) return;
+
+    if (f === 'amount') {
+      const val = parseFlexibleMoneyInput(el.value);
+      target.amount = val;
+      this._refreshLiveTotals(id);
+    } else {
+      target.name = el.value;
+    }
+  },
   removeExtraItem(id, idx, expId = '') {
     if (!Array.isArray(state.ctpItems[id]?.extras)) return;
     if (expId) {
