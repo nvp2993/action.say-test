@@ -1603,6 +1603,11 @@ window.ctpActions = {
 };
 
 window.ownerActions = {
+  setBossFilter(bossKey) {
+    const nextKey = bossKey || 'all';
+    state.ownerBossFilterKey = state.ownerBossFilterKey === nextKey ? 'all' : nextKey;
+    renderApp();
+  },
   setMonth(m) { state.ownerMonth = Number(m); state.ownerAllMonths = false; renderApp(); },
   toggleAllMonths() { state.ownerAllMonths = !state.ownerAllMonths; renderApp(); },
   setFilterStatus(s) { state.ownerFilterStatus = s; renderApp(); },
