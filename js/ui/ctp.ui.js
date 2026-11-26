@@ -376,7 +376,7 @@ export function renderCtpTabHtml() {
                                 </span>
                               ` : ''}
                             </div>
-                            <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition shrink-0">+ Thêm phí</button>
+                            <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition shrink-0">+ Thêm phát sinh</button>
                           </div>
 
                           <div class="${hasEditingRow ? 'max-h-44' : 'h-[84px]'} overflow-y-auto custom-scroll pr-0.5">
