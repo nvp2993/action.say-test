@@ -251,9 +251,9 @@ export function renderCtpTabHtml() {
           </div>
         </aside>
 
-        <div id="ctp-shows-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-4">
-          <div class="max-w-6xl mx-auto space-y-2.5 sm:space-y-3">
-            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-2 sm:pt-3 pb-2 sm:pb-2.5 border-b border-slate-200/80 cursor-pointer">
+        <div id="ctp-shows-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-2.5 sm:px-4 pb-4">
+          <div class="max-w-6xl mx-auto space-y-2 sm:space-y-3">
+            <div onclick="appActions.toggleHideMoneyMode()" class="sm:sticky sm:top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 bg-[#f1f5f9] sm:-mx-4 sm:px-4 pt-2 sm:pt-3 pb-1.5 sm:pb-2.5 sm:border-b sm:border-slate-200/80 cursor-pointer">
               ${ctpStatCards.map(c => `
                 <div class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border shadow-2xs transition ${c.wrapCls}">
                   <span class="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
@@ -292,8 +292,8 @@ export function renderCtpTabHtml() {
 
                   return `
                     <article id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border border-slate-200/90 hover:border-slate-300'} rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xs flex flex-col justify-between gap-2.5 sm:gap-3 min-w-0 transition-colors">
-                      <div class="space-y-2.5 sm:space-y-3">
-                        <div class="flex items-start justify-between gap-2 min-h-[50px] sm:min-h-[54px] -mx-1 -mt-1 sm:-mx-1.5 sm:-mt-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
+                      <div class="space-y-2 sm:space-y-3">
+                        <div class="flex items-start justify-between gap-2 min-h-[48px] sm:min-h-[54px] -mx-1 -mt-1 sm:-mx-1.5 sm:-mt-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500">
                               <span class="font-mono font-bold text-indigo-600 tabular-nums shrink-0">${dateLabel}</span>
@@ -333,12 +333,12 @@ export function renderCtpTabHtml() {
                               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nhiệm vụ</span>
                               <span class="font-mono font-bold tabular-nums text-[10.5px] text-slate-500">${getShowTaskSum(item).toLocaleString('vi-VN')}đ</span>
                             </div>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-1">
+                            <div class="grid grid-cols-3 gap-1">
                               ${taskList.map(t => {
                                 const checked = item.tasks?.[t.key] !== undefined && item.tasks?.[t.key] !== null;
                                 const val = checked ? item.tasks[t.key] : t.def;
                                 return `
-                                  <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-1 transition min-w-0 ${
+                                  <div class="h-6 rounded-md border px-1 flex items-center justify-between gap-0.5 transition min-w-0 ${
                                     checked
                                       ? 'bg-slate-100 border-slate-300/90 text-slate-900'
                                       : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
@@ -346,7 +346,7 @@ export function renderCtpTabHtml() {
                                     <button
                                       type="button"
                                       onclick="ctpActions.toggleTask('${sh.id}', '${t.key}')"
-                                      class="text-left text-[10px] truncate ${checked ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}"
+                                      class="text-left text-[9.5px] sm:text-[10px] truncate ${checked ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}"
                                     >${t.label}</button>
                                     ${checked ? `
                                       <input
@@ -354,7 +354,7 @@ export function renderCtpTabHtml() {
                                         inputmode="numeric"
                                         value="${Number(val).toLocaleString('vi-VN')}"
                                         oninput="ctpActions.handleTaskPriceInput('${sh.id}', '${t.key}', this)"
-                                        class="flex-1 min-w-[44px] bg-transparent text-right font-mono font-extrabold tabular-nums text-[9.5px] text-slate-900 focus:outline-none"
+                                        class="flex-1 min-w-[34px] bg-transparent text-right font-mono font-extrabold tabular-nums text-[8.5px] sm:text-[9.5px] tracking-tighter text-slate-900 focus:outline-none"
                                       />
                                     ` : ''}
                                   </div>
