@@ -114,6 +114,33 @@ export function renderDebtTabHtml() {
   const uid = state.currentUserId;
   const curMem = getMember(uid);
 
+  // Tính công nợ cộng dồn từ các tháng trước trong cùng năm (m < state.ownerMonth)
+  let prevCarryCount = 0;
+  let prevCarryAmount = 0;
+  if (!state.ownerAllMonths && Number(state.ownerMonth) > 1) {
+    (state.shows || []).forEach(sh => {
+      if (!sh || sh.isCancelled || !sh.startDate) return;
+      if (sh.ownerId !== uid && !(sh.memberIds || []).includes(uid)) return;
+      const [y, m] = sh.startDate.split('-').map(Number);
+      if (y !== state.selectedYear || !(m < Number(state.ownerMonth))) return;
+      if (!shouldCountShowMoney(sh)) return;
+
+      if (sh.ownerId === uid) {
+        const mObj = calculateOwnerShowMetrics(sh);
+        if (mObj.rec.status !== 'settled' && mObj.remainingClientDebt > 0) {
+          prevCarryCount++;
+          prevCarryAmount += mObj.remainingClientDebt;
+        }
+      } else {
+        const cm = calculateCrewShowMetrics(sh);
+        if (!cm.isSettled && cm.pendingCtpDebt > 0) {
+          prevCarryCount++;
+          prevCarryAmount += cm.pendingCtpDebt;
+        }
+      }
+    });
+  }
+
   const allInvolved = (state.shows || []).filter(sh => {
     if (!sh || sh.isCancelled || !sh.startDate) return false;
     if (sh.ownerId !== uid && !(sh.memberIds || []).includes(uid)) return false;
@@ -179,7 +206,7 @@ export function renderDebtTabHtml() {
   const fmtMoney = (n) => (hide ? '••••••đ' : `${Number(n || 0).toLocaleString('vi-VN')}đ`);
   const fmtCompact = (n) => (hide ? '••••đ' : formatCompactMoneyPlain(n));
 
-  // Gom nhóm đối chiếu theo từng Sếp / Chủ show trong kỳ
+  // Gom nhóm đối chiếu theo từng Chủ show trong kỳ
   const bossMap = new Map();
   allInvolved.forEach(sh => {
     const isOwner = sh.ownerId === uid;
@@ -299,11 +326,11 @@ export function renderDebtTabHtml() {
         <aside class="hidden lg:flex flex-col gap-3 p-3.5 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
           <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2.5">
             <div class="flex items-center justify-between gap-1">
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Đối chiếu theo Sếp / Chủ show</span>
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">ĐỐI CHIẾU THEO CHỦ SHOW</span>
               ${selectedBossKey !== 'all' ? `
-                <button type="button" onclick="state.ownerBossFilterKey='all'; window.dispatchEvent(new Event('resize'));" class="text-[10px] font-extrabold text-indigo-600 hover:underline">Bỏ lọc</button>
+                <button type="button" onclick="ownerActions.setBossFilter('all')" class="text-[10px] font-extrabold text-indigo-600 hover:underline">Bỏ lọc</button>
               ` : `
-                <span class="font-mono font-bold text-[10px] text-slate-400">${bossSummaryList.length} nhóm</span>
+                <span class="font-mono font-bold text-[10px] text-slate-400">${bossSummaryList.length} chủ show</span>
               `}
             </div>
 
@@ -312,11 +339,10 @@ export function renderDebtTabHtml() {
                 <div class="text-[11px] text-slate-400 py-3 text-center">Không có dữ liệu trong kỳ</div>
               ` : bossSummaryList.map(g => {
                 const isSelected = selectedBossKey === g.key;
-                const toggleJs = `state.ownerBossFilterKey = (state.ownerBossFilterKey === '${escapeHtml(g.key)}' ? 'all' : '${escapeHtml(g.key)}'); document.getElementById('app').dispatchEvent(new Event('ctp-rerender'));`;
                 return `
                   <button
                     type="button"
-                    onclick="${toggleJs}"
+                    onclick="ownerActions.setBossFilter('${escapeHtml(g.key)}')"
                     class="w-full text-left p-2.5 rounded-xl border transition space-y-1 ${
                       isSelected
                         ? 'bg-slate-900 border-slate-900 text-white'
@@ -346,19 +372,28 @@ export function renderDebtTabHtml() {
           </div>
 
           <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2 text-[11px]">
-            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tóm tắt kỳ này</div>
-            <div class="flex items-center justify-between py-1 border-b border-slate-100">
-              <span class="text-slate-600 font-semibold">Show chưa hoàn tất</span>
-              <span class="font-mono font-black text-amber-700">${unsettledCount} show</span>
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cộng dồn tháng trước</span>
+              <span class="font-mono font-bold text-[10px] text-slate-400">${state.ownerAllMonths ? 'Đang xem cả năm' : `T1–T${Math.max(0, Number(state.ownerMonth) - 1)}`}</span>
             </div>
-            <div class="flex items-center justify-between py-1 border-b border-slate-100">
-              <span class="text-slate-600 font-semibold">Show đã hoàn tất</span>
-              <span class="font-mono font-black text-emerald-700">${settledCount} show</span>
-            </div>
-            <div class="flex items-center justify-between pt-1">
-              <span class="text-slate-700 font-bold">Chưa thu về ví</span>
-              <span class="font-mono font-black text-rose-600">${fmtMoney(totalUncollectedToWallet)}</span>
-            </div>
+            ${state.ownerAllMonths ? `
+              <div class="text-[11px] text-slate-500 py-1">Đang gộp toàn bộ các tháng của năm ${state.selectedYear}.</div>
+            ` : prevCarryAmount > 0 ? `
+              <div class="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-amber-950">Công nợ treo từ tháng trước</span>
+                  <span class="font-mono font-black text-rose-600">${fmtMoney(prevCarryAmount)}</span>
+                </div>
+                <div class="flex items-center justify-between text-[10px] text-amber-800">
+                  <span>${prevCarryCount} show chưa hoàn tất</span>
+                  <button type="button" onclick="ownerActions.toggleAllMonths()" class="font-extrabold text-indigo-700 hover:underline">Xem cả năm →</button>
+                </div>
+              </div>
+            ` : `
+              <div class="text-[11px] text-emerald-700 font-semibold py-2 px-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                ✓ Không có công nợ cộng dồn từ tháng trước
+              </div>
+            `}
           </div>
         </aside>
 
