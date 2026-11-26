@@ -1931,7 +1931,24 @@ window.ownerActions = {
       if (inp) inp.focus();
     });
   },
-  finishEditOwnerExpense() {
+finishEditOwnerExpense() {
+    const activeKey = state.ownerEditingExpenseKey;
+    if (activeKey) {
+      const nameInp = document.getElementById(`debt-exp-name-${activeKey}`);
+      const rowBox = nameInp?.closest('li');
+      const amountInp = rowBox?.querySelector('input[inputmode="decimal"]');
+      const idxSep = String(activeKey).indexOf('_');
+      if (idxSep > 0) {
+        const shId = activeKey.slice(0, idxSep);
+        const expId = activeKey.slice(idxSep + 1);
+        const rec = ensureOwnerFinRecord(shId);
+        const target = (rec.otherExpenses || []).find(x => x && x.id === expId);
+        if (target) {
+          if (nameInp) target.name = nameInp.value;
+          if (amountInp) target.amount = parseFlexibleMoneyInput(amountInp.value);
+        }
+      }
+    }
     state.ownerEditingExpenseKey = null;
     saveOwnerFinanceState(true);
     renderApp();
