@@ -102,7 +102,7 @@ function formatCleanStatusLabel(label) {
 function getColoredStatusBtnClass(statusId, isActive) {
   const isSettled = statusId === 'settled';
   if (!isActive) {
-    return 'bg-white/80 hover:bg-white text-slate-500 border-slate-200/80 font-medium';
+    return 'bg-white/85 hover:bg-white text-slate-500 border-slate-200/80 font-medium';
   }
   if (isSettled) {
     return 'bg-emerald-50 text-emerald-800 border-emerald-300/90 font-extrabold shadow-2xs';
@@ -510,20 +510,20 @@ export function renderDebtTabHtml() {
                                         <span class="font-mono font-black tabular-nums text-[11px] text-slate-900 shrink-0">${memCost.toLocaleString('vi-VN')}đ</span>
                                       </div>
 
-                                      <div class="grid grid-cols-2 gap-1.5">
+                                      <div class="grid grid-cols-3 gap-1">
                                         ${taskKeys.map(tk => {
                                           const active = memTasks[tk] !== undefined && memTasks[tk] !== null;
                                           const tVal = active ? memTasks[tk] : getDefaultRateForTask(tk, sh);
                                           return `
-                                            <div class="h-7 rounded-lg border px-2 flex items-center justify-between gap-1 transition min-w-0 ${
+                                            <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-0.5 transition min-w-0 ${
                                               active
                                                 ? 'bg-slate-100 border-slate-300/90 text-slate-900'
                                                 : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
                                             }">
-                                              <button type="button" onclick="ownerActions.toggleOwnerCrewTask('${sh.id}', '${mid}', '${tk}')" class="text-left text-[10.5px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
+                                              <button type="button" onclick="ownerActions.toggleOwnerCrewTask('${sh.id}', '${mid}', '${tk}')" class="text-left text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
                                                 ${taskLabels[tk]}
                                               </button>
-                                              ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleOwnerCrewTaskInput('${sh.id}', '${mid}', '${tk}', this)" class="w-16 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[10.5px] text-slate-900 focus:outline-none" />` : ''}
+                                              ${active ? `<input type="tel" inputmode="numeric" value="${Number(tVal).toLocaleString('vi-VN')}" oninput="ownerActions.handleOwnerCrewTaskInput('${sh.id}', '${mid}', '${tk}', this)" class="w-14 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[9.5px] text-slate-900 focus:outline-none" />` : ''}
                                             </div>
                                           `;
                                         }).join('')}
@@ -686,8 +686,8 @@ export function renderDebtTabHtml() {
 
                           ${expanded ? `
                             <div class="space-y-3">
-                              <div class="grid grid-cols-2 gap-1.5">
-                                ${CREW_CTP_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setCrewCtpStatus('${sh.id}', '${s.id}')" class="py-1.5 px-2 rounded-lg text-[10.5px] border truncate transition ${getColoredStatusBtnClass(s.id, cm.meta.ctpStatus === s.id)}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
+                              <div class="grid grid-cols-2 gap-1 p-0.5 rounded-xl bg-[#f8fafc] border border-slate-200/80">
+                                ${CREW_CTP_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setCrewCtpStatus('${sh.id}', '${s.id}')" class="py-1 px-2 rounded-lg text-[10.5px] border truncate transition ${getColoredStatusBtnClass(s.id, cm.meta.ctpStatus === s.id)}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
                               </div>
 
                               <div class="space-y-1.5">
