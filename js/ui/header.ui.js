@@ -126,6 +126,7 @@ function renderLiveMarqueeHtml() {
     </div>
   `;
 }
+
 export function renderHeaderHtml(totalAlerts = 0) {
   const curMem = getMember(state.currentUserId);
   const prof = state.memberProfiles?.[state.currentUserId] || {};
@@ -140,6 +141,7 @@ export function renderHeaderHtml(totalAlerts = 0) {
     (s.ownerId === uid || (s.memberIds || []).includes(uid))
   );
   const alertCount = totalAlerts > 0 ? totalAlerts : activeHolds.length;
+  const quickNoteCount = state.quickExpenses?.length || state.quickNotes?.length || 0;
 
   return `
     <header style="padding-top: max(16px, env(safe-area-inset-top));" class="bg-slate-900 text-white px-2.5 pb-2 shrink-0 border-b border-slate-800 z-30 space-y-2">
@@ -160,16 +162,33 @@ export function renderHeaderHtml(totalAlerts = 0) {
           </div>
         </div>
 
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
           ${state.isAdminMode ? `
             <button type="button" onclick="appActions.enterBackendPortal()" class="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black flex items-center gap-1">
               <i class="fa-solid fa-shield-halved text-amber-600"></i><span>ADMIN</span>
             </button>
           ` : ''}
+
+          <button
+            type="button"
+            onclick="appActions.openQuickExpenseModal ? appActions.openQuickExpenseModal() : (window.quickExpenseActions?.openModal?.())"
+            title="Note nhanh chi phí"
+            class="relative h-8 px-2.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-[10.5px] font-extrabold inline-flex items-center gap-1 shrink-0 transition"
+          >
+            <i class="fa-solid fa-receipt text-[11px] text-amber-400"></i>
+            <span class="hidden sm:inline">Note</span>
+            ${quickNoteCount > 0 ? `
+              <span class="min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-slate-950 font-mono font-black text-[9px] flex items-center justify-center leading-none">
+                ${quickNoteCount}
+              </span>
+            ` : ''}
+          </button>
+
           <button type="button" id="as-header-bell-btn" onclick="holdBellActions.openBellDrawer()" class="relative ${alertCount > 0 ? 'has-alert' : ''}" title="Thông báo & Giữ lịch">
             <i class="fa-solid fa-bell text-xs"></i>
             ${alertCount > 0 ? `<span id="as-header-bell-badge" style="color: #ffffff !important; background-color: #e11d48 !important;" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-black flex items-center justify-center leading-none shadow">${alertCount}</span>` : ''}
           </button>
+
           <button type="button" onclick="appActions.openCrewPassModal()" title="Thẻ VIP & Hồ sơ" class="flex items-center bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-0.5">
             ${avatarSrc
               ? `<img src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(curMem.name)}" class="w-7 h-7 rounded-full object-cover border border-amber-300/80 shrink-0" />`
