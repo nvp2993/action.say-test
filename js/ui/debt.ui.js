@@ -368,7 +368,7 @@ export function renderDebtTabHtml() {
 
         <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 sm:p-4">
           <div class="max-w-6xl mx-auto space-y-3">
-            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9]/95 backdrop-blur-xs pb-1.5 cursor-pointer">
+            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-1 pb-2 border-b border-slate-200/70 cursor-pointer">
               ${statCards.map(c => `
                 <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
                   <span class="text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
