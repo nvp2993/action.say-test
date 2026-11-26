@@ -174,7 +174,7 @@ export function renderCtpTabHtml() {
 
           <div class="space-y-2 pt-0.5">
             <button type="button" onclick="ctpActions.saveNow()" class="w-full py-3 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition">
-              💾 LƯU CTP
+              💾 LƯU CTP LÊN CLOUD
             </button>
             <button type="button" onclick="ctpActions.generateBill()" class="w-full py-3.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase shadow-xs transition">
               🔥 LỤM (TỔNG HỢP BILL)
@@ -223,7 +223,8 @@ export function renderCtpTabHtml() {
                   return `
                     <article id="ctp-show-card-${escapeHtml(sh.id)}" ${sh.isHold ? 'style="background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px); border: 1.5px dashed #f59e0b;"' : ''} class="${sh.isHold ? '' : 'bg-white border border-slate-200/90 hover:border-slate-300'} rounded-3xl p-4 shadow-2xs flex flex-col justify-between gap-3 min-w-0 transition-colors">
                       <div class="space-y-3">
-                        <div class="flex items-start justify-between gap-2 min-h-[48px] ${isCounted ? `border-b ${sh.isHold ? 'border-amber-200/80' : 'border-slate-100'} pb-2.5` : ''}">
+                        <!-- NỀN TIÊU ĐỀ SHOW HƠI XÁM NHẸ -->
+                        <div class="flex items-start justify-between gap-2 min-h-[54px] -mx-1.5 -mt-1.5 px-3 py-2.5 rounded-2xl ${sh.isHold ? 'bg-white/65 border-b border-amber-200/80' : 'bg-[#f8fafc] border-b border-slate-200/70'}">
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500">
                               <span class="font-mono font-black text-slate-400 tabular-nums">#${String(idx + 1).padStart(2, '0')}</span>
