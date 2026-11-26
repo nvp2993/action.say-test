@@ -377,19 +377,17 @@ function hideBroadcastBannerNow(sig = '') {
     _broadcastHideTimer = null;
   }
   const cur = state.studioBroadcast;
+  const finalSig = sig || getBroadcastSignature(cur);
   if (cur) {
     cur.enabled = false;
-    writeDismissedBroadcastSig(sig || getBroadcastSignature(cur));
+    if (finalSig) writeDismissedBroadcastSig(finalSig);
     try {
       localStorage.setItem('as_studio_broadcast_2026', JSON.stringify(cur));
     } catch {}
   }
-  const broadcastEl = document.querySelector('[data-studio-broadcast], .as-studio-broadcast, #studio-broadcast-banner');
-  if (broadcastEl) {
-    broadcastEl.style.display = 'none';
-  } else {
-    renderApp();
-  }
+  document.querySelectorAll('[data-studio-broadcast], .as-studio-broadcast, #studio-broadcast-banner').forEach(el => {
+    el.style.display = 'none';
+  });
 }
 
 function scheduleBroadcastAutoHide() {
@@ -420,6 +418,7 @@ function renderApp() {
 
   syncBroadcastDismissedState();
   state.welcomeSplashVisible = false;
+
   if (!state.authReady) {
     root.innerHTML = `<div class="h-[100dvh] flex items-center justify-center bg-slate-950 text-white text-xs font-bold">⏳ Đang kết nối Action &amp; Say Cloud...</div>`;
     scheduleBroadcastAutoHide();
