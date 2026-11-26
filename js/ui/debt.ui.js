@@ -343,12 +343,11 @@ export function renderDebtTabHtml() {
         <div class="flex items-center justify-between gap-2">
           <span class="font-black text-xs text-slate-900 uppercase tracking-tight truncate">👑 CÔNG NỢ: ${escapeHtml(curMem.name)}</span>
           <div class="flex items-center gap-1.5 shrink-0">
-            <button type="button" onclick="appActions.toggleHideMoneyMode()" class="px-2.5 py-1 rounded-full bg-slate-200/70 hover:bg-slate-200 text-[10px] font-extrabold text-slate-700 transition">
-              ${hide ? '👁️ Hiện tiền' : '🙈 Ẩn tiền'}
-            </button>
-            <button type="button" onclick="ownerActions.openClientDebtBill()" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition">📤 Gửi Công Nợ</button>
-            <button type="button" onclick="ownerActions.exportOwnerExcel()" class="px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 text-[10px] font-extrabold transition">.XLSX</button>
-          </div>
+  <button type="button" onclick="appActions.toggleHideMoneyMode()" title="${hide ? 'Hiện tiền' : 'Ẩn tiền'}" aria-label="${hide ? 'Hiện tiền' : 'Ẩn tiền'}" class="w-7 h-7 rounded-full bg-slate-200/70 hover:bg-slate-200 text-xs flex items-center justify-center text-slate-700 transition">
+    ${hide ? '👁️' : '🙈'}
+  </button>
+  <button type="button" onclick="ownerActions.openClientDebtBill()" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition">📤 Gửi Công Nợ</button>
+</div>
         </div>
         <div class="as-ios-seg-bar">
           ${[
