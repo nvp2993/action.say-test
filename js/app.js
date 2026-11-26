@@ -1933,31 +1933,40 @@ window.ownerActions = {
   },
 finishEditOwnerExpense() {
     const activeKey = state.ownerEditingExpenseKey;
+    const meta = state._ownerEditingExpenseMeta;
+
     if (activeKey) {
       const nameInp = document.getElementById(`debt-exp-name-${activeKey}`);
       const rowBox = nameInp?.closest('li');
       const amountInp = rowBox?.querySelector('input[inputmode="decimal"]');
-      const idxSep = String(activeKey).indexOf('_');
-      if (idxSep > 0) {
-        const shId = activeKey.slice(0, idxSep);
-        const expId = activeKey.slice(idxSep + 1);
+
+      const shId = meta?.shId || '';
+      const expId = meta?.expId || '';
+
+      if (shId) {
         const rec = ensureOwnerFinRecord(shId);
-        const target = (rec.otherExpenses || []).find(x => x && x.id === expId);
+        const list = Array.isArray(rec?.otherExpenses) ? rec.otherExpenses : [];
+        const target = expId ? list.find(x => x && x.id === expId) : list[list.length - 1];
         if (target) {
-          if (nameInp) target.name = nameInp.value;
+          if (nameInp) target.name = String(nameInp.value || '').trim();
           if (amountInp) target.amount = parseFlexibleMoneyInput(amountInp.value);
         }
       }
     }
+
     state.ownerEditingExpenseKey = null;
+    state._ownerEditingExpenseMeta = null;
     saveOwnerFinanceState(true);
     renderApp();
   },
   addOwnerExpense(shId) {
     const rec = ensureOwnerFinRecord(shId);
+    if (!rec) return;
+    if (!Array.isArray(rec.otherExpenses)) rec.otherExpenses = [];
     const newId = `exp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     rec.otherExpenses.push({ id: newId, name: '', amount: 0, payerId: state.currentUserId });
     state.ownerEditingExpenseKey = `${shId}_${newId}`;
+    state._ownerEditingExpenseMeta = { shId, expId: newId };
     renderApp();
     requestAnimationFrame(() => {
       const inp = document.getElementById(`debt-exp-name-${shId}_${newId}`);
