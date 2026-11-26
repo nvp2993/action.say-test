@@ -172,11 +172,50 @@ export function renderDebtTabHtml() {
   });
 
   const filterMode = state.ownerFilterStatus || 'all';
+  const selectedBossKey = state.ownerBossFilterKey || 'all';
   const totalIncomeAll = ownerProfitSum + crewPocketSum;
   const totalUncollectedToWallet = unsettledClientDebtSum + unsettledCrewDebtSum;
   const hide = Boolean(state.hideMoneyMode);
   const fmtMoney = (n) => (hide ? '••••••đ' : `${Number(n || 0).toLocaleString('vi-VN')}đ`);
   const fmtCompact = (n) => (hide ? '••••đ' : formatCompactMoneyPlain(n));
+
+  // Gom nhóm đối chiếu theo từng Sếp / Chủ show trong kỳ
+  const bossMap = new Map();
+  allInvolved.forEach(sh => {
+    const isOwner = sh.ownerId === uid;
+    const key = isOwner ? `self_owner:${uid}` : `boss:${sh.ownerId || 'unknown'}`;
+    if (!bossMap.has(key)) {
+      bossMap.set(key, {
+        key,
+        name: isOwner ? `${curMem.name} (Chủ show)` : getMember(sh.ownerId).name,
+        isOwner,
+        showCount: 0,
+        unsettledCount: 0,
+        billOrProfit: 0,
+        pendingAmount: 0
+      });
+    }
+    const g = bossMap.get(key);
+    g.showCount++;
+    if (!shouldCountShowMoney(sh)) return;
+
+    if (isOwner) {
+      const m = calculateOwnerShowMetrics(sh);
+      g.billOrProfit += m.netProfit;
+      if (m.rec.status !== 'settled') {
+        g.unsettledCount++;
+        g.pendingAmount += m.remainingClientDebt;
+      }
+    } else {
+      const cm = calculateCrewShowMetrics(sh);
+      g.billOrProfit += cm.grossCtp;
+      if (!cm.isSettled) {
+        g.unsettledCount++;
+        g.pendingAmount += cm.pendingCtpDebt;
+      }
+    }
+  });
+  const bossSummaryList = Array.from(bossMap.values()).sort((a, b) => b.pendingAmount - a.pendingAmount || b.showCount - a.showCount);
 
   let statCards = [];
   if (filterMode === 'role_owner') {
@@ -218,86 +257,14 @@ export function renderDebtTabHtml() {
 
   const filtered = allInvolved.filter(sh => {
     const isOwner = sh.ownerId === uid;
+    const bossKey = isOwner ? `self_owner:${uid}` : `boss:${sh.ownerId || 'unknown'}`;
+    if (selectedBossKey !== 'all' && bossKey !== selectedBossKey) return false;
     const settled = isOwner ? calculateOwnerShowMetrics(sh).rec.status === 'settled' : calculateCrewShowMetrics(sh).isSettled;
     if (filterMode === 'role_owner') return isOwner;
     if (filterMode === 'role_crew') return !isOwner;
     if (filterMode === 'unsettled') return !settled;
     if (filterMode === 'settled') return settled;
     return true;
-  });
-
-  const periodExpenses = [];
-  filtered.forEach(sh => {
-    if (!shouldCountShowMoney(sh)) return;
-    const isOwner = sh.ownerId === uid;
-    const loc = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
-    if (isOwner) {
-      const m = calculateOwnerShowMetrics(sh);
-      const list = Array.isArray(m.allShowExp) ? m.allShowExp : (m.rec.otherExpenses || []);
-      list.forEach(ex => {
-        const amt = Number(ex?.amount) || 0;
-        if (amt > 0 || String(ex?.name || '').trim()) {
-          periodExpenses.push({
-            showId: sh.id,
-            showLoc: loc,
-            name: ex.name || 'Chi phí phát sinh',
-            amount: amt,
-            payerName: ex.payerId ? getMember(ex.payerId).name : ''
-          });
-        }
-      });
-    } else {
-      const cm = calculateCrewShowMetrics(sh);
-      (cm.ctpItem?.extras || []).forEach(ex => {
-        const amt = Number(ex?.amount) || 0;
-        if (amt > 0 || String(ex?.name || '').trim()) {
-          periodExpenses.push({
-            showId: sh.id,
-            showLoc: loc,
-            name: ex.name || 'Phát sinh CTP',
-            amount: amt,
-            payerName: curMem.name
-          });
-        }
-      });
-    }
-  });
-  const periodExpTotal = periodExpenses.reduce((s, r) => s + r.amount, 0);
-
-  const pendingDebts = [];
-  filtered.forEach(sh => {
-    if (!shouldCountShowMoney(sh)) return;
-    const isOwner = sh.ownerId === uid;
-    const loc = sh.isHold ? cleanHoldTitle(sh.location) : sh.location;
-    const days = Math.max(1, Number(getShowDays(sh) || 1));
-    const dateLabel = formatShowDateRange(sh, days);
-    if (isOwner) {
-      const m = calculateOwnerShowMetrics(sh);
-      if (m.rec.status !== 'settled' && m.remainingClientDebt > 0) {
-        pendingDebts.push({
-          showId: sh.id,
-          loc,
-          dateLabel,
-          roleLabel: sh.partner ? `Khách: ${sh.partner}` : 'Khách chưa thanh toán',
-          amount: m.remainingClientDebt,
-          badgeText: `Nợ ${fmtCompact(m.remainingClientDebt)}`,
-          badgeCls: 'text-rose-600'
-        });
-      }
-    } else {
-      const cm = calculateCrewShowMetrics(sh);
-      if (!cm.isSettled && cm.pendingCtpDebt > 0) {
-        pendingDebts.push({
-          showId: sh.id,
-          loc,
-          dateLabel,
-          roleLabel: `Sếp: ${getMember(sh.ownerId).name}`,
-          amount: cm.pendingCtpDebt,
-          badgeText: `Chờ ${fmtCompact(cm.pendingCtpDebt)}`,
-          badgeCls: 'text-amber-700'
-        });
-      }
-    }
   });
 
   const taskKeys = ['quay', 'dung', 'chup', 'lamhinh', 'flycam', 'gimbal'];
@@ -330,65 +297,74 @@ export function renderDebtTabHtml() {
 
       <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[336px_minmax(0,1fr)]">
         <aside class="hidden lg:flex flex-col gap-3 p-3.5 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
-          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2">
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2.5">
             <div class="flex items-center justify-between gap-1">
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cần thu / Chờ nhận (${pendingDebts.length})</span>
-              <span class="font-mono font-black tabular-nums text-[10.5px] text-rose-600">${fmtMoney(pendingDebts.reduce((s, x) => s + x.amount, 0))}</span>
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Đối chiếu theo Sếp / Chủ show</span>
+              ${selectedBossKey !== 'all' ? `
+                <button type="button" onclick="state.ownerBossFilterKey='all'; window.dispatchEvent(new Event('resize'));" class="text-[10px] font-extrabold text-indigo-600 hover:underline">Bỏ lọc</button>
+              ` : `
+                <span class="font-mono font-bold text-[10px] text-slate-400">${bossSummaryList.length} nhóm</span>
+              `}
             </div>
-            <div class="space-y-1.5 max-h-56 overflow-y-auto custom-scroll pr-0.5">
-              ${pendingDebts.length === 0 ? `
-                <div class="text-[11px] text-emerald-700 font-semibold py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
-                  ✓ Không còn khoản nợ tồn đọng trong kỳ
-                </div>
-              ` : pendingDebts.map(item => `
-                <button
-                  type="button"
-                  onclick="ownerActions.focusShow('${escapeHtml(item.showId)}')"
-                  class="w-full text-left px-2.5 py-2 rounded-xl bg-[#f8fafc] hover:bg-slate-100/80 border border-slate-200/80 transition space-y-0.5"
-                >
-                  <div class="flex items-center justify-between gap-2 text-[11px]">
-                    <span class="font-extrabold text-slate-900 truncate">${escapeHtml(item.loc || 'Show')}</span>
-                    <span class="font-mono tabular-nums text-[9.5px] text-indigo-600 font-bold shrink-0">${escapeHtml(item.dateLabel)}</span>
-                  </div>
-                  <div class="flex items-center justify-between gap-2 text-[10px]">
-                    <span class="text-slate-500 truncate">${escapeHtml(item.roleLabel)}</span>
-                    <span class="font-mono font-black tabular-nums shrink-0 ${item.badgeCls}">${item.badgeText}</span>
-                  </div>
-                </button>
-              `).join('')}
+
+            <div class="space-y-1.5">
+              ${bossSummaryList.length === 0 ? `
+                <div class="text-[11px] text-slate-400 py-3 text-center">Không có dữ liệu trong kỳ</div>
+              ` : bossSummaryList.map(g => {
+                const isSelected = selectedBossKey === g.key;
+                const toggleJs = `state.ownerBossFilterKey = (state.ownerBossFilterKey === '${escapeHtml(g.key)}' ? 'all' : '${escapeHtml(g.key)}'); document.getElementById('app').dispatchEvent(new Event('ctp-rerender'));`;
+                return `
+                  <button
+                    type="button"
+                    onclick="${toggleJs}"
+                    class="w-full text-left p-2.5 rounded-xl border transition space-y-1 ${
+                      isSelected
+                        ? 'bg-slate-900 border-slate-900 text-white'
+                        : 'bg-[#f8fafc] hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
+                    }"
+                  >
+                    <div class="flex items-center justify-between gap-2 text-[11px]">
+                      <span class="font-black truncate">${escapeHtml(g.name)}</span>
+                      <span class="font-mono text-[10px] font-bold shrink-0 ${isSelected ? 'text-slate-300' : 'text-slate-500'}">${g.showCount} show</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 text-[10px]">
+                      <span class="${isSelected ? 'text-amber-300' : 'text-slate-600'} font-semibold">
+                        ${g.isOwner ? 'Lãi:' : 'Bill:'} <b class="font-mono tabular-nums">${fmtCompact(g.billOrProfit)}</b>
+                      </span>
+                      <span class="font-mono font-black tabular-nums shrink-0 ${
+                        g.pendingAmount > 0
+                          ? (isSelected ? 'text-rose-300' : 'text-rose-600')
+                          : (isSelected ? 'text-emerald-300' : 'text-emerald-700')
+                      }">
+                        ${g.pendingAmount > 0 ? `Chờ ${fmtCompact(g.pendingAmount)}` : 'Đã xong ✓'}
+                      </span>
+                    </div>
+                  </button>
+                `;
+              }).join('')}
             </div>
           </div>
 
-          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2">
-            <div class="flex items-center justify-between gap-1">
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Phát sinh trong kỳ (${periodExpenses.length})</span>
-              <span class="font-mono font-black tabular-nums text-[10.5px] text-rose-600">${fmtMoney(periodExpTotal)}</span>
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2 text-[11px]">
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tóm tắt kỳ này</div>
+            <div class="flex items-center justify-between py-1 border-b border-slate-100">
+              <span class="text-slate-600 font-semibold">Show chưa hoàn tất</span>
+              <span class="font-mono font-black text-amber-700">${unsettledCount} show</span>
             </div>
-            <div class="space-y-1.5 max-h-56 overflow-y-auto custom-scroll pr-0.5">
-              ${periodExpenses.length === 0 ? `
-                <div class="text-[11px] text-slate-400 py-2.5 text-center">• Không có phát sinh trong kỳ</div>
-              ` : periodExpenses.map(row => `
-                <button
-                  type="button"
-                  onclick="ownerActions.focusShow('${escapeHtml(row.showId)}')"
-                  class="w-full text-left px-2.5 py-2 rounded-xl bg-[#f8fafc] hover:bg-slate-100/80 border border-slate-200/80 transition space-y-0.5"
-                >
-                  <div class="flex items-center justify-between gap-2 text-[11px]">
-                    <span class="font-bold text-slate-800 truncate">• ${escapeHtml(row.name)}</span>
-                    <span class="font-mono font-black tabular-nums text-rose-600 shrink-0">${hide ? '••••đ' : `${row.amount.toLocaleString('vi-VN')}đ`}</span>
-                  </div>
-                  <div class="text-[9.5px] text-slate-500 truncate">
-                    ${escapeHtml(row.showLoc || '')}${row.payerName ? ` • ${escapeHtml(row.payerName)}` : ''}
-                  </div>
-                </button>
-              `).join('')}
+            <div class="flex items-center justify-between py-1 border-b border-slate-100">
+              <span class="text-slate-600 font-semibold">Show đã hoàn tất</span>
+              <span class="font-mono font-black text-emerald-700">${settledCount} show</span>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-slate-700 font-bold">Chưa thu về ví</span>
+              <span class="font-mono font-black text-rose-600">${fmtMoney(totalUncollectedToWallet)}</span>
             </div>
           </div>
         </aside>
 
-        <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-3 sm:p-4">
+        <div id="owner-debt-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-4">
           <div class="max-w-6xl mx-auto space-y-3">
-            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-1 pb-2 border-b border-slate-200/70 cursor-pointer">
+            <div onclick="appActions.toggleHideMoneyMode()" class="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-3 pb-2.5 border-b border-slate-200/80 cursor-pointer">
               ${statCards.map(c => `
                 <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
                   <span class="text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
