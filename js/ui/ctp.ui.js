@@ -185,9 +185,9 @@ export function renderCtpTabHtml() {
         ${renderUnifiedDateBarHtml('ctp')}
         <div class="lg:hidden flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/70">
           <div class="flex items-center gap-1.5 flex-1 min-w-0">
-            <span class="text-[10px] font-bold text-slate-500 shrink-0">Chủ show:</span>
+            <span class="text-[10px] font-bold text-slate-500 shrink-0">Sếp:</span>
             <select onchange="ctpActions.setOwner(this.value)" class="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold">
-              <option value="all">Tất cả Chủ Show</option>
+              <option value="all">Tất cả Sếp</option>
               ${state.members.filter(m => m.id !== uid).map(m => `<option value="${m.id}" ${state.ctpOwnerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
             </select>
           </div>
@@ -202,11 +202,11 @@ export function renderCtpTabHtml() {
         <aside class="hidden lg:flex flex-col gap-3 p-3.5 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
           <div class="p-3.5 rounded-2xl bg-white border border-slate-200/90 space-y-2">
             <div class="flex items-center justify-between">
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Chủ show</label>
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Sếp</label>
               <span class="text-[10px] font-mono font-bold text-slate-400 tabular-nums">${filteredShows.length} show</span>
             </div>
             <select onchange="ctpActions.setOwner(this.value)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-slate-900">
-              <option value="all">Tất cả Chủ Show</option>
+              <option value="all">Tất cả Sếp</option>
               ${state.members.filter(m => m.id !== uid).map(m => `<option value="${m.id}" ${state.ctpOwnerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
             </select>
           </div>
@@ -243,7 +243,7 @@ export function renderCtpTabHtml() {
 
           <div class="space-y-2 pt-0.5">
             <button type="button" onclick="ctpActions.saveNow()" class="w-full py-3 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition">
-              💾 LƯU CTP LÊN CLOUD
+              💾 LƯU CTP
             </button>
             <button type="button" onclick="ctpActions.generateBill()" class="w-full py-3.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase shadow-xs transition">
               🔥 LỤM (TỔNG HỢP BILL)
@@ -298,9 +298,9 @@ export function renderCtpTabHtml() {
                             <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500">
                               <span class="font-mono font-bold text-indigo-600 tabular-nums shrink-0">${dateLabel}</span>
                               <span>•</span>
-                              <span class="font-semibold text-slate-600 tabular-nums shrink-0">${days} ngày</span>
+                              <span class="font-semibold text-slate-600 tabular-nums shrink-0">${days}n</span>
                               <span>•</span>
-                              <span class="truncate">Chủ show: <b class="text-slate-800">${escapeHtml(owner.name)}</b></span>
+                              <span class="truncate">Sếp: <b class="text-slate-800">${escapeHtml(owner.name)}</b></span>
                             </div>
                             <h4 class="font-black text-slate-900 text-sm mt-1 truncate" title="${escapeHtml(displayLocation)}${partnerText ? ` (${escapeHtml(partnerText)})` : ''}">
                               ${escapeHtml(displayLocation)}${partnerText ? ` <span class="text-slate-500 font-semibold text-xs">(${escapeHtml(partnerText)})</span>` : ''}
@@ -376,7 +376,7 @@ export function renderCtpTabHtml() {
                                 </span>
                               ` : ''}
                             </div>
-                            <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition shrink-0">+ Thêm phát sinh</button>
+                            <button type="button" onclick="ctpActions.addExtraItem('${sh.id}')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-extrabold transition shrink-0">+ Thêm phí</button>
                           </div>
 
                           <div class="${hasEditingRow ? 'max-h-44' : 'h-[84px]'} overflow-y-auto custom-scroll pr-0.5">
@@ -495,7 +495,7 @@ export function renderCtpBillModalHtml() {
         <div class="flex justify-between items-center border-b pb-2 shrink-0">
           <div>
             <h3 class="font-black text-sm text-slate-900">BẢNG CTP THÁNG ${bm.month}/${state.selectedYear}</h3>
-            <p class="text-[11px] text-slate-500">Nhân sự: <b>${escapeHtml(memberNickname)}</b> • Chủ show: <b class="text-emerald-700">${escapeHtml(bm.ownerTitle)}</b></p>
+            <p class="text-[11px] text-slate-500">Nhân sự: <b>${escapeHtml(memberNickname)}</b> • Sếp: <b class="text-emerald-700">${escapeHtml(bm.ownerTitle)}</b></p>
           </div>
           <button type="button" data-html2canvas-ignore="true" onclick="ctpActions.closeBillModal()" class="w-8 h-8 rounded-full bg-slate-100">✕</button>
         </div>
