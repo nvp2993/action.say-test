@@ -569,73 +569,122 @@ export function renderDebtTabHtml() {
                                 ${OWNER_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setStatus('${sh.id}', '${s.id}')" class="py-1 px-1.5 rounded-lg text-[10px] border truncate transition ${getColoredStatusBtnClass(s.id, m.rec.status === s.id)}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
                               </div>
 
-                              <div class="grid grid-cols-1 gap-2">
-                                <div class="min-w-0">
-                                  <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Giá báo khách hàng (VNĐ)</label>
-                                  <input type="tel" inputmode="numeric" value="${m.clientPrice ? m.clientPrice.toLocaleString('vi-VN') : ''}" oninput="ownerActions.handleMoneyInput('${sh.id}', 'clientPrice', this)" placeholder="Nhập giá báo khách..." class="w-full min-w-0 px-3 py-1.5 bg-[#f8fafc] border border-slate-200/90 rounded-xl font-mono font-black tabular-nums text-slate-900 text-right text-xs focus:outline-none focus:border-slate-900 focus:bg-white" />
-                                </div>
-                                <div class="min-w-0">
-                                  <div class="flex items-center justify-between flex-wrap gap-1 mb-1">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Khách đã cọc / đã trả</label>
-                                    ${missingClient > 0 ? `<span class="font-mono tabular-nums text-[10px] font-bold text-rose-600">Thiếu: ${missingClient.toLocaleString('vi-VN')}đ</span>` : ''}
+                              <div class="space-y-1">
+                                <div class="grid grid-cols-2 gap-1.5">
+                                  <div class="h-8 px-2.5 bg-[#f8fafc] border border-slate-200/90 focus-within:border-slate-900 focus-within:bg-white rounded-xl flex items-center justify-between gap-1.5 min-w-0">
+                                    <span class="text-[10px] font-extrabold text-slate-500 shrink-0">Báo giá</span>
+                                    <input
+                                      type="tel"
+                                      inputmode="numeric"
+                                      value="${m.clientPrice ? m.clientPrice.toLocaleString('vi-VN') : ''}"
+                                      oninput="ownerActions.handleMoneyInput('${sh.id}', 'clientPrice', this)"
+                                      placeholder="0"
+                                      class="flex-1 min-w-0 bg-transparent font-mono font-black tabular-nums text-slate-900 text-right text-[11.5px] focus:outline-none"
+                                    />
                                   </div>
-                                  <input type="tel" inputmode="numeric" value="${m.depositPaid ? m.depositPaid.toLocaleString('vi-VN') : ''}" oninput="ownerActions.handleMoneyInput('${sh.id}', 'depositPaid', this)" placeholder="Số tiền khách đã chuyển..." class="w-full min-w-0 px-3 py-1.5 bg-[#f8fafc] border border-slate-200/90 rounded-xl font-mono font-black tabular-nums text-right text-xs text-emerald-700 focus:outline-none focus:border-slate-900 focus:bg-white" />
+                                  <div class="h-8 px-2.5 bg-[#f8fafc] border border-slate-200/90 focus-within:border-slate-900 focus-within:bg-white rounded-xl flex items-center justify-between gap-1.5 min-w-0">
+                                    <span class="text-[10px] font-extrabold text-slate-500 shrink-0">Đã cọc</span>
+                                    <input
+                                      type="tel"
+                                      inputmode="numeric"
+                                      value="${m.depositPaid ? m.depositPaid.toLocaleString('vi-VN') : ''}"
+                                      oninput="ownerActions.handleMoneyInput('${sh.id}', 'depositPaid', this)"
+                                      placeholder="0"
+                                      class="flex-1 min-w-0 bg-transparent font-mono font-black tabular-nums text-emerald-700 text-right text-[11.5px] focus:outline-none"
+                                    />
+                                  </div>
                                 </div>
+                                ${missingClient > 0 ? `
+                                  <div class="flex justify-end px-1">
+                                    <span class="font-mono tabular-nums text-[9.5px] font-bold text-rose-600">Khách còn thiếu: ${missingClient.toLocaleString('vi-VN')}đ</span>
+                                  </div>
+                                ` : ''}
                               </div>
 
-                              <div class="space-y-2">
+                              <div class="space-y-1.5">
                                 <div class="flex items-center justify-between gap-2">
                                   <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Dự kiến chi CTP (${crewMembers.length})</span>
-                                  <span class="text-[10px] font-semibold text-slate-400">Chạm để chọn</span>
+                                  ${crewMembers.length > 0 ? `
+                                    <button
+                                      type="button"
+                                      onclick="ownerActions.toggleAllCrewRowsForShow('${sh.id}', '${crewMembers.join(',')}')"
+                                      class="text-[10px] font-extrabold text-indigo-600 hover:underline"
+                                    >
+                                      ${crewMembers.some(mid => !state.ownerExpandedCrewRows?.[`${sh.id}_${mid}`]) ? 'Mở tất cả' : 'Thu gọn hết'}
+                                    </button>
+                                  ` : ''}
                                 </div>
+
                                 ${crewMembers.length === 0 ? `
                                   <div class="text-[11px] text-slate-400 py-0.5">• Không có nhân sự CTP đi cùng</div>
-                                ` : crewMembers.map(mid => {
-                                  const mem = getMember(mid);
-                                  const memCost = Number(m.rec.crewCosts?.[mid]) || 0;
-                                  const memTasks = m.rec.crewTasks?.[mid] || {};
-                                  const roleHint = (sh.roles?.[mid] || []).join(' • ');
-                                  return `
-                                    <div class="p-2.5 rounded-2xl bg-[#f8fafc] border border-slate-200/80 space-y-1.5">
-                                      <div class="flex items-center justify-between gap-2">
-                                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
-                                          <span class="font-black text-slate-900 text-[11.5px] truncate">${escapeHtml(mem.name)}</span>
-                                          ${roleHint ? `<span class="text-[9.5px] font-semibold text-slate-500 truncate">• ${escapeHtml(roleHint)}</span>` : ''}
-                                        </div>
-                                        <span class="font-mono font-black tabular-nums text-[11px] text-slate-900 shrink-0">${memCost.toLocaleString('vi-VN')}đ</span>
-                                      </div>
+                                ` : `
+                                  <div class="divide-y divide-slate-200/70 rounded-2xl bg-[#f8fafc] border border-slate-200/80 overflow-hidden">
+                                    ${crewMembers.map(mid => {
+                                      const mem = getMember(mid);
+                                      const memCost = Number(m.rec.crewCosts?.[mid]) || 0;
+                                      const memTasks = m.rec.crewTasks?.[mid] || {};
+                                      const activeTaskSummary = taskKeys
+                                        .filter(tk => memTasks[tk] !== undefined && memTasks[tk] !== null)
+                                        .map(tk => `${taskLabels[tk]} ${formatCompactMoneyPlain(memTasks[tk])}`)
+                                        .join(' • ');
+                                      const roleHint = (sh.roles?.[mid] || []).join(', ');
+                                      const isCrewOpen = Boolean(state.ownerExpandedCrewRows?.[`${sh.id}_${mid}`]);
 
-                                      <div class="grid grid-cols-3 gap-1">
-  ${taskKeys.map(tk => {
-    const active = memTasks[tk] !== undefined && memTasks[tk] !== null;
-    const tVal = active ? memTasks[tk] : getDefaultRateForTask(tk, sh);
-    return `
-      <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-1 transition min-w-0 ${
-        active
-          ? 'bg-slate-100 border-slate-300/90 text-slate-900'
-          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/75 text-slate-600'
-      }">
-        <button type="button" onclick="ownerActions.toggleOwnerCrewTask('${sh.id}', '${mid}', '${tk}')" class="text-left text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
-          ${taskLabels[tk]}
-        </button>
-        ${active ? `
-          <input
-            type="text"
-            inputmode="decimal"
-            value="${formatCompactMoneyPlain(tVal)}"
-            onfocus="this.value='${Number(tVal || 0) || ''}';this.select();"
-            oninput="ownerActions.handleOwnerCrewTaskInput('${sh.id}', '${mid}', '${tk}', this)"
-            onblur="const n=Number(state.ownerFinanceMap?.['${sh.id}']?.crewTasks?.['${mid}']?.['${tk}']||0);this.value=${formatCompactMoneyPlain.name}(n);"
-            class="flex-1 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[10px] text-slate-900 focus:outline-none"
-          />
-        ` : ''}
-      </div>
-    `;
-  }).join('')}
-</div>
-                                    </div>
-                                  `;
-                                }).join('')}
+                                      return `
+                                        <div class="px-2.5 py-1.5 space-y-1.5">
+                                          <div
+                                            onclick="ownerActions.toggleCrewRowExpand('${sh.id}', '${mid}')"
+                                            class="flex items-center justify-between gap-2 cursor-pointer select-none"
+                                          >
+                                            <div class="min-w-0 flex-1 flex items-center gap-1.5">
+                                              <span class="font-black text-slate-900 text-[11px] shrink-0">${escapeHtml(mem.name)}</span>
+                                              <span class="text-[9.5px] font-semibold truncate ${activeTaskSummary ? 'text-indigo-700' : 'text-slate-400'}">
+                                                ${activeTaskSummary ? escapeHtml(activeTaskSummary) : (roleHint ? `(${escapeHtml(roleHint)})` : 'Chưa chọn')}
+                                              </span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5 shrink-0">
+                                              <span class="font-mono font-black tabular-nums text-[11px] ${memCost > 0 ? 'text-slate-900' : 'text-slate-400'}">${formatCompactMoneyPlain(memCost)}</span>
+                                              <span class="w-5 h-5 rounded-md bg-white border border-slate-200/90 text-[9px] font-black text-slate-600 flex items-center justify-center">
+                                                ${isCrewOpen ? '▲' : '✎'}
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          ${isCrewOpen ? `
+                                            <div class="grid grid-cols-3 gap-1 pt-0.5">
+                                              ${taskKeys.map(tk => {
+                                                const active = memTasks[tk] !== undefined && memTasks[tk] !== null;
+                                                const tVal = active ? memTasks[tk] : getDefaultRateForTask(tk, sh);
+                                                return `
+                                                  <div class="h-6 rounded-md border px-1.5 flex items-center justify-between gap-1 transition min-w-0 ${
+                                                    active
+                                                      ? 'bg-white border-slate-300 text-slate-900'
+                                                      : 'bg-white/60 hover:bg-white border-slate-200/75 text-slate-600'
+                                                  }">
+                                                    <button type="button" onclick="ownerActions.toggleOwnerCrewTask('${sh.id}', '${mid}', '${tk}')" class="text-left text-[10px] truncate ${active ? 'text-slate-900 font-bold shrink-0' : 'text-slate-600 font-medium w-full'}">
+                                                      ${taskLabels[tk]}
+                                                    </button>
+                                                    ${active ? `
+                                                      <input
+                                                        type="text"
+                                                        inputmode="decimal"
+                                                        value="${formatCompactMoneyPlain(tVal)}"
+                                                        onfocus="this.value='${Number(tVal || 0) || ''}';this.select();"
+                                                        oninput="ownerActions.handleOwnerCrewTaskInput('${sh.id}', '${mid}', '${tk}', this)"
+                                                        onblur="renderApp()"
+                                                        class="flex-1 min-w-0 bg-transparent text-right font-mono font-extrabold tabular-nums text-[10px] text-slate-900 focus:outline-none"
+                                                      />
+                                                    ` : ''}
+                                                  </div>
+                                                `;
+                                              }).join('')}
+                                            </div>
+                                          ` : ''}
+                                        </div>
+                                      `;
+                                    }).join('')}
+                                  </div>
+                                `}
                               </div>
 
                               <div class="space-y-1.5">
