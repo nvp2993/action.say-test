@@ -2699,3 +2699,7 @@ initAuthListener(
     detachFinanceListeners();
   }
 );
+
+if (window.appActions && typeof dismissLiveMarqueeNow === 'function') {
+  window.appActions.dismissLiveMarquee = dismissLiveMarqueeNow;
+}
