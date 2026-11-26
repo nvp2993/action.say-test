@@ -1923,8 +1923,9 @@ window.ownerActions = {
     el.value = num ? num.toLocaleString('vi-VN') : '';
     saveCtpState();
   },
-  startEditOwnerExpense(key) {
+startEditOwnerExpense(key, shId = '', expId = '') {
     state.ownerEditingExpenseKey = key;
+    if (shId) state._ownerEditingExpenseMeta = { shId, expId };
     renderApp();
     requestAnimationFrame(() => {
       const inp = document.getElementById(`debt-exp-name-${key}`);
