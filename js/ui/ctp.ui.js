@@ -388,6 +388,7 @@ export function renderCtpTabHtml() {
                               <ul class="divide-y divide-slate-100">
                                 ${myExtras.map((ex, exIdx) => {
                                   const rowKey = `${sh.id}_${ex.id || exIdx}`;
+                                  const isEditingRow = state.ctpEditingExtraKey === rowKey;
 if (isEditingRow) {
   return `
     <li class="py-1 flex items-center gap-1.5">
