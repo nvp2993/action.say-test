@@ -3,6 +3,12 @@ import { POST_STATUS_OPTIONS } from '../config/constants.js';
 import { escapeHtml, formatDayMonth, getMember, renderPillHtml, formatMemberRolesClean } from '../utils/helpers.js';
 import { canEditShow, getFilteredShows, getVisiblePartnerText } from '../services/show.service.js';
 
+function renderSoftMemberTag(memberId, extraCls = '', extraAttrs = '') {
+  const mem = getMember(memberId);
+  const label = escapeHtml(mem?.name || memberId);
+  return `<span ${extraAttrs} class="inline-flex items-center px-2 py-0.5 rounded-md bg-[#f8fafc] border border-slate-200/90 text-[10px] font-bold text-slate-700 tracking-tight uppercase ${extraCls}">${label}</span>`;
+}
+
 export function renderShowsTabHtml() {
   const filtered = getFilteredShows();
   return `
@@ -21,11 +27,14 @@ export function renderShowsTabHtml() {
             </button>
           </div>
           <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <button type="button" onclick="appActions.setFilterMember('all')" class="px-2.5 py-1 rounded-full text-[9.5px] font-extrabold shrink-0 border transition ${state.filterMemberId === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/90'}">
+            <button type="button" onclick="appActions.setFilterMember('all')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 border transition ${state.filterMemberId === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/90'}">
               Tất cả (${state.members.length})
             </button>
             ${[...state.members].sort((a,b) => (a.id === state.currentUserId ? -1 : b.id === state.currentUserId ? 1 : 0))
-              .map(m => renderPillHtml(m.id, 'xs', `shrink-0 cursor-pointer ${state.filterMemberId === m.id ? 'ring-2 ring-slate-900' : 'opacity-85 hover:opacity-100'}`, `onclick="appActions.setFilterMember('${m.id}')"` )).join('')}
+              .map(m => {
+                const active = state.filterMemberId === m.id;
+                return `<button type="button" onclick="appActions.setFilterMember('${m.id}')" class="px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 border transition ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'}">${escapeHtml(m.name)}</button>`;
+              }).join('')}
           </div>
         </div>
       `}
@@ -39,56 +48,56 @@ export function renderShowsTabHtml() {
           </button>
         </div>
       ` : `
-        <div class="flex-1 min-h-0 overflow-auto custom-scroll relative p-2 sm:p-3">
+        <div class="flex-1 min-h-0 overflow-auto custom-scroll relative p-2.5 sm:p-3.5">
           <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-            <table class="w-full border-collapse text-[11px] min-w-[820px]">
+            <table class="w-full table-fixed border-collapse text-[11.5px] min-w-[860px]">
               <thead class="sticky top-0 z-20">
-                <tr class="bg-[#f8fafc] text-slate-500 border-b border-slate-200/90 font-black text-[10px] uppercase tracking-wider">
-                  <th class="py-2.5 px-2 border-r border-slate-200/80 w-10 text-center">STT</th>
-                  <th class="sticky left-0 z-20 bg-[#f8fafc] py-2.5 px-3 border-r border-slate-200/80 text-left w-40 sticky-col-shadow">THÔNG TIN (ĐỊA ĐIỂM)</th>
-                  <th class="py-2.5 px-2.5 border-r border-slate-200/80 text-left w-32">TÊN SHOW - ĐỐI TÁC</th>
-                  <th class="py-2.5 px-2 border-r border-slate-200/80 text-center w-14">BĐ</th>
-                  <th class="py-2.5 px-2 border-r border-slate-200/80 text-center w-14">KT</th>
-                  <th class="py-2.5 px-3 border-r border-slate-200/80 text-left min-w-[230px]">NHÂN SỰ</th>
-                  <th class="py-2.5 px-2 border-r border-slate-200/80 text-center w-24">CHỦ SHOW</th>
-                  <th class="py-2.5 px-2 text-center w-24">NGƯỜI TẠO</th>
+                <tr class="bg-[#f8fafc] text-slate-400 border-b border-slate-200/90 font-black text-[10px] uppercase tracking-wider">
+                  <th class="py-2.5 px-2 border-r border-slate-200/70 w-11 text-center">STT</th>
+                  <th class="sticky left-0 z-20 bg-[#f8fafc] py-2.5 px-3 border-r border-slate-200/70 text-left w-44 sticky-col-shadow">THÔNG TIN (ĐỊA ĐIỂM)</th>
+                  <th class="py-2.5 px-3 border-r border-slate-200/70 text-left w-40">TÊN SHOW - ĐỐI TÁC</th>
+                  <th class="py-2.5 px-2 border-r border-slate-200/70 text-center w-16">BĐ</th>
+                  <th class="py-2.5 px-2 border-r border-slate-200/70 text-center w-16">KT</th>
+                  <th class="py-2.5 px-3 border-r border-slate-200/70 text-left">NHÂN SỰ</th>
+                  <th class="py-2.5 px-2.5 border-r border-slate-200/70 text-center w-24">CHỦ SHOW</th>
+                  <th class="py-2.5 px-2.5 text-center w-24">NGƯỜI TẠO</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-200/70">
+              <tbody class="divide-y divide-slate-200/65">
                 ${filtered.map((sh, idx) => {
                   const editable = canEditShow(sh);
                   const owner = getMember(sh.ownerId);
                   const creator = getMember(sh.creatorId || sh.ownerId);
                   const partner = getVisiblePartnerText(sh);
                   const statusBadge = sh.postStatus === 'done' ? '<span class="text-[9.5px] ml-1">✅</span>' : sh.postStatus === 'editing' ? '<span class="text-[9.5px] ml-1">✂️</span>' : '';
-                  const rowCls = sh.isCancelled ? 'as-row-cancelled' : sh.isHold ? 'as-is-hold-card' : (editable ? 'bg-white' : 'bg-[#f8fafc]/70');
+                  const rowCls = sh.isCancelled ? 'as-row-cancelled' : sh.isHold ? 'as-is-hold-card' : (editable ? 'bg-white' : 'bg-[#f8fafc]/60');
                   const stickyCellBg = sh.isCancelled ? 'bg-rose-50' : editable ? 'bg-white' : 'bg-[#f8fafc]';
                   return `
-                    <tr onclick="appActions.openShowDetail('${sh.id}')" class="hover:bg-[#f1f5f9]/80 cursor-pointer transition-colors ${rowCls}">
-                      <td class="py-2.5 px-2 border-r border-slate-200/70 text-center font-mono tabular-nums text-[10.5px] font-bold text-slate-400">${idx + 1}</td>
-                      <td class="sticky left-0 z-10 ${stickyCellBg} py-2.5 px-3 border-r border-slate-200/70 font-extrabold text-slate-900 sticky-col-shadow">
+                    <tr onclick="appActions.openShowDetail('${sh.id}')" class="hover:bg-[#f1f5f9]/75 cursor-pointer transition-colors ${rowCls}">
+                      <td class="py-2.5 px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[10.5px] font-semibold text-slate-400">${idx + 1}</td>
+                      <td class="sticky left-0 z-10 ${stickyCellBg} py-2.5 px-3 border-r border-slate-200/65 font-bold text-slate-900 sticky-col-shadow">
                         <div class="flex items-center gap-2 min-w-0">
                           <span class="w-2 h-2 rounded-full shrink-0 border border-black/15" style="background-color:${sh.color || '#dbeafe'}"></span>
-                          <span class="truncate max-w-[132px] as-loc-text">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>${statusBadge}
+                          <span class="truncate as-loc-text">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>${statusBadge}
                           ${sh.isCancelled ? '<span class="as-badge-cancelled">🚫 ĐÃ HỦY</span>' : ''}
                         </div>
                       </td>
-                      <td class="py-2.5 px-2.5 border-r border-slate-200/70 text-slate-700 font-semibold truncate max-w-[128px]">
-                        ${partner ? escapeHtml(partner) : '<span class="text-slate-300">-</span>'}
+                      <td class="py-2.5 px-3 border-r border-slate-200/65 text-slate-700 font-medium truncate">
+                        ${partner ? escapeHtml(partner) : '<span class="text-slate-300">—</span>'}
                       </td>
-                      <td class="py-2.5 px-2 border-r border-slate-200/70 text-center font-mono tabular-nums font-bold text-slate-700">${formatDayMonth(sh.startDate)}</td>
-                      <td class="py-2.5 px-2 border-r border-slate-200/70 text-center font-mono tabular-nums font-bold text-slate-700">${formatDayMonth(sh.endDate)}</td>
-                      <td class="py-2.5 px-3 border-r border-slate-200/70 min-w-[230px]">
+                      <td class="py-2.5 px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.startDate)}</td>
+                      <td class="py-2.5 px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.endDate)}</td>
+                      <td class="py-2.5 px-3 border-r border-slate-200/65">
                         <div class="flex flex-wrap items-center gap-1.5">
-                          ${(sh.memberIds || []).map(mid => renderPillHtml(mid, 'xs')).join('')}
+                          ${(sh.memberIds || []).map(mid => renderSoftMemberTag(mid)).join('')}
                           ${(sh.externalCrew || []).map((p, eIdx) => {
                             const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
-                            return `<span style="background:#4f46e5;color:#fff;border:1px dashed #c7d2fe;" class="inline-flex items-center font-extrabold rounded-full px-2 py-0.5 text-[9px]">🤝 ${escapeHtml(extLabel)}</span>`;
+                            return `<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50/80 border border-dashed border-indigo-200 text-indigo-800 font-bold text-[10px]">🤝 ${escapeHtml(extLabel)}</span>`;
                           }).join('')}
                         </div>
                       </td>
-                      <td class="py-2.5 px-2 border-r border-slate-200/70 text-center"><span class="text-[10.5px] font-bold text-slate-800">${escapeHtml(owner.name)}</span></td>
-                      <td class="py-2.5 px-2 text-center"><span class="text-[10.5px] font-bold text-indigo-700">${escapeHtml(creator.name)}</span></td>
+                      <td class="py-2.5 px-2.5 border-r border-slate-200/65 text-center truncate"><span class="text-[11px] font-semibold text-slate-700">${escapeHtml(owner.name)}</span></td>
+                      <td class="py-2.5 px-2.5 text-center truncate"><span class="text-[11px] font-semibold text-slate-500">${escapeHtml(creator.name)}</span></td>
                     </tr>
                   `;
                 }).join('')}
