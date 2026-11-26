@@ -1964,12 +1964,6 @@ finishEditOwnerExpense() {
     saveOwnerFinanceState(true);
     renderApp();
   },
-
-    state.ownerEditingExpenseKey = null;
-    state._ownerEditingExpenseMeta = null;
-    saveOwnerFinanceState(true);
-    renderApp();
-  },
   addOwnerExpense(shId) {
     const rec = ensureOwnerFinRecord(shId);
     if (!rec) return;
