@@ -1,5 +1,5 @@
 import { state } from '../state/store.js';
-import { escapeHtml, getMember, getShowDays, buildVietQrUrl, getBankName } from '../utils/helpers.js';
+import { escapeHtml, getMember, getShowDays, buildVietQrUrl, getBankName, formatCompactMoneyPlain } from '../utils/helpers.js';
 import { getVisiblePartnerText } from '../services/show.service.js';
 import { getCombinedCtpShows, getDefaultRateForTask, getMemberExtrasForShow, ensureOwnerFinRecord } from '../services/finance.service.js';
 import { renderUnifiedDateBarHtml } from './header.ui.js';
