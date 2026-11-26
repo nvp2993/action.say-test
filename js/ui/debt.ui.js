@@ -99,6 +99,17 @@ function formatCleanStatusLabel(label) {
     .trim();
 }
 
+function getColoredStatusBtnClass(statusId, isActive) {
+  const isSettled = statusId === 'settled';
+  if (!isActive) {
+    return 'bg-white/80 hover:bg-white text-slate-500 border-slate-200/80 font-medium';
+  }
+  if (isSettled) {
+    return 'bg-emerald-50 text-emerald-800 border-emerald-300/90 font-extrabold shadow-2xs';
+  }
+  return 'bg-amber-50 text-amber-800 border-amber-300/90 font-extrabold shadow-2xs';
+}
+
 export function renderDebtTabHtml() {
   const uid = state.currentUserId;
   const curMem = getMember(uid);
@@ -450,13 +461,8 @@ export function renderDebtTabHtml() {
                               </h4>
                             </div>
                             <div class="text-right shrink-0">
-                              ${isCounted ? `
-                                <span class="text-[10px] font-mono tabular-nums text-slate-500 block">Thu ${fmtCompact(m.clientPrice)} • Chi ${fmtCompact(m.totalExpense)}</span>
-                                <span class="text-[15px] font-mono font-black tabular-nums tracking-tight text-emerald-700 block">Lãi ${m.netProfit >= 0 ? '+' : ''}${fmtCompact(m.netProfit)}</span>
-                              ` : `
-                                <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Tạm giữ</span>
-                                <span class="text-[15px] font-mono font-black tabular-nums text-slate-400 block">0đ</span>
-                              `}
+                              <span class="text-[9px] font-black uppercase tracking-wider text-slate-500 block">${isCounted ? 'TỔNG SHOW' : 'Tạm giữ'}</span>
+                              <span class="text-[15px] font-mono font-black tabular-nums tracking-tight ${isCounted ? 'text-emerald-700' : 'text-slate-400'} block">${isCounted ? `${m.netProfit >= 0 ? '+' : ''}${fmtMoney(m.netProfit)}` : '0đ'}</span>
                             </div>
                           </div>
 
@@ -464,11 +470,8 @@ export function renderDebtTabHtml() {
 
                           ${expanded ? `
                             <div class="space-y-3">
-                              <div class="space-y-1.5">
-                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">TÌNH TRẠNG</span>
-                                <div class="grid grid-cols-3 gap-1 p-0.5 rounded-xl bg-[#f8fafc] border border-slate-200/80">
-                                  ${OWNER_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setStatus('${sh.id}', '${s.id}')" class="py-1 px-1.5 rounded-lg text-[10px] truncate transition ${m.rec.status === s.id ? 'bg-slate-100 text-slate-900 font-extrabold border border-slate-300/90' : 'text-slate-600 font-medium hover:text-slate-900'}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
-                                </div>
+                              <div class="grid grid-cols-3 gap-1 p-0.5 rounded-xl bg-[#f8fafc] border border-slate-200/80">
+                                ${OWNER_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setStatus('${sh.id}', '${s.id}')" class="py-1 px-1.5 rounded-lg text-[10px] border truncate transition ${getColoredStatusBtnClass(s.id, m.rec.status === s.id)}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
                               </div>
 
                               <div class="grid grid-cols-1 gap-2">
@@ -639,7 +642,7 @@ export function renderDebtTabHtml() {
 
                             <div class="flex items-center gap-1.5">
                               <button type="button" onclick="ownerActions.toggleExpandShow('${sh.id}')" class="px-2.5 py-2 rounded-xl bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/90 text-slate-700 font-bold text-[11px] transition">Thu gọn ▲</button>
-                              <button type="button" onclick="ownerActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-[11px] transition">💾 LƯU SHOW</button>
+                              <button type="button" onclick="ownerActions.saveShowFinanceNow('${sh.id}')" class="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-[11px] transition">💾 LƯU</button>
                             </div>
                           </div>
                         ` : `
@@ -674,13 +677,8 @@ export function renderDebtTabHtml() {
                               </h4>
                             </div>
                             <div class="text-right shrink-0">
-                              ${isCounted ? `
-                                <span class="text-[10px] font-mono tabular-nums text-slate-500 block">CTP ${fmtCompact(cm.taskSum)}${cm.extraBillSum > 0 ? ` • PS +${fmtCompact(cm.extraBillSum)}` : ''}</span>
-                                <span class="text-[15px] font-mono font-black tabular-nums tracking-tight text-slate-950 block">${fmtCompact(cm.grossCtp)}</span>
-                              ` : `
-                                <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Tạm giữ</span>
-                                <span class="text-[15px] font-mono font-black tabular-nums text-slate-400 block">0đ</span>
-                              `}
+                              <span class="text-[9px] font-black uppercase tracking-wider text-slate-500 block">${sh.isHold && !sh.countHoldForBilling ? 'Tạm giữ' : 'TỔNG SHOW'}</span>
+                              <span class="text-[15px] font-mono font-black tabular-nums tracking-tight ${isCounted ? 'text-slate-950' : 'text-slate-400'} block">${isCounted ? fmtMoney(cm.grossCtp) : '0đ'}</span>
                             </div>
                           </div>
 
@@ -688,11 +686,8 @@ export function renderDebtTabHtml() {
 
                           ${expanded ? `
                             <div class="space-y-3">
-                              <div class="space-y-1.5">
-                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">TÌNH TRẠNG</span>
-                                <div class="grid grid-cols-2 gap-1 p-0.5 rounded-xl bg-[#f8fafc] border border-slate-200/80">
-                                  ${CREW_CTP_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setCrewCtpStatus('${sh.id}', '${s.id}')" class="py-1 px-2 rounded-lg text-[10.5px] truncate transition ${cm.meta.ctpStatus === s.id ? 'bg-slate-100 text-slate-900 font-extrabold border border-slate-300/90' : 'text-slate-600 font-medium hover:text-slate-900'}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
-                                </div>
+                              <div class="grid grid-cols-2 gap-1.5">
+                                ${CREW_CTP_STATUS_OPTIONS.map(s => `<button type="button" onclick="ownerActions.setCrewCtpStatus('${sh.id}', '${s.id}')" class="py-1.5 px-2 rounded-lg text-[10.5px] border truncate transition ${getColoredStatusBtnClass(s.id, cm.meta.ctpStatus === s.id)}">${escapeHtml(formatCleanStatusLabel(s.label))}</button>`).join('')}
                               </div>
 
                               <div class="space-y-1.5">
