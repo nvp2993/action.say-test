@@ -1957,8 +1957,6 @@ window.ownerActions = {
       target.name = el.value;
     }
   },
-    saveOwnerFinanceState();
-  },
   removeOwnerExpense(shId, idx, expId = '') {
     const rec = ensureOwnerFinRecord(shId);
     if (expId) {
