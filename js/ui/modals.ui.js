@@ -1,7 +1,7 @@
 import { state } from '../state/store.js';
 import { ROLE_OPTIONS } from '../config/constants.js';
 import { escapeHtml, getMember, renderPillHtml, normalizeRoleName, formatDayMonth, buildVietQrUrl, getBankName } from '../utils/helpers.js';
-import { getBusyMembersMap } from '../services/show.service.js';
+import { getBusyMembersMap, getVisiblePartnerText } from '../services/show.service.js';
 
 const DEFAULT_STUDIO_LOGO = './assets/logo.png';
 const FALLBACK_LOGO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-weight='900' font-size='22' fill='%23fbbf24'%3EA%C3%97S%3C/text%3E%3C/svg%3E";
@@ -1046,16 +1046,20 @@ export function renderQuickExpenseBubbleHtml() {
             <div class="flex flex-wrap gap-1.5">
               ${activeShows.map(sh => {
                 const picked = activeShow && sh.id === activeShow.id;
+                const partner = getVisiblePartnerText(sh);
+                const dateBadge = formatDayMonth(sh.startDate);
                 return `
                   <button
                     type="button"
                     onclick="appActions.selectQuickExpenseShow('${escapeHtml(sh.id)}')"
-                    class="px-3 py-1.5 rounded-xl text-[11px] font-extrabold border transition ${
+                    class="px-3 py-1.5 rounded-xl text-[11px] font-extrabold border transition text-left ${
                       picked
                         ? 'bg-slate-900 text-amber-300 border-slate-900'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                     }"
-                  >${escapeHtml(sh.location || 'Show')}</button>
+                  >
+                    <span class="font-mono text-[10px] opacity-80">${escapeHtml(dateBadge)}</span> • ${escapeHtml(sh.location || 'Show')}${partner ? ` <span class="font-normal opacity-85">(${escapeHtml(partner)})</span>` : ''}
+                  </button>
                 `;
               }).join('')}
             </div>
@@ -1134,7 +1138,7 @@ export function renderQuickExpenseBubbleHtml() {
                   return `
                     <div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80">
                       <div class="min-w-0 flex-1">
-                        <div class="font-bold text-slate-900 truncate">${escapeHtml(ex.name || '')}</div>
+                        <div class="font-bold text-slate-900 truncate">• ${escapeHtml(ex.name || '')}</div>
                         <div class="text-[10px] text-slate-500 font-semibold flex items-center flex-wrap gap-1">
                           <span class="font-mono font-extrabold text-emerald-700">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
                           ${payerMem ? `<span>• <b>${escapeHtml(payerMem.name)}</b></span>` : ''}
