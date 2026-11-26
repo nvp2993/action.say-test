@@ -339,6 +339,80 @@ function downloadCanvasWithVietQrFallback(canvas, filename) {
   }
 }
 
+let _broadcastHideTimer = null;
+const BROADCAST_DISMISSED_STORAGE_KEY = 'as_studio_broadcast_dismissed_2026';
+
+function getBroadcastSignature(bc) {
+  if (!bc) return '';
+  return `${Number(bc.updatedAt || 0)}::${String(bc.text || '').trim()}`;
+}
+
+function readDismissedBroadcastSig() {
+  try {
+    return localStorage.getItem(BROADCAST_DISMISSED_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function writeDismissedBroadcastSig(sig) {
+  if (!sig) return;
+  try {
+    localStorage.setItem(BROADCAST_DISMISSED_STORAGE_KEY, sig);
+  } catch {}
+}
+
+function syncBroadcastDismissedState() {
+  const bc = state.studioBroadcast;
+  if (!bc || !bc.enabled) return;
+  const sig = getBroadcastSignature(bc);
+  if (sig && sig === readDismissedBroadcastSig()) {
+    bc.enabled = false;
+  }
+}
+
+function hideBroadcastBannerNow(sig = '') {
+  if (_broadcastHideTimer) {
+    clearTimeout(_broadcastHideTimer);
+    _broadcastHideTimer = null;
+  }
+  const cur = state.studioBroadcast;
+  if (cur) {
+    cur.enabled = false;
+    writeDismissedBroadcastSig(sig || getBroadcastSignature(cur));
+    try {
+      localStorage.setItem('as_studio_broadcast_2026', JSON.stringify(cur));
+    } catch {}
+  }
+  const broadcastEl = document.querySelector('[data-studio-broadcast], .as-studio-broadcast, #studio-broadcast-banner');
+  if (broadcastEl) {
+    broadcastEl.style.display = 'none';
+  } else {
+    renderApp();
+  }
+}
+
+function scheduleBroadcastAutoHide() {
+  if (_broadcastHideTimer) {
+    clearTimeout(_broadcastHideTimer);
+    _broadcastHideTimer = null;
+  }
+
+  syncBroadcastDismissedState();
+
+  const bc = state.studioBroadcast;
+  if (!bc || !bc.enabled || !String(bc.text || '').trim()) return;
+
+  const sig = getBroadcastSignature(bc);
+  const autoHideMs = 15000;
+  const updatedAt = Number(bc.updatedAt || 0);
+  const elapsed = updatedAt > 0 ? Math.max(0, Date.now() - updatedAt) : 0;
+  const remaining = elapsed < autoHideMs ? (autoHideMs - elapsed) : autoHideMs;
+
+  _broadcastHideTimer = setTimeout(() => {
+    hideBroadcastBannerNow(sig);
+  }, remaining);
+}
 function renderApp() {
   const root = document.getElementById('app');
   if (!root) return;
