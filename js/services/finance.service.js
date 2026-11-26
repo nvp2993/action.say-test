@@ -24,11 +24,7 @@ export function attachFinanceListeners(memberId) {
       if (Array.isArray(d.customShows)) state.ctpCustomShows = d.customShows;
       localStorage.setItem('as_ctp_items_2026', JSON.stringify(state.ctpItems));
       localStorage.setItem('as_ctp_custom_shows_2026', JSON.stringify(state.ctpCustomShows));
-      const activeTag = document.activeElement?.tagName;
-      const isTypingInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
-      if (!isTypingInput && (state.activeTab === 'ctp' || state.activeTab === 'owner_stats')) {
-        triggerRender();
-      }
+      if (state.activeTab === 'ctp' || state.activeTab === 'owner_stats') triggerRender();
     }
   }));
 
@@ -37,11 +33,7 @@ export function attachFinanceListeners(memberId) {
     if (snap.exists() && snap.data()?.map) {
       state.ownerFinanceMap = { ...state.ownerFinanceMap, ...snap.data().map };
       localStorage.setItem('as_owner_finance_2026', JSON.stringify(state.ownerFinanceMap));
-      const activeTag = document.activeElement?.tagName;
-      const isTypingInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
-      if (!isTypingInput && state.activeTab === 'owner_stats') {
-        triggerRender();
-      }
+      if (state.activeTab === 'owner_stats') triggerRender();
     }
   }));
 }
@@ -56,7 +48,7 @@ export function saveCtpState(immediate = false) {
     const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', state.currentUserId);
     await setDoc(ref, { items: state.ctpItems, customShows: state.ctpCustomShows, updatedAt: Date.now() }, { merge: true });
   };
-  if (immediate) push(); else ctpTimer = setTimeout(push, 600);
+  if (immediate) push(); else ctpTimer = setTimeout(push, 500);
 }
 
 export function saveOwnerFinanceState(immediate = false) {
@@ -68,7 +60,7 @@ export function saveOwnerFinanceState(immediate = false) {
     const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'owner_finance_v2', state.currentUserId);
     await setDoc(ref, { map: state.ownerFinanceMap, updatedAt: Date.now() }, { merge: true });
   };
-  if (immediate) push(); else ownerTimer = setTimeout(push, 600);
+  if (immediate) push(); else ownerTimer = setTimeout(push, 500);
 }
 
 export function getDefaultRateForTask(taskKey, sh) {
@@ -173,10 +165,18 @@ export function calculateCrewShowMetrics(sh) {
     rec.crewMemberMeta[uid] = { ctpStatus: 'unpaid', selfExpense: 0, selfExpenseNote: '' };
   }
   const meta = rec.crewMemberMeta[uid];
-  const selfExpense = Number(meta.selfExpense) || 0;
-  const netPocket = grossCtp - selfExpense;
   const isSettled = meta.ctpStatus === 'settled';
-  return { ctpItem: { ...ctpItem, extras: myExtras }, meta, grossCtp, selfExpense, netPocket, isSettled, pendingCtpDebt: isSettled ? 0 : Math.max(0, grossCtp) };
+  return {
+    ctpItem: { ...ctpItem, extras: myExtras },
+    meta,
+    taskSum,
+    extraBillSum,
+    grossCtp,
+    selfExpense: 0,
+    netPocket: grossCtp,
+    isSettled,
+    pendingCtpDebt: isSettled ? 0 : Math.max(0, grossCtp)
+  };
 }
 
 export async function saveQuickShowExpensesBatch({ showId, entries = [], deletedIds = [] }) {
