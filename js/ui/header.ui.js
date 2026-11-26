@@ -165,10 +165,17 @@ export function renderHeaderHtml(totalAlerts = 0) {
         </div>
       ` : ''}
 
-      ${(!isExpanded && state.studioBroadcast?.enabled && state.studioBroadcast?.text) ? `
-        <div class="bg-rose-50 border border-rose-300 text-rose-700 rounded-xl px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-2">
+      ${!isExpanded && state.studioBroadcast?.enabled && state.studioBroadcast?.text ? `
+        <div data-studio-broadcast="true" class="bg-rose-50 border border-rose-300 text-rose-700 rounded-xl px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-2">
           <span style="color: #ffffff !important; background-color: #e11d48 !important;" class="bg-rose-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shrink-0 inline-flex items-center gap-1">📢 THÔNG BÁO</span>
           <span class="flex-1 text-rose-700 font-extrabold">${escapeHtml(state.studioBroadcast.text)}</span>
+          <button
+            type="button"
+            onclick="appActions.dismissBroadcast()"
+            title="Đóng thông báo"
+            aria-label="Đóng thông báo"
+            class="w-5 h-5 rounded-full bg-rose-200/80 hover:bg-rose-300 text-rose-800 text-[10px] font-black flex items-center justify-center shrink-0 transition"
+          >✕</button>
         </div>
       ` : ''}
 
