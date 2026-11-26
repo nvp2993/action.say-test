@@ -6,95 +6,91 @@ import { canEditShow, getFilteredShows, getVisiblePartnerText } from '../service
 export function renderShowsTabHtml() {
   const filtered = getFilteredShows();
   return `
-    <div class="flex-1 flex flex-col min-h-0 bg-[#f1f5f9] text-xs">
+    <div class="flex-1 flex flex-col min-h-0 bg-white">
       ${state.zenFullscreen ? '' : `
-        <div class="bg-[#f8fafc] px-2.5 sm:px-3 py-2 sm:py-2.5 border-b border-slate-200/90 shrink-0 space-y-2">
-          <div class="flex items-center gap-1.5 sm:gap-2">
+        <div class="bg-slate-100 px-2.5 py-1.5 border-b border-slate-200 shrink-0 space-y-1.5">
+          <div class="flex items-center gap-1.5">
             <div class="relative flex-1 min-w-0">
-              <i class="fa-solid fa-magnifying-glass text-slate-400 text-[11px] absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2"></i>
+              <i class="fa-solid fa-magnifying-glass text-slate-400 text-[11px] absolute left-2.5 top-1/2 -translate-y-1/2"></i>
               <input id="search-input-box" type="text" value="${escapeHtml(state.searchQuery)}" oninput="appActions.onSearchInput(this.value)"
-                placeholder="Tìm Hồ Tràm, Đà Nẵng, Phú Quốc, Golf..." class="w-full pl-7 sm:pl-8 pr-2.5 py-1.5 bg-white border border-slate-200/90 rounded-xl text-[11px] sm:text-[11.5px] text-slate-800 focus:outline-none focus:border-slate-900" />
+                placeholder="Tìm Hồ Tràm, Đà Nẵng, Phú Quốc, Golf..." class="w-full pl-7 pr-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:border-indigo-500" />
             </div>
-            <button type="button" onclick="appActions.openZaloTomorrowModal()" class="px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[10.5px] font-extrabold bg-slate-900 hover:bg-slate-800 text-white shrink-0 transition">📋 Điểm danh Mai</button>
-            <button type="button" onclick="appActions.toggleAllMonths()" class="px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[10.5px] font-bold border shrink-0 transition ${state.filterAllMonthsInList ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'}">
+            <button type="button" onclick="appActions.openZaloTomorrowModal()" class="px-2 py-1 rounded-lg text-[10px] font-extrabold bg-emerald-600 text-white shrink-0">📋 Điểm danh Mai</button>
+            <button type="button" onclick="appActions.toggleAllMonths()" class="px-2 py-1 rounded-lg text-[10px] font-bold border shrink-0 ${state.filterAllMonthsInList ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200'}">
               ${state.filterAllMonthsInList ? `Tất cả (${state.shows.length})` : `T${state.selectedMonth} (${filtered.length})`}
             </button>
           </div>
-          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <button type="button" onclick="appActions.setFilterMember('all')" class="px-2.5 py-1 rounded-full text-[9.5px] font-extrabold shrink-0 border transition ${state.filterMemberId === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/90'}">
+          <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+            <button type="button" onclick="appActions.setFilterMember('all')" class="px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 border ${state.filterMemberId === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}">
               Tất cả (${state.members.length})
             </button>
             ${[...state.members].sort((a,b) => (a.id === state.currentUserId ? -1 : b.id === state.currentUserId ? 1 : 0))
-              .map(m => renderPillHtml(m.id, 'xs', `shrink-0 cursor-pointer ${state.filterMemberId === m.id ? 'ring-2 ring-slate-900' : 'opacity-90 hover:opacity-100'}`, `onclick="appActions.setFilterMember('${m.id}')"` )).join('')}
+              .map(m => renderPillHtml(m.id, 'xs', `shrink-0 cursor-pointer ${state.filterMemberId === m.id ? 'ring-2 ring-indigo-600' : 'opacity-85'}`, `onclick="appActions.setFilterMember('${m.id}')"`)).join('')}
           </div>
         </div>
       `}
 
       ${filtered.length === 0 ? `
-        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#f1f5f9] space-y-3">
-          <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200/90 text-slate-500 flex items-center justify-center text-xl shadow-2xs"><i class="fa-regular fa-calendar-xmark"></i></div>
-          <div class="text-sm font-black text-slate-600 uppercase tracking-tight">CHƯA CÓ DỮ LIỆU</div>
-          <button type="button" onclick="appActions.openAddModal('${state.selectedYear}-${String(state.selectedMonth).padStart(2,'0')}-01')" class="px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold inline-flex items-center gap-1.5 transition">
+        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-slate-50/60 space-y-3">
+          <div class="w-12 h-12 rounded-2xl bg-slate-200/80 text-slate-500 flex items-center justify-center text-xl"><i class="fa-regular fa-calendar-xmark"></i></div>
+          <div class="text-sm font-black text-slate-500 uppercase">CHƯA CÓ DỮ LIỆU</div>
+          <button type="button" onclick="appActions.openAddModal('${state.selectedYear}-${String(state.selectedMonth).padStart(2,'0')}-01')" class="px-4 py-2 rounded-full bg-indigo-600 text-white text-xs font-extrabold inline-flex items-center gap-1.5">
             <i class="fa-solid fa-bolt"></i><span>Nổ Show Mới</span>
           </button>
         </div>
       ` : `
-        <div class="flex-1 min-h-0 overflow-auto custom-scroll relative p-2 sm:p-3.5">
-          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-            <table class="w-full table-fixed border-collapse text-[11px] sm:text-[11.5px] min-w-[620px] sm:min-w-[860px]">
-              <thead class="sticky top-0 z-20">
-                <tr class="bg-[#f8fafc] text-slate-400 border-b border-slate-200/90 font-black text-[9.5px] sm:text-[10px] uppercase tracking-wider">
-                  <th class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/70 w-9 sm:w-11 text-center">STT</th>
-                  <th class="sticky left-0 z-20 bg-[#f8fafc] py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/70 text-left w-32 sm:w-44 sticky-col-shadow">THÔNG TIN (ĐỊA ĐIỂM)</th>
-                  <th class="py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/70 text-left w-28 sm:w-40">TÊN SHOW - ĐỐI TÁC</th>
-                  <th class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/70 text-center w-12 sm:w-16">BĐ</th>
-                  <th class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/70 text-center w-12 sm:w-16">KT</th>
-                  <th class="py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/70 text-left min-w-[140px] sm:min-w-[210px]">NHÂN SỰ</th>
-                  <th class="py-2 sm:py-2.5 px-1.5 sm:px-2.5 border-r border-slate-200/70 text-center w-20 sm:w-24">CHỦ SHOW</th>
-                  <th class="py-2 sm:py-2.5 px-1.5 sm:px-2.5 text-center w-20 sm:w-24">NGƯỜI TẠO</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200/65">
-                ${filtered.map((sh, idx) => {
-                  const editable = canEditShow(sh);
-                  const owner = getMember(sh.ownerId);
-                  const creator = getMember(sh.creatorId || sh.ownerId);
-                  const partner = getVisiblePartnerText(sh);
-                  const statusBadge = sh.postStatus === 'done' ? '<span class="text-[9.5px] ml-1">✅</span>' : sh.postStatus === 'editing' ? '<span class="text-[9.5px] ml-1">✂️</span>' : '';
-                  const rowCls = sh.isCancelled ? 'as-row-cancelled' : sh.isHold ? 'as-is-hold-card' : (editable ? 'bg-white' : 'bg-[#f8fafc]/60');
-                  const stickyCellBg = sh.isCancelled ? 'bg-rose-50' : editable ? 'bg-white' : 'bg-[#f8fafc]';
-                  return `
-                    <tr onclick="appActions.openShowDetail('${sh.id}')" class="hover:bg-[#f1f5f9]/75 cursor-pointer transition-colors ${rowCls}">
-                      <td class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[10px] sm:text-[10.5px] font-semibold text-slate-400">${idx + 1}</td>
-                      <td class="sticky left-0 z-10 ${stickyCellBg} py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/65 font-bold text-slate-900 sticky-col-shadow">
-                        <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                          <span class="w-2 h-2 rounded-full shrink-0 border border-black/15" style="background-color:${sh.color || '#dbeafe'}"></span>
-                          <span class="truncate as-loc-text">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>${statusBadge}
-                          ${sh.isCancelled ? '<span class="as-badge-cancelled">🚫 ĐÃ HỦY</span>' : ''}
-                        </div>
-                      </td>
-                      <td class="py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/65 text-slate-700 font-medium truncate">
-                        ${partner ? escapeHtml(partner) : '<span class="text-slate-300">—</span>'}
-                      </td>
-                      <td class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[10.5px] sm:text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.startDate)}</td>
-                      <td class="py-2 sm:py-2.5 px-1 sm:px-2 border-r border-slate-200/65 text-center font-mono tabular-nums text-[10.5px] sm:text-[11px] font-semibold text-slate-700">${formatDayMonth(sh.endDate)}</td>
-                      <td class="py-2 sm:py-2.5 px-2 sm:px-3 border-r border-slate-200/65">
-                        <div class="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                          ${(sh.memberIds || []).map(mid => renderPillHtml(mid, 'xs')).join('')}
-                          ${(sh.externalCrew || []).map((p, eIdx) => {
-                            const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
-                            return `<span style="background:#4f46e5;color:#fff;border:1px dashed #c7d2fe;" class="inline-flex items-center font-extrabold rounded-full px-2 py-0.5 text-[9px]">🤝 ${escapeHtml(extLabel)}</span>`;
-                          }).join('')}
-                        </div>
-                      </td>
-                      <td class="py-2 sm:py-2.5 px-1.5 sm:px-2.5 border-r border-slate-200/65 text-center truncate"><span class="text-[10.5px] sm:text-[11px] font-bold text-slate-800">${escapeHtml(owner.name)}</span></td>
-                      <td class="py-2 sm:py-2.5 px-1.5 sm:px-2.5 text-center truncate"><span class="text-[10.5px] sm:text-[11px] font-bold text-indigo-700">${escapeHtml(creator.name)}</span></td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
+        <div class="flex-1 min-h-0 overflow-auto custom-scroll relative">
+          <table class="w-full border-collapse text-[11px] min-w-[740px]">
+            <thead class="sticky top-0 z-20">
+              <tr class="bg-[#d9ead3] text-slate-800 border-b border-slate-300 font-extrabold text-[10px] uppercase">
+                <th class="py-1.5 px-1.5 border-r border-slate-300 w-9 text-center">STT</th>
+                <th class="sticky left-0 z-20 bg-[#d9ead3] py-1.5 px-2 border-r border-slate-300 text-left w-32 sticky-col-shadow">THÔNG TIN (ĐỊA ĐIỂM)</th>
+                <th class="py-1.5 px-1.5 border-r border-slate-300 text-left w-24">TÊN SHOW - ĐỐI TÁC</th>
+                <th class="py-1.5 px-1 border-r border-slate-300 text-center w-12">BĐ</th>
+                <th class="py-1.5 px-1 border-r border-slate-300 text-center w-12">KT</th>
+                <th class="py-1.5 px-2 border-r border-slate-300 text-left min-w-[205px]">NHÂN SỰ</th>
+                <th class="py-1.5 px-1.5 border-r border-slate-300 text-center w-20">CHỦ SHOW</th>
+                <th class="py-1.5 px-1.5 text-center w-20">NGƯỜI TẠO</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              ${filtered.map((sh, idx) => {
+                const editable = canEditShow(sh);
+                const owner = getMember(sh.ownerId);
+                const creator = getMember(sh.creatorId || sh.ownerId);
+                const statusBadge = sh.postStatus === 'done' ? '<span class="text-[9px] ml-1">✅</span>' : sh.postStatus === 'editing' ? '<span class="text-[9px] ml-1">✂️</span>' : '';
+                const rowCls = sh.isCancelled ? 'as-row-cancelled' : sh.isHold ? 'as-is-hold-card' : (editable ? 'bg-white' : 'bg-slate-50/50');
+                return `
+                  <tr onclick="appActions.openShowDetail('${sh.id}')" class="hover:bg-indigo-50/40 cursor-pointer ${rowCls}">
+                    <td class="py-1.5 px-1 border-r border-slate-200 text-center font-mono text-[10px] font-bold text-slate-500">${idx + 1}</td>
+                    <td class="sticky left-0 z-10 ${sh.isCancelled ? 'bg-rose-50' : editable ? 'bg-white' : 'bg-slate-50'} py-1.5 px-2 border-r border-slate-200 font-extrabold text-slate-900 sticky-col-shadow">
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full shrink-0 border border-black/15" style="background-color:${sh.color || '#dbeafe'}"></span>
+                        <span class="truncate max-w-[115px] as-loc-text">${escapeHtml(sh.isHold ? `⏳ GIỮ LỊCH: ${String(sh.location || '').replace(/^⏳\s*GIỮ LỊCH:\s*/i, '').trim()}` : sh.location)}</span>${statusBadge}
+                        ${sh.isCancelled ? '<span class="as-badge-cancelled">🚫 ĐÃ HỦY</span>' : ''}
+                      </div>
+                    </td>
+                    <td class="py-1.5 px-1.5 border-r border-slate-200 text-slate-700 font-semibold truncate max-w-[95px]">
+                      ${getVisiblePartnerText(sh) ? escapeHtml(getVisiblePartnerText(sh)) : '<span class="text-slate-300">-</span>'}
+                    </td>
+                    <td class="py-1.5 px-1 border-r border-slate-200 text-center font-bold text-slate-700">${formatDayMonth(sh.startDate)}</td>
+                    <td class="py-1.5 px-1 border-r border-slate-200 text-center font-bold text-slate-700">${formatDayMonth(sh.endDate)}</td>
+                    <td class="py-1.5 px-2 border-r border-slate-200 min-w-[205px]">
+                      <div class="flex flex-wrap gap-1">
+                        ${(sh.memberIds || []).map(mid => renderPillHtml(mid, 'xs')).join('')}
+                        ${(sh.externalCrew || []).map((p, eIdx) => {
+                          const extLabel = String(p?.name || '').trim() || `NS ${eIdx + 1}`;
+                          return `<span style="background:#4f46e5;color:#fff;border:1px dashed #c7d2fe;" class="inline-flex items-center font-extrabold rounded-full px-2 py-0.5 text-[9px]">🤝 ${escapeHtml(extLabel)}</span>`;
+                        }).join('')}
+                      </div>
+                    </td>
+                    <td class="py-1.5 px-1.5 border-r border-slate-200 text-center"><span class="text-[10px] font-semibold text-slate-700">${escapeHtml(owner.name)}</span></td>
+                    <td class="py-1.5 px-1.5 text-center"><span class="text-[10px] font-bold text-indigo-700">${escapeHtml(creator.name)}</span></td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
         </div>
       `}
     </div>
