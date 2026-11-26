@@ -444,7 +444,7 @@ export function renderDebtTabHtml() {
 
           <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2 text-[11px]">
             <div class="flex items-center justify-between gap-1">
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cộng dồn tháng trước</span>
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Công nợ Cộng dồn</span>
               <span class="font-mono font-bold text-[10px] text-slate-400">${state.ownerAllMonths ? 'Đang xem cả năm' : `T1–T${Math.max(0, Number(state.ownerMonth) - 1)}`}</span>
             </div>
             ${state.ownerAllMonths ? `
