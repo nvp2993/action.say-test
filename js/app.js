@@ -1,7 +1,7 @@
 import { state, registerRenderer } from './state/store.js';
 import { initAuthListener, loginMemberWithPin, loginAdminWithEmail, changeMyPin, logoutCurrentUser } from './services/auth.service.js';
 import { attachShowListeners, detachShowListeners, syncShowsToCloud, saveMyProfileToCloud, canEditShow, isYearMonthLocked, getVisiblePartnerText, cleanupMatchingHoldsForOfficialShow } from './services/show.service.js';
-import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, getMemberExtrasForShow, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics, saveQuickShowExpensesBatch } from './services/finance.service.js';
+import { attachFinanceListeners, detachFinanceListeners, saveCtpState, saveOwnerFinanceState, getDefaultRateForTask, findAnyCtpShow, getCombinedCtpShows, ensureOwnerFinRecord, calculateOwnerShowMetrics, calculateCrewShowMetrics, saveQuickShowExpensesBatch, getMemberExtrasForShow } from './services/finance.service.js';
 import { pushAdminConfigToCloud, logStudioActivity, applyColorsToAllShows, saveOfficialLegalName, exportFullJsonBackup } from './services/admin.service.js';
 import { getTodayISO, getMember, resolveDynamicLocationColor, playStudioSound, showToast, formatDayMonth, formatCompactMoneyPlain, buildVietQrUrl, escapeHtml } from './utils/helpers.js';
 import { exportShowToAppleCalendar } from './utils/export.js';
@@ -362,15 +362,6 @@ function renderApp() {
     return;
   }
 
-  const activeEl = document.activeElement;
-  const focusMeta = (activeEl && activeEl.id && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'))
-    ? {
-        id: activeEl.id,
-        selStart: typeof activeEl.selectionStart === 'number' ? activeEl.selectionStart : null,
-        selEnd: typeof activeEl.selectionEnd === 'number' ? activeEl.selectionEnd : null
-      }
-    : null;
-
   let main = '';
   if (state.activeTab === 'shows') main = renderShowsTabHtml();
   else if (state.activeTab === 'matrix') main = renderMatrixTabHtml();
@@ -413,16 +404,6 @@ function renderApp() {
   if (prevModalScroll > 0) {
     const nextModalScroll = document.querySelector('.ios-sheet');
     if (nextModalScroll) nextModalScroll.scrollTop = prevModalScroll;
-  }
-
-  if (focusMeta?.id) {
-    const nextEl = document.getElementById(focusMeta.id);
-    if (nextEl && typeof nextEl.focus === 'function') {
-      nextEl.focus({ preventScroll: true });
-      if (focusMeta.selStart !== null && focusMeta.selEnd !== null && typeof nextEl.setSelectionRange === 'function') {
-        try { nextEl.setSelectionRange(focusMeta.selStart, focusMeta.selEnd); } catch {}
-      }
-    }
   }
 }
 
@@ -1042,16 +1023,6 @@ window.ctpActions = {
   },
   setMonth(m) { state.ctpMonth = Number(m); renderApp(); },
   setOwner(o) { state.ctpOwnerId = o; renderApp(); },
-  focusShow(id) {
-    renderApp();
-    requestAnimationFrame(() => {
-      const container = document.getElementById('ctp-shows-scroll-list');
-      const target = document.getElementById(`ctp-show-card-${id}`);
-      if (container && target) {
-        container.scrollTo({ top: Math.max(0, target.offsetTop - container.offsetTop - 8), behavior: 'smooth' });
-      }
-    });
-  },
   toggleTask(id, k) {
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
     if (!state.ctpItems[id].tasks) state.ctpItems[id].tasks = {};
@@ -1072,23 +1043,35 @@ window.ctpActions = {
     this._refreshLiveTotals(id);
     saveCtpState();
   },
+  startEditExtra(key) {
+    state.ctpEditingExtraKey = key;
+    renderApp();
+    requestAnimationFrame(() => {
+      const inp = document.getElementById(`ctp-extra-name-${key}`);
+      if (inp) inp.focus();
+    });
+  },
+  finishEditExtra() {
+    state.ctpEditingExtraKey = null;
+    saveCtpState(true);
+    renderApp();
+  },
   addExtraItem(id) {
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
     if (!Array.isArray(state.ctpItems[id].extras)) state.ctpItems[id].extras = [];
-    state.ctpItems[id].extras.push({
-      id: 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      name: '',
-      amount: 0,
-      payerId: state.currentUserId
-    });
+    const newId = `exp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    state.ctpItems[id].extras.push({ id: newId, name: '', amount: 0, payerId: state.currentUserId });
+    state.ctpEditingExtraKey = `${id}_${newId}`;
     saveCtpState();
     renderApp();
+    requestAnimationFrame(() => {
+      const inp = document.getElementById(`ctp-extra-name-${id}_${newId}`);
+      if (inp) inp.focus();
+    });
   },
   saveExtraField(id, idx, f, el, expId = '') {
-    if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
-    if (!Array.isArray(state.ctpItems[id].extras)) state.ctpItems[id].extras = [];
-    const list = state.ctpItems[id].extras;
-    const target = expId ? list.find(x => x && x.id === expId) : list[idx];
+    const myList = getMemberExtrasForShow(id, state.currentUserId);
+    const target = expId ? myList.find(x => x.id === expId) : myList[idx];
     if (!target) return;
 
     if (f === 'amount') {
@@ -1096,65 +1079,68 @@ window.ctpActions = {
       target.amount = val;
       el.value = val ? val.toLocaleString('vi-VN') : '';
       this._refreshLiveTotals(id);
-      saveCtpState();
     } else {
       target.name = el.value;
-      saveCtpState();
-    }
-  },
-  removeExtraItem(id, idx, expId = '') {
-    if (!state.ctpItems[id] || !Array.isArray(state.ctpItems[id].extras)) return;
-    if (expId) {
-      state.ctpItems[id].extras = state.ctpItems[id].extras.filter(x => x && x.id !== expId);
-    } else {
-      state.ctpItems[id].extras.splice(idx, 1);
     }
     saveCtpState();
+  },
+  removeExtraItem(id, idx, expId = '') {
+    if (!Array.isArray(state.ctpItems[id]?.extras)) return;
+    if (expId) {
+      const fullIdx = state.ctpItems[id].extras.findIndex(x => x && x.id === expId);
+      if (fullIdx >= 0) state.ctpItems[id].extras.splice(fullIdx, 1);
+    } else {
+      const myList = getMemberExtrasForShow(id, state.currentUserId);
+      const target = myList[idx];
+      if (target) {
+        const fullIdx = state.ctpItems[id].extras.indexOf(target);
+        if (fullIdx >= 0) state.ctpItems[id].extras.splice(fullIdx, 1);
+      }
+    }
+    state.ctpEditingExtraKey = null;
+    saveCtpState(true);
     renderApp();
   },
   _refreshLiveTotals(showId) {
     const uid = state.currentUserId;
     const it = state.ctpItems[showId] || { tasks: {}, extras: [] };
-    const taskSum = Object.entries(it.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
     const myExtras = getMemberExtrasForShow(showId, uid);
+    const taskSum = Object.entries(it.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
     const extraSum = myExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
     const sub = taskSum + extraSum;
     const showEl = document.getElementById(`ctp-show-total-${showId}`);
     if (showEl) showEl.textContent = sub.toLocaleString('vi-VN') + 'đ';
 
-    const showExtraEl = document.getElementById(`ctp-show-extra-total-${showId}`);
-    if (showExtraEl) showExtraEl.textContent = extraSum.toLocaleString('vi-VN') + 'đ';
+    const showExtraBadge = document.getElementById(`ctp-show-extra-sum-${showId}`);
+    if (showExtraBadge) showExtraBadge.textContent = extraSum.toLocaleString('vi-VN') + 'đ';
 
     let grand = 0;
-    let totalExtras = 0;
-    let pendingSum = 0;
-    let settledSum = 0;
-
+    let totalExtra = 0;
+    let unpaid = 0;
+    let settled = 0;
     getCombinedCtpShows().forEach(sh => {
       if (sh?.isHold && !sh?.countHoldForBilling) return;
       const x = state.ctpItems[sh.id] || { tasks: {}, extras: [] };
-      const tSum = Object.entries(x.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
-      const eList = getMemberExtrasForShow(sh.id, uid);
-      const eSum = eList.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
-      const sSum = tSum + eSum;
-
-      grand += sSum;
-      totalExtras += eSum;
-
-      const meta = state.ownerFinanceMap?.[sh.id]?.crewMemberMeta?.[uid] || {};
-      if (meta.ctpStatus === 'settled') settledSum += sSum;
-      else pendingSum += sSum;
+      const shExtras = sh.ownerId === uid ? [] : getMemberExtrasForShow(sh.id, uid);
+      const shExtraSum = shExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+      const shTaskSum = Object.entries(x.tasks || {}).reduce((s, [, v]) => (v !== null && v !== undefined) ? s + (Number(v) || 0) : s, 0);
+      const rowTotal = shTaskSum + shExtraSum;
+      grand += rowTotal;
+      totalExtra += shExtraSum;
+      const isSettled = ensureOwnerFinRecord(sh)?.crewMemberMeta?.[uid]?.ctpStatus === 'settled';
+      if (isSettled) settled += rowTotal;
+      else unpaid += rowTotal;
     });
 
     if (!state.hideMoneyMode) {
       const grandEl = document.getElementById('ctp-grand-total-display');
       if (grandEl) grandEl.textContent = grand.toLocaleString('vi-VN') + 'đ';
       const extraEl = document.getElementById('ctp-extra-total-display');
-      if (extraEl) extraEl.textContent = totalExtras.toLocaleString('vi-VN') + 'đ';
-      const pendEl = document.getElementById('ctp-pending-total-display');
-      if (pendEl) pendEl.textContent = pendingSum.toLocaleString('vi-VN') + 'đ';
-      const setEl = document.getElementById('ctp-settled-total-display');
-      if (setEl) setEl.textContent = settledSum.toLocaleString('vi-VN') + 'đ';
+      if (extraEl) extraEl.textContent = totalExtra.toLocaleString('vi-VN') + 'đ';
+      const unpaidEl = document.getElementById('ctp-unpaid-total-display');
+      if (unpaidEl) unpaidEl.textContent = unpaid.toLocaleString('vi-VN') + 'đ';
+      const settledEl = document.getElementById('ctp-settled-total-display');
+      if (settledEl) settledEl.textContent = settled.toLocaleString('vi-VN') + 'đ';
     }
   },
   openAddCustomShowModal() {
@@ -1231,6 +1217,7 @@ window.ctpActions = {
     showToast(count > 0 ? `⚡ Đã tự điền ${count} nhiệm vụ theo vai trò!` : 'ℹ️ Không có nhiệm vụ mới nào cần điền thêm.');
   },
   saveNow() {
+    state.ctpEditingExtraKey = null;
     saveCtpState(true);
     renderApp();
     showToast('💾 Đã lưu CTP lên Cloud!');
@@ -1503,7 +1490,7 @@ window.ownerActions = {
       const container = document.getElementById('owner-debt-scroll-list');
       const target = document.getElementById(`debt-show-card-${id}`);
       if (container && target) {
-        container.scrollTo({ top: Math.max(0, target.offsetTop - container.offsetTop - 8), behavior: 'smooth' });
+        container.scrollTo({ top: Math.max(0, target.offsetTop - container.offsetTop - 92), behavior: 'smooth' });
       }
     });
   },
@@ -1585,20 +1572,33 @@ window.ownerActions = {
     el.value = num ? num.toLocaleString('vi-VN') : '';
     saveCtpState();
   },
+  startEditOwnerExpense(key) {
+    state.ownerEditingExpenseKey = key;
+    renderApp();
+    requestAnimationFrame(() => {
+      const inp = document.getElementById(`debt-exp-name-${key}`);
+      if (inp) inp.focus();
+    });
+  },
+  finishEditOwnerExpense() {
+    state.ownerEditingExpenseKey = null;
+    saveOwnerFinanceState(true);
+    renderApp();
+  },
   addOwnerExpense(shId) {
     const rec = ensureOwnerFinRecord(shId);
-    rec.otherExpenses.push({
-      id: 'exp_own_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      name: '',
-      amount: 0,
-      payerId: state.currentUserId
-    });
+    const newId = `exp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    rec.otherExpenses.push({ id: newId, name: '', amount: 0, payerId: state.currentUserId });
+    state.ownerEditingExpenseKey = `${shId}_${newId}`;
     saveOwnerFinanceState();
     renderApp();
+    requestAnimationFrame(() => {
+      const inp = document.getElementById(`debt-exp-name-${shId}_${newId}`);
+      if (inp) inp.focus();
+    });
   },
   saveOwnerExpenseField(shId, idx, field, el, expId = '') {
     const rec = ensureOwnerFinRecord(shId);
-    if (!Array.isArray(rec.otherExpenses)) rec.otherExpenses = [];
     const target = expId ? rec.otherExpenses.find(x => x && x.id === expId) : rec.otherExpenses[idx];
     if (!target) return;
 
@@ -1606,29 +1606,36 @@ window.ownerActions = {
       const val = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
       target.amount = val;
       el.value = val ? val.toLocaleString('vi-VN') : '';
-      const totalExpEl = document.getElementById(`debt-show-other-exp-total-${shId}`);
-      if (totalExpEl) {
-        const sum = rec.otherExpenses.reduce((s, x) => s + (Number(x?.amount) || 0), 0);
-        totalExpEl.textContent = sum.toLocaleString('vi-VN') + 'đ';
+      const sh = state.shows.find(s => s.id === shId);
+      if (sh) {
+        const m = calculateOwnerShowMetrics(sh);
+        const otherSum = (rec.otherExpenses || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+        const otherSumEl = document.getElementById(`debt-show-other-sum-${shId}`);
+        if (otherSumEl) otherSumEl.textContent = otherSum.toLocaleString('vi-VN') + 'đ';
+        const expEl = document.getElementById(`debt-show-total-exp-${shId}`);
+        if (expEl) expEl.textContent = m.totalExpense.toLocaleString('vi-VN') + 'đ';
+        const profEl = document.getElementById(`debt-show-net-profit-${shId}`);
+        if (profEl) profEl.textContent = `${m.netProfit >= 0 ? '+' : ''}${m.netProfit.toLocaleString('vi-VN')}đ`;
       }
-      saveOwnerFinanceState();
     } else {
       target.name = el.value;
-      saveOwnerFinanceState();
     }
+    saveOwnerFinanceState();
   },
   removeOwnerExpense(shId, idx, expId = '') {
     const rec = ensureOwnerFinRecord(shId);
-    if (!Array.isArray(rec.otherExpenses)) return;
     if (expId) {
-      rec.otherExpenses = rec.otherExpenses.filter(x => x && x.id !== expId);
+      const realIdx = rec.otherExpenses.findIndex(x => x && x.id === expId);
+      if (realIdx >= 0) rec.otherExpenses.splice(realIdx, 1);
     } else {
       rec.otherExpenses.splice(idx, 1);
     }
-    saveOwnerFinanceState();
+    state.ownerEditingExpenseKey = null;
+    saveOwnerFinanceState(true);
     renderApp();
   },
   saveShowFinanceNow() {
+    state.ownerEditingExpenseKey = null;
     saveCtpState(true);
     saveOwnerFinanceState(true);
     state.ownerExpandedShowId = null;
