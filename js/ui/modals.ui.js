@@ -1008,14 +1008,13 @@ export function renderQuickExpenseModalHtml() {
 
   const drafts = Array.isArray(q.drafts) && q.drafts.length ? q.drafts : [{ id: '', title: '', amountRaw: '' }];
 
-  // Lấy các khoản đã lưu trong ngày của show đang chọn để dễ xem/sửa nhanh
   const savedCtp = (state.ctpItems?.[activeShowId]?.extras || []).filter(x => x && Number(x.amount) > 0);
   const savedOwner = (state.ownerFinanceMap?.[activeShowId]?.otherExpenses || []).filter(x => x && Number(x.amount) > 0);
   const savedAll = [...savedOwner, ...savedCtp];
 
   return `
-    <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-4 text-xs shadow-2xl max-h-[90dvh] flex flex-col">
+    <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      <div onclick="event.stopPropagation()" class="bg-white w-full max-w-md rounded-3xl p-4 sm:p-5 space-y-3.5 text-xs shadow-2xl border border-slate-200/80 max-h-[86dvh] flex flex-col">
         <!-- Header -->
         <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100 shrink-0">
           <div class="flex items-center gap-2.5 min-w-0">
@@ -1029,35 +1028,53 @@ export function renderQuickExpenseModalHtml() {
         </div>
 
         <!-- Body -->
-        <div class="flex-1 min-h-0 overflow-y-auto custom-scroll space-y-3.5 pr-0.5">
+        <div class="flex-1 min-h-0 overflow-y-auto custom-scroll space-y-3 pr-0.5">
           <!-- 1. Chọn Show -->
           <div class="space-y-1.5">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">1. Show đang diễn ra (${activeShows.length})</span>
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">1. Chọn show hôm nay</span>
+              <span class="text-[10px] font-mono font-bold text-slate-400">${activeShows.length} show</span>
+            </div>
+
             ${activeShows.length === 0 ? `
               <div class="p-3 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center text-[11px] text-slate-500">
                 Hôm nay bạn không có show nào đang chạy.
               </div>
             ` : `
-              <div class="grid grid-cols-1 gap-1.5">
+              <div class="space-y-1.5">
                 ${activeShows.map(sh => {
                   const isSel = sh.id === activeShowId;
                   const partner = getVisiblePartnerText(sh);
                   const dateShort = formatDayMonth(sh.startDate);
+                  const ownerName = getMember(sh.ownerId)?.name || '';
                   return `
                     <button
                       type="button"
                       onclick="appActions.selectQuickExpenseShow('${sh.id}')"
-                      class="w-full px-3 py-2 rounded-2xl border text-left flex items-center justify-between gap-2 transition ${
+                      class="w-full px-3 py-2.5 rounded-2xl border text-left flex items-center justify-between gap-2.5 transition ${
                         isSel
-                          ? 'bg-slate-900 border-slate-900 text-white shadow-xs'
-                          : 'bg-slate-50/80 hover:bg-slate-100 border-slate-200/90 text-slate-800'
+                          ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
+                          : 'bg-[#f8fafc] hover:bg-slate-100/90 border-slate-200/90 text-slate-800'
                       }"
                     >
-                      <div class="min-w-0 flex items-center gap-2">
-                        <span class="px-2 py-0.5 rounded-lg font-mono font-bold text-[10px] shrink-0 ${isSel ? 'bg-amber-400/20 text-amber-300' : 'bg-white text-indigo-600 border border-slate-200/80'}">${escapeHtml(dateShort)}</span>
-                        <span class="font-extrabold text-[11.5px] truncate">${escapeHtml(sh.location)}${partner ? ` <span class="${isSel ? 'text-slate-300' : 'text-slate-500'} font-semibold">(${escapeHtml(partner)})</span>` : ''}</span>
+                      <div class="min-w-0 flex-1 space-y-0.5">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                          <span class="px-1.5 py-0.5 rounded-md font-mono font-bold text-[10px] shrink-0 ${
+                            isSel
+                              ? 'bg-amber-400/20 text-amber-300'
+                              : 'bg-white text-indigo-600 border border-slate-200/80'
+                          }">${escapeHtml(dateShort)}</span>
+                          <span class="font-extrabold text-[12px] truncate">${escapeHtml(sh.location)}</span>
+                        </div>
+                        <div class="text-[10px] truncate ${isSel ? 'text-slate-300' : 'text-slate-500'}">
+                          ${partner ? `Đối tác: <b>${escapeHtml(partner)}</b>` : 'Show nội bộ / lẻ'}${ownerName ? ` • Chủ: ${escapeHtml(ownerName)}` : ''}
+                        </div>
                       </div>
-                      <span class="text-[10px] font-black shrink-0 ${isSel ? 'text-emerald-400' : 'text-slate-300'}">${isSel ? '●' : '○'}</span>
+                      <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                        isSel
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-white border border-slate-300 text-transparent'
+                      }">✓</span>
                     </button>
                   `;
                 }).join('')}
@@ -1144,7 +1161,7 @@ export function renderQuickExpenseModalHtml() {
 
           <!-- Các khoản đã lưu trong show này (nếu có) -->
           ${savedAll.length > 0 ? `
-            <div class="space-y-1.5 pt-1">
+            <div class="space-y-1.5 pt-0.5">
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Đã ghi trong show này (${savedAll.length})</span>
               <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200/80 bg-white overflow-hidden">
                 ${savedAll.map(ex => {
