@@ -29,6 +29,25 @@ export function renderCrewBoardTabHtml() {
   const totalCount = sortedMembers.length;
   const freePct = totalCount > 0 ? Math.round((freeList.length / totalCount) * 100) : 0;
 
+  const locationGroupMap = new Map();
+  busyList.forEach(m => {
+    const rawLabels = Array.isArray(busyMap[m.id]) ? busyMap[m.id] : [];
+    const labels = rawLabels.length ? rawLabels : ['Có lịch'];
+    labels.forEach(lbl => {
+      const locName = String(lbl || 'Có lịch').trim() || 'Có lịch';
+      if (!locationGroupMap.has(locName)) {
+        locationGroupMap.set(locName, { location: locName, members: [] });
+      }
+      const entry = locationGroupMap.get(locName);
+      if (!entry.members.some(x => x.id === m.id)) {
+        entry.members.push(m);
+      }
+    });
+  });
+  const busyByLocation = Array.from(locationGroupMap.values()).sort(
+    (a, b) => b.members.length - a.members.length || a.location.localeCompare(b.location, 'vi')
+  );
+
   const startDmy = formatIsoToDmy(state.checkStart);
   const endDmy = formatIsoToDmy(state.checkEnd);
 
@@ -146,24 +165,28 @@ export function renderCrewBoardTabHtml() {
 
           <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2">
             <div class="flex items-center justify-between gap-1">
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tóm tắt lịch bận</span>
-              <span class="font-mono font-bold text-[10px] text-amber-700">${busyList.length} người</span>
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tóm tắt lịch bận theo địa điểm</span>
+              <span class="font-mono font-bold text-[10px] text-amber-700">${busyByLocation.length} địa điểm</span>
             </div>
-            ${busyList.length === 0 ? `
+            ${busyByLocation.length === 0 ? `
               <div class="text-[11px] text-emerald-700 font-semibold py-2 px-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
                 ✓ Không có thành viên nào trùng lịch
               </div>
             ` : `
               <div class="space-y-1.5">
-                ${busyList.map(m => {
-                  const showLabels = busyMap[m.id] || [];
-                  return `
-                    <div class="px-2.5 py-1.5 rounded-xl bg-[#f8fafc] border border-slate-200/80 space-y-0.5">
-                      <div class="font-black text-[11px] text-slate-900">${escapeHtml(m.name)}</div>
-                      <div class="text-[10px] font-semibold text-slate-500 truncate">📍 ${escapeHtml(showLabels.join(', ') || 'Có lịch')}</div>
+                ${busyByLocation.map(grp => `
+                  <div class="px-2.5 py-2 rounded-xl bg-[#f8fafc] border border-slate-200/80 space-y-1">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-black text-[11px] text-slate-900 truncate">📍 ${escapeHtml(grp.location)}</span>
+                      <span class="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200/90 font-mono font-black text-[9.5px] text-amber-800 shrink-0">${grp.members.length} người</span>
                     </div>
-                  `;
-                }).join('')}
+                    <div class="flex flex-wrap gap-1">
+                      ${grp.members.map(mem => `
+                        <span class="px-2 py-0.5 rounded-full bg-white border border-slate-200/80 text-[10px] font-bold text-slate-700">${escapeHtml(mem.name)}</span>
+                      `).join('')}
+                    </div>
+                  </div>
+                `).join('')}
               </div>
             `}
           </div>
