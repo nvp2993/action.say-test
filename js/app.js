@@ -1181,13 +1181,6 @@ window.appActions = {
 };
 
 window.ctpActions = {
-  handleTaskPriceInput(id, k, el) {
-    const num = parseFlexibleMoneyInput(el.value);
-    if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
-    state.ctpItems[id].tasks[k] = num;
-    this._refreshLiveTotals(id);
-    saveCtpState();
-  },
   async toggleHoldBilling(showId) {
     const sh = state.shows.find(s => s.id === showId);
     if (!sh) return;
@@ -1214,25 +1207,66 @@ window.ctpActions = {
     renderApp();
   },
   handleTaskPriceInput(id, k, el) {
-    const num = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+    const num = parseFlexibleMoneyInput(el.value);
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
     state.ctpItems[id].tasks[k] = num;
-    el.value = num ? num.toLocaleString('vi-VN') : '';
     this._refreshLiveTotals(id);
     saveCtpState();
   },
-  startEditExtra(key) {
+  startEditExtra(key, shId = '', expId = '') {
     state.ctpEditingExtraKey = key;
+    if (shId) state._ctpEditingExtraMeta = { shId, expId };
     renderApp();
     requestAnimationFrame(() => {
       const inp = document.getElementById(`ctp-extra-name-${key}`);
       if (inp) inp.focus();
     });
   },
-  finishEditExtra() {
+  async finishEditExtra() {
+    const activeKey = state.ctpEditingExtraKey;
+    const meta = state._ctpEditingExtraMeta;
+
+    if (activeKey) {
+      const nameInp = document.getElementById(`ctp-extra-name-${activeKey}`);
+      const rowContainer = nameInp?.closest('li') || nameInp?.parentElement?.parentElement;
+      const inputs = rowContainer ? Array.from(rowContainer.querySelectorAll('input')) : [];
+      const amountInp = inputs.find(inp => inp !== nameInp) || null;
+
+      let shId = meta?.shId || '';
+      let expId = meta?.expId || '';
+      if (!shId && activeKey.includes('_exp_')) {
+        const splitAt = activeKey.indexOf('_exp_');
+        shId = activeKey.slice(0, splitAt);
+        expId = activeKey.slice(splitAt + 1);
+      } else if (!shId) {
+        const lastIdx = activeKey.lastIndexOf('_');
+        if (lastIdx > 0) {
+          shId = activeKey.slice(0, lastIdx);
+        }
+      }
+
+      if (shId) {
+        const myList = getMemberExtrasForShow(shId, state.currentUserId);
+        const target = expId
+          ? myList.find(x => x && x.id === expId)
+          : myList[myList.length - 1];
+        if (target) {
+          if (nameInp) target.name = String(nameInp.value || '').trim();
+          if (amountInp) target.amount = parseFlexibleMoneyInput(amountInp.value);
+        }
+      }
+    }
+
     state.ctpEditingExtraKey = null;
-    saveCtpState(true);
+    state._ctpEditingExtraMeta = null;
     renderApp();
+    try {
+      await saveCtpState(true);
+      showToast('✅ Đã lưu phát sinh!');
+    } catch (err) {
+      console.error('SAVE_CTP_EXTRA_ERR:', err);
+      showToast('❌ Lỗi lưu phát sinh: ' + (err?.message || err), 'error');
+    }
   },
   addExtraItem(id) {
     if (!state.ctpItems[id]) state.ctpItems[id] = { tasks: {}, extras: [] };
@@ -1240,24 +1274,12 @@ window.ctpActions = {
     const newId = `exp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     state.ctpItems[id].extras.push({ id: newId, name: '', amount: 0, payerId: state.currentUserId });
     state.ctpEditingExtraKey = `${id}_${newId}`;
+    state._ctpEditingExtraMeta = { shId: id, expId: newId };
     renderApp();
     requestAnimationFrame(() => {
       const inp = document.getElementById(`ctp-extra-name-${id}_${newId}`);
       if (inp) inp.focus();
     });
-  },
-  saveExtraField(id, idx, f, el, expId = '') {
-    const myList = getMemberExtrasForShow(id, state.currentUserId);
-    const target = expId ? myList.find(x => x.id === expId) : myList[idx];
-    if (!target) return;
-
-    if (f === 'amount') {
-      const val = parseFlexibleMoneyInput(el.value);
-      target.amount = val;
-      this._refreshLiveTotals(id);
-    } else {
-      target.name = el.value;
-    }
   },
   saveExtraField(id, idx, f, el, expId = '') {
     const myList = getMemberExtrasForShow(id, state.currentUserId);
@@ -1810,21 +1832,6 @@ window.ownerActions = {
     });
     renderApp();
   },
-  handleOwnerCrewTaskInput(shId, mid, taskKey, el) {
-    const num = parseFlexibleMoneyInput(el.value);
-    const rec = ensureOwnerFinRecord(shId);
-    if (!rec.crewTasks[mid]) rec.crewTasks[mid] = {};
-    rec.crewTasks[mid][taskKey] = num;
-    this._recalcMemberCost(shId, mid);
-    saveOwnerFinanceState();
-  },
-  handleSyncedCtpTaskInput(shId, taskKey, el) {
-    const num = parseFlexibleMoneyInput(el.value);
-    if (!state.ctpItems[shId]) state.ctpItems[shId] = { tasks: {}, extras: [] };
-    if (!state.ctpItems[shId].tasks) state.ctpItems[shId].tasks = {};
-    state.ctpItems[shId].tasks[taskKey] = num;
-    saveCtpState();
-  },
   setBossFilter(bossKey) {
     const nextKey = bossKey || 'all';
     state.ownerBossFilterKey = state.ownerBossFilterKey === nextKey ? 'all' : nextKey;
@@ -1894,11 +1901,10 @@ window.ownerActions = {
     renderApp();
   },
   handleOwnerCrewTaskInput(shId, mid, taskKey, el) {
-    const num = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+    const num = parseFlexibleMoneyInput(el.value);
     const rec = ensureOwnerFinRecord(shId);
     if (!rec.crewTasks[mid]) rec.crewTasks[mid] = {};
     rec.crewTasks[mid][taskKey] = num;
-    el.value = num ? num.toLocaleString('vi-VN') : '';
     this._recalcMemberCost(shId, mid);
     saveOwnerFinanceState();
   },
@@ -1916,11 +1922,10 @@ window.ownerActions = {
     renderApp();
   },
   handleSyncedCtpTaskInput(shId, taskKey, el) {
-    const num = parseInt(String(el.value).replace(/\D/g, ''), 10) || 0;
+    const num = parseFlexibleMoneyInput(el.value);
     if (!state.ctpItems[shId]) state.ctpItems[shId] = { tasks: {}, extras: [] };
     if (!state.ctpItems[shId].tasks) state.ctpItems[shId].tasks = {};
     state.ctpItems[shId].tasks[taskKey] = num;
-    el.value = num ? num.toLocaleString('vi-VN') : '';
     saveCtpState();
   },
 startEditOwnerExpense(key, shId = '', expId = '') {
@@ -1932,39 +1937,52 @@ startEditOwnerExpense(key, shId = '', expId = '') {
       if (inp) inp.focus();
     });
   },
-finishEditOwnerExpense() {
-  const activeKey = state.ownerEditingExpenseKey;
-  const meta = state._ownerEditingExpenseMeta;
+  async finishEditOwnerExpense() {
+    const activeKey = state.ownerEditingExpenseKey;
+    const meta = state._ownerEditingExpenseMeta;
 
-  if (activeKey) {
-    const nameInp = document.getElementById(`debt-exp-name-${activeKey}`);
-    const rowContainer = nameInp?.closest('li') || nameInp?.parentElement?.parentElement;
-    const inputs = rowContainer ? Array.from(rowContainer.querySelectorAll('input')) : [];
-    const amountInp = inputs.find(inp => inp !== nameInp) || null;
+    if (activeKey) {
+      const nameInp = document.getElementById(`debt-exp-name-${activeKey}`);
+      const rowContainer = nameInp?.closest('li') || nameInp?.parentElement?.parentElement;
+      const inputs = rowContainer ? Array.from(rowContainer.querySelectorAll('input')) : [];
+      const amountInp = inputs.find(inp => inp !== nameInp) || null;
 
-    const shId = meta?.shId || '';
-    const expId = meta?.expId || '';
+      let shId = meta?.shId || '';
+      let expId = meta?.expId || '';
+      if (!shId && activeKey.includes('_exp_')) {
+        const splitAt = activeKey.indexOf('_exp_');
+        shId = activeKey.slice(0, splitAt);
+        expId = activeKey.slice(splitAt + 1);
+      } else if (!shId) {
+        const lastIdx = activeKey.lastIndexOf('_');
+        if (lastIdx > 0) shId = activeKey.slice(0, lastIdx);
+      }
 
-    if (shId) {
-      const rec = ensureOwnerFinRecord(shId);
-      if (rec && Array.isArray(rec.otherExpenses)) {
-        const target = expId
-          ? rec.otherExpenses.find(x => x && x.id === expId)
-          : rec.otherExpenses[rec.otherExpenses.length - 1];
-        if (target) {
-          if (nameInp) target.name = String(nameInp.value || '').trim();
-          if (amountInp) target.amount = parseFlexibleMoneyInput(amountInp.value);
+      if (shId) {
+        const rec = ensureOwnerFinRecord(shId);
+        if (rec && Array.isArray(rec.otherExpenses)) {
+          const target = expId
+            ? rec.otherExpenses.find(x => x && x.id === expId)
+            : rec.otherExpenses[rec.otherExpenses.length - 1];
+          if (target) {
+            if (nameInp) target.name = String(nameInp.value || '').trim();
+            if (amountInp) target.amount = parseFlexibleMoneyInput(amountInp.value);
+          }
         }
       }
     }
-  }
 
-  state.ownerEditingExpenseKey = null;
-  state._ownerEditingExpenseMeta = null;
-  saveOwnerFinanceState(true);
-  renderApp();
-  showToast('✅ Đã lưu khoản chi!');
-},
+    state.ownerEditingExpenseKey = null;
+    state._ownerEditingExpenseMeta = null;
+    renderApp();
+    try {
+      await saveOwnerFinanceState(true);
+      showToast('✅ Đã lưu khoản chi!');
+    } catch (err) {
+      console.error('SAVE_OWNER_EXP_ERR:', err);
+      showToast('❌ Lỗi lưu khoản chi: ' + (err?.message || err), 'error');
+    }
+  },
   addOwnerExpense(shId) {
     const rec = ensureOwnerFinRecord(shId);
     if (!rec) return;
@@ -2014,13 +2032,26 @@ finishEditOwnerExpense() {
     saveOwnerFinanceState(true);
     renderApp();
   },
-  saveShowFinanceNow() {
+  async saveShowFinanceNow() {
+    if (state.ownerEditingExpenseKey) {
+      await this.finishEditOwnerExpense();
+    }
+    if (state.ctpEditingExtraKey && window.ctpActions?.finishEditExtra) {
+      await window.ctpActions.finishEditExtra();
+    }
     state.ownerEditingExpenseKey = null;
-    saveCtpState(true);
-    saveOwnerFinanceState(true);
+    state._ownerEditingExpenseMeta = null;
+    state.ctpEditingExtraKey = null;
+    state._ctpEditingExtraMeta = null;
     state.ownerExpandedShowId = null;
     renderApp();
-    showToast('💾 Đã lưu & đồng bộ thông tin Công nợ + CTP!');
+    try {
+      await Promise.all([saveCtpState(true), saveOwnerFinanceState(true)]);
+      showToast('💾 Đã lưu & đồng bộ thông tin Công nợ + CTP!');
+    } catch (err) {
+      console.error('SAVE_SHOW_FIN_ERR:', err);
+      showToast('❌ Lỗi đồng bộ Cloud: ' + (err?.message || err), 'error');
+    }
   },
   openClientDebtBill() {
     const uid = state.currentUserId;
