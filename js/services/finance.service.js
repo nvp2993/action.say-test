@@ -39,28 +39,50 @@ export function attachFinanceListeners(memberId) {
 }
 
 export function saveCtpState(immediate = false) {
-  localStorage.setItem('as_ctp_items_2026', JSON.stringify(state.ctpItems));
-  localStorage.setItem('as_ctp_custom_shows_2026', JSON.stringify(state.ctpCustomShows));
-  if (!state.currentUserId) return;
+  try {
+    localStorage.setItem('as_ctp_items_2026', JSON.stringify(state.ctpItems));
+    localStorage.setItem('as_ctp_custom_shows_2026', JSON.stringify(state.ctpCustomShows));
+  } catch (e) {
+    console.warn('LOCALSTORAGE_CTP_WARN:', e);
+  }
+  if (!state.currentUserId) return Promise.resolve();
 
   clearTimeout(ctpTimer);
   const push = async () => {
-    const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', state.currentUserId);
-    await setDoc(ref, { items: state.ctpItems, customShows: state.ctpCustomShows, updatedAt: Date.now() }, { merge: true });
+    try {
+      const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'user_ctp_data', state.currentUserId);
+      await setDoc(ref, { items: state.ctpItems, customShows: state.ctpCustomShows, updatedAt: Date.now() }, { merge: true });
+    } catch (err) {
+      console.error('SAVE_CTP_CLOUD_ERR:', err);
+      throw err;
+    }
   };
-  if (immediate) push(); else ctpTimer = setTimeout(push, 500);
+  if (immediate) return push();
+  ctpTimer = setTimeout(() => { push().catch(() => {}); }, 500);
+  return Promise.resolve();
 }
 
 export function saveOwnerFinanceState(immediate = false) {
-  localStorage.setItem('as_owner_finance_2026', JSON.stringify(state.ownerFinanceMap));
-  if (!state.currentUserId) return;
+  try {
+    localStorage.setItem('as_owner_finance_2026', JSON.stringify(state.ownerFinanceMap));
+  } catch (e) {
+    console.warn('LOCALSTORAGE_OWNER_WARN:', e);
+  }
+  if (!state.currentUserId) return Promise.resolve();
 
   clearTimeout(ownerTimer);
   const push = async () => {
-    const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'owner_finance_v2', state.currentUserId);
-    await setDoc(ref, { map: state.ownerFinanceMap, updatedAt: Date.now() }, { merge: true });
+    try {
+      const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'owner_finance_v2', state.currentUserId);
+      await setDoc(ref, { map: state.ownerFinanceMap, updatedAt: Date.now() }, { merge: true });
+    } catch (err) {
+      console.error('SAVE_OWNER_CLOUD_ERR:', err);
+      throw err;
+    }
   };
-  if (immediate) push(); else ownerTimer = setTimeout(push, 500);
+  if (immediate) return push();
+  ownerTimer = setTimeout(() => { push().catch(() => {}); }, 500);
+  return Promise.resolve();
 }
 
 export function getDefaultRateForTask(taskKey, sh) {
@@ -265,7 +287,7 @@ export async function saveQuickShowExpensesBatch({ showId, entries = [], deleted
   });
 
   if (ctpChanged) {
-    saveCtpState(true);
+    await saveCtpState(true);
     const ctpPayload = {
       items: {
         [showId]: {
@@ -287,7 +309,7 @@ export async function saveQuickShowExpensesBatch({ showId, entries = [], deleted
   }
 
   if (ownerChanged) {
-    saveOwnerFinanceState(true);
+    await saveOwnerFinanceState(true);
     if (showOwnerId && showOwnerId !== state.currentUserId) {
       const ownerDocRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'owner_finance_v2', showOwnerId);
       await setDoc(
