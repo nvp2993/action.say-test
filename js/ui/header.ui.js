@@ -170,14 +170,14 @@ export function renderHeaderHtml(totalAlerts = 0) {
           ` : ''}
 
           <button
-            type="button"
-            onclick="appActions.openQuickExpenseModal ? appActions.openQuickExpenseModal() : (window.quickExpenseActions?.openModal?.())"
-            title="NOTE PS"
-            class="h-7 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-amber-400/40 text-amber-300 text-[9.5px] font-black tracking-tight inline-flex items-center gap-1 shrink-0 transition"
-          >
-            <span>NOTE PS</span>
-            ${quickNoteCount > 0 ? `<span class="px-1 py-[1px] rounded bg-amber-400 text-slate-950 font-mono text-[8.5px] leading-none">${quickNoteCount}</span>` : ''}
-          </button>
+  type="button"
+  onclick="appActions.openQuickExpenseModal()"
+  title="Note nhanh chi phí phát sinh"
+  class="px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 active:scale-95 border border-amber-300/90 shadow-2xs flex flex-col items-center justify-center leading-none transition shrink-0 cursor-pointer"
+>
+  <span class="text-[10px] font-black text-amber-950 tracking-tight">Note</span>
+  <span class="text-[8px] font-bold text-amber-700 mt-0.5">phát sinh</span>
+</button>
 
           <button type="button" id="as-header-bell-btn" onclick="holdBellActions.openBellDrawer()" class="relative ${alertCount > 0 ? 'has-alert' : ''}" title="Thông báo & Giữ lịch">
             <i class="fa-solid fa-bell text-xs"></i>
