@@ -91,53 +91,45 @@ export function renderCrewBoardTabHtml() {
 
   return `
     <div class="flex-1 flex flex-col min-h-0 bg-[#f1f5f9] text-xs">
-      <!-- Top Bar gọn + tiêu đề cũ -->
-      <div class="bg-[#f8fafc] px-3 py-2 border-b border-slate-200/90 shrink-0 flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="leading-none shrink-0">
-            <div class="text-[8.5px] font-extrabold tracking-wider text-slate-400 uppercase">ACTION × SAY • CREW BOARD</div>
-            <h2 class="font-black text-xs text-slate-900 uppercase tracking-tight mt-0.5">NHÂN SỰ RẢNH / BẬN</h2>
-          </div>
-
-          <div class="bg-white rounded-xl border border-slate-200/90 px-2.5 py-1 flex items-center gap-2">
-            <div class="flex items-center gap-1.5">
-              <span class="text-[9px] font-black text-slate-400 uppercase">Từ</span>
-              <span class="font-mono font-black text-[11px] text-slate-900 tabular-nums">${escapeHtml(startDmy)}</span>
-              <label class="relative w-5 h-5 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0" title="Chọn từ ngày">
-                <span class="font-mono font-black text-[9px] text-slate-700 tabular-nums pointer-events-none">${escapeHtml(startDayNum)}</span>
-                <input
-                  type="date"
-                  aria-label="Từ ngày"
-                  value="${escapeHtml(state.checkStart)}"
-                  onchange="appActions.setCheckDate('checkStart', this.value)"
-                  class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                />
-              </label>
-            </div>
-            <span class="text-slate-300 font-black">→</span>
-            <div class="flex items-center gap-1.5">
-              <span class="text-[9px] font-black text-slate-400 uppercase">Đến</span>
-              <span class="font-mono font-black text-[11px] text-slate-900 tabular-nums">${escapeHtml(endDmy)}</span>
-              <label class="relative w-5 h-5 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0" title="Chọn đến ngày">
-                <span class="font-mono font-black text-[9px] text-slate-700 tabular-nums pointer-events-none">${escapeHtml(endDayNum)}</span>
-                <input
-                  type="date"
-                  aria-label="Đến ngày"
-                  min="${escapeHtml(state.checkStart)}"
-                  value="${escapeHtml(state.checkEnd)}"
-                  onchange="appActions.setCheckDate('checkEnd', this.value)"
-                  class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                />
-              </label>
-            </div>
-          </div>
+      <!-- Top Bar gọn -->
+      <div class="bg-[#f8fafc] px-3 py-2 border-b border-slate-200/90 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div class="leading-none shrink-0">
+          <div class="text-[8.5px] font-extrabold tracking-wider text-slate-400 uppercase">ACTION × SAY • CREW BOARD</div>
+          <h2 class="font-black text-xs text-slate-900 uppercase tracking-tight mt-0.5">NHÂN SỰ RẢNH / BẬN</h2>
         </div>
 
-        <button
-          type="button"
-          onclick="appActions.openAddModal('${escapeHtml(state.checkStart)}')"
-          class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition shrink-0"
-        >⚡ Nổ Show Ngày Này</button>
+        <div class="bg-white rounded-xl border border-slate-200/90 px-2.5 py-1 flex items-center justify-between gap-2 w-full sm:w-auto">
+          <div class="min-w-0 flex items-center gap-1.5">
+            <span class="text-[9px] font-black text-slate-400 uppercase shrink-0">Từ</span>
+            <span class="font-mono font-black text-[11px] text-slate-900 tabular-nums truncate">${escapeHtml(startDmy)}</span>
+            <label class="relative w-5 h-5 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0" title="Chọn từ ngày">
+              <span class="font-mono font-black text-[9px] text-slate-700 tabular-nums pointer-events-none">${escapeHtml(startDayNum)}</span>
+              <input
+                type="date"
+                aria-label="Từ ngày"
+                value="${escapeHtml(state.checkStart)}"
+                onchange="appActions.setCheckDate('checkStart', this.value)"
+                class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+            </label>
+          </div>
+          <span class="text-slate-300 font-black shrink-0">→</span>
+          <div class="min-w-0 flex items-center gap-1.5">
+            <span class="text-[9px] font-black text-slate-400 uppercase shrink-0">Đến</span>
+            <span class="font-mono font-black text-[11px] text-slate-900 tabular-nums truncate">${escapeHtml(endDmy)}</span>
+            <label class="relative w-5 h-5 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0" title="Chọn đến ngày">
+              <span class="font-mono font-black text-[9px] text-slate-700 tabular-nums pointer-events-none">${escapeHtml(endDayNum)}</span>
+              <input
+                type="date"
+                aria-label="Đến ngày"
+                min="${escapeHtml(state.checkStart)}"
+                value="${escapeHtml(state.checkEnd)}"
+                onchange="appActions.setCheckDate('checkEnd', this.value)"
+                class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+            </label>
+          </div>
+        </div>
       </div>
 
       <!-- Layout 2 cột đồng bộ CTP / Công nợ -->
