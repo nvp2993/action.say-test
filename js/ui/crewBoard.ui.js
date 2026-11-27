@@ -2,6 +2,15 @@ import { state } from '../state/store.js';
 import { escapeHtml, getMember } from '../utils/helpers.js';
 import { getBusyMembersMap } from '../services/show.service.js';
 
+function formatIsoToDmy(isoStr) {
+  const m = String(isoStr || '').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return '--/--/----';
+  const yyyy = m[1];
+  const mm = String(m[2]).padStart(2, '0');
+  const dd = String(m[3]).padStart(2, '0');
+  return `${dd}/${mm}/${yyyy}`;
+}
+
 export function renderCrewBoardTabHtml() {
   const busyMap = getBusyMembersMap(state.checkStart, state.checkEnd);
   const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
@@ -19,6 +28,9 @@ export function renderCrewBoardTabHtml() {
   const busyList = sortedMembers.filter(m => !!busyMap[m.id]);
   const totalCount = sortedMembers.length;
   const freePct = totalCount > 0 ? Math.round((freeList.length / totalCount) * 100) : 0;
+
+  const startDmy = formatIsoToDmy(state.checkStart);
+  const endDmy = formatIsoToDmy(state.checkEnd);
 
   const renderAvatarBox = (m) => {
     const prof = state.memberProfiles?.[m.id] || {};
@@ -53,25 +65,35 @@ export function renderCrewBoardTabHtml() {
           >⚡ Nổ Show Ngày Này</button>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-200/90 px-3 py-1.5 flex items-center justify-between gap-2 max-w-xl">
-          <div class="min-w-0 flex-1 flex items-center gap-2">
-            <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider shrink-0">Từ</span>
+        <div class="bg-white rounded-2xl border border-slate-200/90 px-3 py-1.5 flex items-center justify-between gap-2 max-w-2xl">
+          <div class="min-w-0 flex-1 flex items-center justify-between gap-1.5">
+            <div class="min-w-0">
+              <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Từ ngày</div>
+              <div class="font-mono font-black text-[11.5px] text-slate-900 tabular-nums">${escapeHtml(startDmy)}</div>
+            </div>
             <input
               type="date"
+              aria-label="Từ ngày"
               value="${escapeHtml(state.checkStart)}"
               onchange="appActions.setCheckDate('checkStart', this.value)"
-              class="w-full min-w-0 bg-transparent text-xs font-mono font-black text-slate-900 focus:outline-none"
+              class="w-7 h-7 bg-slate-50 border border-slate-200/80 rounded-lg text-[10px] font-mono text-slate-700 shrink-0 focus:outline-none"
             />
           </div>
+
           <span class="text-slate-300 font-black shrink-0">→</span>
-          <div class="min-w-0 flex-1 flex items-center justify-end gap-2">
-            <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider shrink-0">Đến</span>
+
+          <div class="min-w-0 flex-1 flex items-center justify-between gap-1.5">
+            <div class="min-w-0">
+              <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Đến ngày</div>
+              <div class="font-mono font-black text-[11.5px] text-slate-900 tabular-nums">${escapeHtml(endDmy)}</div>
+            </div>
             <input
               type="date"
+              aria-label="Đến ngày"
               min="${escapeHtml(state.checkStart)}"
               value="${escapeHtml(state.checkEnd)}"
               onchange="appActions.setCheckDate('checkEnd', this.value)"
-              class="w-full min-w-0 bg-transparent text-xs font-mono font-black text-slate-900 text-right focus:outline-none"
+              class="w-7 h-7 bg-slate-50 border border-slate-200/80 rounded-lg text-[10px] font-mono text-slate-700 shrink-0 focus:outline-none"
             />
           </div>
         </div>
