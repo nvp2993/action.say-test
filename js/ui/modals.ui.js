@@ -1014,8 +1014,8 @@ export function renderQuickExpenseModalHtml() {
 
   return `
     <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3">
-      <div onclick="event.stopPropagation()" class="bg-white w-full max-w-md rounded-3xl p-4 space-y-3 text-xs shadow-2xl border border-slate-200/80 max-h-[84dvh] flex flex-col">
-        <!-- Header gọn -->
+      <div onclick="event.stopPropagation()" class="bg-white w-full max-w-md rounded-3xl p-4 space-y-3 text-xs shadow-2xl border border-slate-200/80 max-h-[85dvh] flex flex-col">
+        <!-- Header -->
         <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 shrink-0">
           <div class="flex items-center gap-2 min-w-0">
             <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-black shrink-0">💸</span>
@@ -1029,48 +1029,30 @@ export function renderQuickExpenseModalHtml() {
 
         <!-- Body -->
         <div class="flex-1 min-h-0 overflow-y-auto custom-scroll space-y-2.5 pr-0.5">
-          <!-- 1. Chọn Show gọn 1 hàng cuộn ngang -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between px-0.5">
-              <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Show hôm nay</span>
+          <!-- 1. Chọn Show dạng Dropdown -->
+          <div class="p-2.5 rounded-2xl bg-[#f8fafc] border border-slate-200/80 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[9.5px] font-black text-slate-500 uppercase tracking-wider">Show đang diễn ra</span>
               <span class="text-[9.5px] font-mono font-bold text-slate-400">${activeShows.length} show</span>
             </div>
 
             ${activeShows.length === 0 ? `
-              <div class="p-2.5 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center text-[11px] text-slate-500">
+              <div class="p-2.5 rounded-xl bg-white border border-dashed border-slate-200 text-center text-[11px] text-slate-500">
                 Hôm nay không có show nào đang chạy.
               </div>
             ` : `
-              <div class="flex items-center gap-1.5 overflow-x-auto custom-scroll pb-1">
+              <select
+                onchange="appActions.selectQuickExpenseShow(this.value)"
+                class="w-full h-9 px-3 rounded-xl bg-white border border-slate-200/90 focus:border-slate-900 text-[11.5px] font-extrabold text-slate-900 focus:outline-none"
+              >
                 ${activeShows.map(sh => {
-                  const isSel = sh.id === activeShowId;
                   const partner = getVisiblePartnerText(sh);
                   const dateShort = formatDayMonth(sh.startDate);
-                  return `
-                    <button
-                      type="button"
-                      onclick="appActions.selectQuickExpenseShow('${sh.id}')"
-                      class="px-2.5 py-1.5 rounded-xl border text-left flex items-center gap-1.5 shrink-0 max-w-[210px] transition ${
-                        isSel
-                          ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
-                          : 'bg-[#f8fafc] hover:bg-slate-100 border-slate-200/90 text-slate-800'
-                      }"
-                    >
-                      <span class="px-1.5 py-0.5 rounded-md font-mono font-bold text-[9.5px] shrink-0 ${
-                        isSel ? 'bg-amber-400/20 text-amber-300' : 'bg-white text-indigo-600 border border-slate-200/80'
-                      }">${escapeHtml(dateShort)}</span>
-                      <span class="font-extrabold text-[11px] truncate">${escapeHtml(sh.location)}</span>
-                      ${partner ? `<span class="text-[9.5px] truncate ${isSel ? 'text-slate-300' : 'text-slate-500'}">• ${escapeHtml(partner)}</span>` : ''}
-                    </button>
-                  `;
+                  const ownerName = getMember(sh.ownerId)?.name || '';
+                  const label = `[${dateShort}] ${sh.location}${partner ? ` (${partner})` : ''}${ownerName ? ` • Chủ: ${ownerName}` : ''}`;
+                  return `<option value="${escapeHtml(sh.id)}" ${sh.id === activeShowId ? 'selected' : ''}>${escapeHtml(label)}</option>`;
                 }).join('')}
-              </div>
-              ${selectedShow ? `
-                <div class="px-2 py-1 rounded-xl bg-amber-50/70 border border-amber-200/70 flex items-center justify-between gap-2 text-[10px] text-slate-600">
-                  <span class="truncate">Đang chọn: <b class="text-slate-900">${escapeHtml(selectedShow.location)}</b>${getVisiblePartnerText(selectedShow) ? ` (${escapeHtml(getVisiblePartnerText(selectedShow))})` : ''}</span>
-                  <span class="text-slate-400 shrink-0">Chủ: <b class="text-slate-700">${escapeHtml(getMember(selectedShow.ownerId)?.name || '')}</b></span>
-                </div>
-              ` : ''}
+              </select>
             `}
           </div>
 
