@@ -986,152 +986,179 @@ function getContrastTextColor(hex) {
 }
 
 export function renderQuickExpenseModalHtml() {
-  if (!state.currentUserId || state.isBackendPortal) return '';
   const q = state.quickExpenseModal;
   if (!q) return '';
 
-  const activeShows = getActiveShowsInPeriodForUser();
-  const activeShow = activeShows.find(s => s.id === q.showId) || activeShows[0] || null;
-  const participantIds = activeShow
-    ? Array.from(new Set([...(activeShow.memberIds || []), activeShow.ownerId].filter(Boolean)))
-    : [];
-  const selectedPayerId = participantIds.includes(q.payerId) ? q.payerId : (participantIds[0] || state.currentUserId);
+  const d = new Date();
+  const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const uid = state.currentUserId;
+
+  const activeShows = (state.shows || []).filter(sh =>
+    sh && !sh.isCancelled && !sh.isHold && sh.startDate &&
+    sh.startDate <= todayIso && (sh.endDate || sh.startDate) >= todayIso &&
+    (sh.ownerId === uid || (Array.isArray(sh.memberIds) && sh.memberIds.includes(uid)))
+  );
+
+  const selectedShow = activeShows.find(s => s.id === q.showId) || activeShows[0] || null;
+  const activeShowId = selectedShow?.id || '';
+
+  const payerCandidates = selectedShow
+    ? Array.from(new Set([selectedShow.ownerId, ...(selectedShow.memberIds || [])].filter(Boolean)))
+    : (uid ? [uid] : []);
+
   const drafts = Array.isArray(q.drafts) && q.drafts.length ? q.drafts : [{ id: '', title: '', amountRaw: '' }];
 
-  const ctpExtras = activeShow && Array.isArray(state.ctpItems?.[activeShow.id]?.extras)
-    ? state.ctpItems[activeShow.id].extras.filter(Boolean).map(x => ({ ...x, _bucket: 'ctp' }))
-    : [];
-  const ownerExtras = activeShow && Array.isArray(state.ownerFinanceMap?.[activeShow.id]?.otherExpenses)
-    ? state.ownerFinanceMap[activeShow.id].otherExpenses.filter(Boolean).map(x => ({ ...x, _bucket: 'owner' }))
-    : [];
-  const showExtras = [...ctpExtras, ...ownerExtras];
+  // Lấy các khoản đã lưu trong ngày của show đang chọn để dễ xem/sửa nhanh
+  const savedCtp = (state.ctpItems?.[activeShowId]?.extras || []).filter(x => x && Number(x.amount) > 0);
+  const savedOwner = (state.ownerFinanceMap?.[activeShowId]?.otherExpenses || []).filter(x => x && Number(x.amount) > 0);
+  const savedAll = [...savedOwner, ...savedCtp];
 
   return `
-    <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-[80] bg-slate-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4">
-      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-3 text-xs shadow-2xl max-h-[90dvh] overflow-y-auto custom-scroll">
-        <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-          <h3 class="font-black text-xs sm:text-sm text-slate-900 uppercase tracking-tight truncate">NOTE NHANH CHI PHÍ SHOW ĐANG ĐI</h3>
-          <button type="button" onclick="appActions.closeQuickExpenseModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 flex items-center justify-center shrink-0">✕</button>
+    <div onclick="appActions.closeQuickExpenseModal()" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div onclick="event.stopPropagation()" class="ios-sheet bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 space-y-4 text-xs shadow-2xl max-h-[90dvh] flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100 shrink-0">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-sm font-black shrink-0">💸</div>
+            <div class="min-w-0">
+              <h3 class="font-black text-sm text-slate-900 tracking-tight truncate">Note nhanh chi phí show</h3>
+              <p class="text-[10.5px] text-slate-500 truncate">Tự động đồng bộ vào CTP hoặc Công nợ show</p>
+            </div>
+          </div>
+          <button type="button" onclick="appActions.closeQuickExpenseModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center shrink-0 transition">✕</button>
         </div>
 
-        ${activeShows.length === 0 ? `
-          <div class="py-6 px-3 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 font-semibold">
-            Hiện không có show nào đang diễn ra mà bạn tham gia.
-          </div>
-        ` : `
+        <!-- Body -->
+        <div class="flex-1 min-h-0 overflow-y-auto custom-scroll space-y-3.5 pr-0.5">
+          <!-- 1. Chọn Show -->
           <div class="space-y-1.5">
-            <div class="flex flex-wrap gap-1.5">
-              ${activeShows.map(sh => {
-                const picked = activeShow && sh.id === activeShow.id;
-                const partner = getVisiblePartnerText(sh);
-                const dateBadge = formatDayMonth(sh.startDate);
-                return `
-                  <button
-                    type="button"
-                    onclick="appActions.selectQuickExpenseShow('${escapeHtml(sh.id)}')"
-                    class="px-3 py-1.5 rounded-xl text-[11px] font-extrabold border transition text-left ${
-                      picked
-                        ? 'bg-slate-900 text-amber-300 border-slate-900'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }"
-                  >
-                    <span class="font-mono text-[10px] opacity-80">${escapeHtml(dateBadge)}</span> • ${escapeHtml(sh.location || 'Show')}${partner ? ` <span class="font-normal opacity-85">(${escapeHtml(partner)})</span>` : ''}
-                  </button>
-                `;
-              }).join('')}
-            </div>
-          </div>
-
-          <div class="space-y-2">
-            ${drafts.map((row, idx) => `
-              <div class="grid grid-cols-[1.35fr_1fr_auto] gap-1.5 items-center">
-                <input
-                  id="quick-exp-title-${idx}"
-                  type="text"
-                  value="${escapeHtml(row.title || '')}"
-                  oninput="appActions.updateQuickExpenseDraft(${idx}, 'title', this.value)"
-                  placeholder="Nội dung (VD: Cà phê)"
-                  class="w-full min-w-0 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 focus:outline-none focus:border-slate-900"
-                />
-                <input
-                  id="quick-exp-amount-${idx}"
-                  type="text"
-                  inputmode="text"
-                  value="${escapeHtml(row.amountRaw || '')}"
-                  oninput="appActions.updateQuickExpenseDraft(${idx}, 'amountRaw', this.value)"
-                  placeholder="Tiền (100k / 100000)"
-                  class="w-full min-w-0 px-2.5 py-2 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-slate-900 focus:outline-none focus:border-slate-900"
-                />
-                ${drafts.length > 1 ? `
-                  <button
-                    type="button"
-                    onclick="appActions.removeQuickExpenseDraft(${idx})"
-                    class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold flex items-center justify-center shrink-0"
-                  >✕</button>
-                ` : `<span class="w-2"></span>`}
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">1. Show đang diễn ra (${activeShows.length})</span>
+            ${activeShows.length === 0 ? `
+              <div class="p-3 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center text-[11px] text-slate-500">
+                Hôm nay bạn không có show nào đang chạy.
               </div>
-            `).join('')}
-
-            <button
-              type="button"
-              onclick="appActions.addQuickExpenseDraft()"
-              class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[11px] inline-flex items-center gap-1 transition"
-            >+ Thêm chi phí</button>
-          </div>
-
-          <div class="space-y-1.5">
-            <div class="text-[10px] font-black text-slate-500 uppercase">Người trả</div>
-            <div class="flex flex-wrap gap-1.5">
-              ${participantIds.map(mid => {
-                const mem = getMember(mid);
-                const active = selectedPayerId === mid;
-                const bgHex = mem?.bg || '#0f172a';
-                const fgHex = getContrastTextColor(bgHex);
-                return `
-                  <button
-                    type="button"
-                    onclick="appActions.selectQuickExpensePayer('${escapeHtml(mid)}')"
-                    style="${active ? `background-color:${escapeHtml(bgHex)};border-color:${escapeHtml(bgHex)};color:${fgHex}` : `border-color:${escapeHtml(bgHex)}55`}"
-                    class="px-2.5 py-1 rounded-xl text-[11px] font-extrabold border transition active:scale-95 ${
-                      active
-                        ? 'shadow-xs ring-2 ring-slate-900/15'
-                        : 'bg-white text-slate-700 hover:bg-slate-50'
-                    }"
-                  >${escapeHtml(mem.name)}</button>
-                `;
-              }).join('')}
-            </div>
-          </div>
-
-          ${showExtras.length > 0 ? `
-            <div class="pt-2 border-t border-slate-100 space-y-1.5">
-              <div class="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase">
-                <span>Chi phí đã lưu trong show (${showExtras.length})</span>
-                <span class="font-mono text-emerald-700">${showExtras.reduce((s, x) => s + (Number(x.amount) || 0), 0).toLocaleString('vi-VN')}đ</span>
-              </div>
-              <div class="space-y-1.5 max-h-36 overflow-y-auto custom-scroll pr-0.5">
-                ${showExtras.map(ex => {
-                  const payerMem = ex.payerId ? getMember(ex.payerId) : null;
+            ` : `
+              <div class="grid grid-cols-1 gap-1.5">
+                ${activeShows.map(sh => {
+                  const isSel = sh.id === activeShowId;
+                  const partner = getVisiblePartnerText(sh);
+                  const dateShort = formatDayMonth(sh.startDate);
                   return `
-                    <div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                      <div class="min-w-0 flex-1">
-                        <div class="font-bold text-slate-900 truncate">• ${escapeHtml(ex.name || '')}</div>
-                        <div class="text-[10px] text-slate-500 font-semibold flex items-center flex-wrap gap-1">
-                          <span class="font-mono font-extrabold text-emerald-700">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
-                          ${payerMem ? `<span>• <b>${escapeHtml(payerMem.name)}</b></span>` : ''}
-                        </div>
+                    <button
+                      type="button"
+                      onclick="appActions.selectQuickExpenseShow('${sh.id}')"
+                      class="w-full px-3 py-2 rounded-2xl border text-left flex items-center justify-between gap-2 transition ${
+                        isSel
+                          ? 'bg-slate-900 border-slate-900 text-white shadow-xs'
+                          : 'bg-slate-50/80 hover:bg-slate-100 border-slate-200/90 text-slate-800'
+                      }"
+                    >
+                      <div class="min-w-0 flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded-lg font-mono font-bold text-[10px] shrink-0 ${isSel ? 'bg-amber-400/20 text-amber-300' : 'bg-white text-indigo-600 border border-slate-200/80'}">${escapeHtml(dateShort)}</span>
+                        <span class="font-extrabold text-[11.5px] truncate">${escapeHtml(sh.location)}${partner ? ` <span class="${isSel ? 'text-slate-300' : 'text-slate-500'} font-semibold">(${escapeHtml(partner)})</span>` : ''}</span>
                       </div>
-                      <div class="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onclick="appActions.editSavedQuickExpense('${escapeHtml(ex.id || '')}')"
-                          class="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700"
-                        >Sửa</button>
-                        <button
-                          type="button"
-                          onclick="appActions.deleteSavedQuickExpense('${escapeHtml(ex.id || '')}')"
-                          class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-[10px] font-bold text-rose-600"
-                        >Xóa</button>
+                      <span class="text-[10px] font-black shrink-0 ${isSel ? 'text-emerald-400' : 'text-slate-300'}">${isSel ? '●' : '○'}</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- 2. Danh sách khoản chi -->
+          <div class="p-3 rounded-2xl bg-[#f8fafc] border border-slate-200/90 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">2. Khoản chi phát sinh</span>
+              <button
+                type="button"
+                onclick="appActions.addQuickExpenseDraft()"
+                class="px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-800 font-extrabold text-[10px] shadow-2xs transition"
+              >+ Thêm dòng</button>
+            </div>
+
+            <div class="space-y-1.5">
+              ${drafts.map((row, idx) => `
+                <div class="flex items-center gap-1.5">
+                  <input
+                    id="quick-exp-title-${idx}"
+                    type="text"
+                    value="${escapeHtml(row.title || '')}"
+                    oninput="appActions.updateQuickExpenseDraft(${idx}, 'title', this.value)"
+                    placeholder="Nội dung (VD: Cà phê, gửi xe...)"
+                    class="flex-1 min-w-0 h-9 px-3 bg-white border border-slate-200/90 focus:border-slate-900 rounded-xl text-[11.5px] font-semibold text-slate-900 focus:outline-none"
+                  />
+                  <input
+                    id="quick-exp-amount-${idx}"
+                    type="text"
+                    inputmode="decimal"
+                    value="${escapeHtml(row.amountRaw || '')}"
+                    oninput="appActions.updateQuickExpenseDraft(${idx}, 'amountRaw', this.value)"
+                    placeholder="Số tiền (50k)"
+                    class="w-28 shrink-0 h-9 px-2.5 bg-white border border-slate-200/90 focus:border-slate-900 rounded-xl text-[11.5px] font-mono font-black text-emerald-700 text-right focus:outline-none"
+                  />
+                  ${drafts.length > 1 ? `
+                    <button
+                      type="button"
+                      onclick="appActions.removeQuickExpenseDraft(${idx})"
+                      title="Xóa dòng"
+                      class="w-7 h-9 text-slate-400 hover:text-rose-600 font-bold text-xs flex items-center justify-center shrink-0 transition"
+                    >✕</button>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- 3. Người trả -->
+          ${payerCandidates.length > 0 ? `
+            <div class="p-3 rounded-2xl bg-[#f8fafc] border border-slate-200/90 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">3. Ai ứng tiền trả?</span>
+                <span class="text-[10px] font-semibold text-slate-400">
+                  ${selectedShow && q.payerId === selectedShow.ownerId ? 'Vào Công nợ chủ show' : 'Vào bill CTP nhân sự'}
+                </span>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                ${payerCandidates.map(pid => {
+                  const m = getMember(pid);
+                  const active = q.payerId === pid;
+                  const isBoss = selectedShow && pid === selectedShow.ownerId;
+                  return `
+                    <button
+                      type="button"
+                      onclick="appActions.selectQuickExpensePayer('${pid}')"
+                      class="px-3 py-1.5 rounded-full text-[11px] font-extrabold border transition flex items-center gap-1 ${
+                        active
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                          : 'bg-white hover:bg-slate-100 border-slate-200/90 text-slate-700'
+                      }"
+                    >
+                      <span>${escapeHtml(m.name)}</span>
+                      ${isBoss ? `<span class="text-[9px] opacity-80">(Chủ)</span>` : ''}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Các khoản đã lưu trong show này (nếu có) -->
+          ${savedAll.length > 0 ? `
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Đã ghi trong show này (${savedAll.length})</span>
+              <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200/80 bg-white overflow-hidden">
+                ${savedAll.map(ex => {
+                  const pName = ex.payerId ? getMember(ex.payerId).name : '';
+                  return `
+                    <div class="px-3 py-2 flex items-center justify-between gap-2 text-[11px]">
+                      <div class="min-w-0 flex-1 flex items-center gap-1.5">
+                        <span class="font-bold text-slate-800 truncate">${escapeHtml(ex.name || 'Khoản chi')}</span>
+                        ${pName ? `<span class="text-[9.5px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold shrink-0">${escapeHtml(pName)}</span>` : ''}
+                      </div>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span class="font-mono font-black text-emerald-700">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
+                        <button type="button" onclick="appActions.editSavedQuickExpense('${escapeHtml(ex.id || '')}')" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700">Sửa</button>
+                        <button type="button" onclick="appActions.deleteSavedQuickExpense('${escapeHtml(ex.id || '')}')" class="w-5 h-5 rounded text-slate-400 hover:text-rose-600 font-bold text-[10px] flex items-center justify-center">✕</button>
                       </div>
                     </div>
                   `;
@@ -1139,13 +1166,18 @@ export function renderQuickExpenseModalHtml() {
               </div>
             </div>
           ` : ''}
+        </div>
 
+        <!-- Footer -->
+        <div class="pt-1 shrink-0">
           <button
             type="button"
             onclick="appActions.submitQuickExpense()"
-            class="w-full py-3 rounded-2xl bg-slate-950 hover:bg-slate-900 text-amber-400 font-black text-xs uppercase tracking-wide transition"
-          >💾 Lưu chi phí</button>
-        `}
+            class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-amber-300 font-black text-xs tracking-wide shadow-sm transition flex items-center justify-center gap-1.5"
+          >
+            <span>💾 LƯU CHI PHÍ</span>
+          </button>
+        </div>
       </div>
     </div>
   `;
