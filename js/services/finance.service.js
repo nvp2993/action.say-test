@@ -176,11 +176,14 @@ export function calculateOwnerShowMetrics(sh) {
     if (mid === sh.ownerId) return;
     crewCtpTotal += (Number(rec.crewCosts?.[mid]) || 0);
   });
-  const otherExpTotal = (rec.otherExpenses || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+  const ownerExpTotal = (rec.otherExpenses || []).reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+  const crewPaidExtras = getCrewExtrasForOwnerShow(sh.id, sh.ownerId);
+  const crewExtrasTotal = crewPaidExtras.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
+  const otherExpTotal = ownerExpTotal + crewExtrasTotal;
   const totalExpense = crewCtpTotal + otherExpTotal;
   const netProfit = clientPrice - totalExpense;
   const remainingClientDebt = rec.status === 'settled' ? 0 : Math.max(0, clientPrice - depositPaid);
-  return { rec, clientPrice, depositPaid, crewCtpTotal, otherExpTotal, totalExpense, netProfit, remainingClientDebt };
+  return { rec, clientPrice, depositPaid, crewCtpTotal, ownerExpTotal, crewExtrasTotal, otherExpTotal, totalExpense, netProfit, remainingClientDebt };
 }
 
 export function calculateCrewShowMetrics(sh) {
