@@ -2,7 +2,7 @@ import { state } from '../state/store.js';
 import { OWNER_STATUS_OPTIONS, CREW_CTP_STATUS_OPTIONS } from '../config/constants.js';
 import { escapeHtml, getShowDays, getMember, formatCompactMoneyPlain } from '../utils/helpers.js';
 import { getVisiblePartnerText } from '../services/show.service.js';
-import { calculateOwnerShowMetrics, calculateCrewShowMetrics, getDefaultRateForTask, getMemberExtrasForShow } from '../services/finance.service.js';
+import { calculateOwnerShowMetrics, calculateCrewShowMetrics, getDefaultRateForTask, getMemberExtrasForShow, getCrewExtrasForOwnerShow } from '../services/finance.service.js';
 import { renderUnifiedDateBarHtml } from './header.ui.js';
 
 function shouldCountShowMoney(sh) {
@@ -549,7 +549,12 @@ export function renderDebtTabHtml() {
                     const m = calculateOwnerShowMetrics(sh);
                     const crewMembers = (sh.memberIds || []).filter(mid => mid !== sh.ownerId);
                     const missingClient = Math.max(0, m.clientPrice - m.depositPaid);
-                    const allExpList = Array.isArray(m.allShowExp) ? m.allShowExp : (m.rec.otherExpenses || []);
+                    const ownerExpList = Array.isArray(m.rec.otherExpenses) ? m.rec.otherExpenses : [];
+                    const crewPaidExtras = getCrewExtrasForOwnerShow(sh.id, sh.ownerId);
+                    const allExpList = [
+                      ...ownerExpList.map(ex => ({ ...ex, _source: 'owner' })),
+                      ...crewPaidExtras.map(ex => ({ ...ex, _source: 'crew_ctp' }))
+                    ];
                     const otherExpSum = allExpList.reduce((s, ex) => s + (Number(ex.amount) || 0), 0);
 
                     return `
@@ -718,9 +723,10 @@ export function renderDebtTabHtml() {
                                 ` : `
                                   <ul class="divide-y divide-slate-100">
                                     ${allExpList.map((ex, exIdx) => {
+                                      const isCrewCtpItem = ex._source === 'crew_ctp';
                                       const payerName = ex.payerId && ex.payerId !== sh.ownerId ? getMember(ex.payerId).name : '';
                                       const rowKey = `${sh.id}_${ex.id || exIdx}`;
-                                      const isEditingRow = state.ownerEditingExpenseKey === rowKey;
+                                      const isEditingRow = !isCrewCtpItem && state.ownerEditingExpenseKey === rowKey;
                                       if (isEditingRow) {
                                         return `
                                           <li class="py-1 flex items-center gap-1.5">
@@ -769,19 +775,23 @@ export function renderDebtTabHtml() {
                                             <span class="text-slate-300 shrink-0">—</span>
                                             <span class="font-mono font-extrabold tabular-nums text-rose-600 shrink-0">${Number(ex.amount || 0).toLocaleString('vi-VN')}đ</span>
                                           </div>
-                                          <div class="flex items-center gap-0.5 shrink-0">
-                                            <button
-                                              type="button"
-                                              onclick="ownerActions.startEditOwnerExpense('${escapeHtml(rowKey)}', '${sh.id}', '${escapeHtml(ex.id || '')}')"
-                                              class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-                                            >Sửa</button>
-                                            <button
-                                              type="button"
-                                              onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
-                                              title="Xóa khoản chi"
-                                              class="w-5 h-5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 font-bold text-[10px] flex items-center justify-center transition"
-                                            >✕</button>
-                                          </div>
+                                          ${isCrewCtpItem ? `
+                                            <span class="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[9.5px] font-bold shrink-0">Ứng CTP</span>
+                                          ` : `
+                                            <div class="flex items-center gap-0.5 shrink-0">
+                                              <button
+                                                type="button"
+                                                onclick="ownerActions.startEditOwnerExpense('${escapeHtml(rowKey)}', '${sh.id}', '${escapeHtml(ex.id || '')}')"
+                                                class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+                                              >Sửa</button>
+                                              <button
+                                                type="button"
+                                                onclick="ownerActions.removeOwnerExpense('${sh.id}', ${exIdx}, '${escapeHtml(ex.id || '')}')"
+                                                title="Xóa khoản chi"
+                                                class="w-5 h-5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 font-bold text-[10px] flex items-center justify-center transition"
+                                              >✕</button>
+                                            </div>
+                                          `}
                                         </li>
                                       `;
                                     }).join('')}
