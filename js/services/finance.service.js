@@ -111,6 +111,14 @@ export function getMemberExtrasForShow(showId, memberId) {
   });
 }
 
+export function getCrewExtrasForOwnerShow(showId, ownerId) {
+  const extras = Array.isArray(state.ctpItems?.[showId]?.extras) ? state.ctpItems[showId].extras : [];
+  return extras.filter(ex => {
+    if (!ex || !(Number(ex.amount) > 0)) return false;
+    return ex.payerId && ex.payerId !== ownerId;
+  });
+}
+
 export function getCombinedCtpShows() {
   const uid = state.currentUserId;
   const regular = (state.shows || []).filter(sh => {
