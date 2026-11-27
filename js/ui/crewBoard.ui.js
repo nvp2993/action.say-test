@@ -11,6 +11,21 @@ function formatIsoToDmy(isoStr) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+function getDayNumberFromIso(isoStr) {
+  const m = String(isoStr || '').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return '--';
+  return String(Number(m[3]));
+}
+
+function normalizeLocationKey(rawLabel) {
+  const cleaned = String(rawLabel || '')
+    .replace(/^⏳\s*GIỮ LỊCH:\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return 'Có lịch';
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
 export function renderCrewBoardTabHtml() {
   const busyMap = getBusyMembersMap(state.checkStart, state.checkEnd);
   const savedAvatars = JSON.parse(localStorage.getItem('as_member_avatars_2026') || '{}');
@@ -34,11 +49,12 @@ export function renderCrewBoardTabHtml() {
     const rawLabels = Array.isArray(busyMap[m.id]) ? busyMap[m.id] : [];
     const labels = rawLabels.length ? rawLabels : ['Có lịch'];
     labels.forEach(lbl => {
-      const locName = String(lbl || 'Có lịch').trim() || 'Có lịch';
-      if (!locationGroupMap.has(locName)) {
-        locationGroupMap.set(locName, { location: locName, members: [] });
+      const locName = normalizeLocationKey(lbl);
+      const groupKey = locName.toLowerCase();
+      if (!locationGroupMap.has(groupKey)) {
+        locationGroupMap.set(groupKey, { location: locName, members: [] });
       }
-      const entry = locationGroupMap.get(locName);
+      const entry = locationGroupMap.get(groupKey);
       if (!entry.members.some(x => x.id === m.id)) {
         entry.members.push(m);
       }
@@ -50,6 +66,8 @@ export function renderCrewBoardTabHtml() {
 
   const startDmy = formatIsoToDmy(state.checkStart);
   const endDmy = formatIsoToDmy(state.checkEnd);
+  const startDayNum = getDayNumberFromIso(state.checkStart);
+  const endDayNum = getDayNumberFromIso(state.checkEnd);
 
   const renderAvatarBox = (m) => {
     const prof = state.memberProfiles?.[m.id] || {};
@@ -73,61 +91,65 @@ export function renderCrewBoardTabHtml() {
 
   return `
     <div class="flex-1 flex flex-col min-h-0 bg-[#f1f5f9] text-xs">
-      <!-- Top Bar đồng bộ CTP / Công nợ -->
-      <div class="bg-[#f8fafc] px-3 py-2.5 border-b border-slate-200/90 shrink-0 space-y-2">
-        <div class="flex items-center justify-between gap-2">
-          <span class="font-black text-xs text-slate-900 uppercase tracking-tight truncate">👥 NHÂN SỰ RẢNH / BẬN (${totalCount})</span>
-          <button
-            type="button"
-            onclick="appActions.openAddModal('${escapeHtml(state.checkStart)}')"
-            class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition shrink-0"
-          >⚡ Nổ Show Ngày Này</button>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200/90 px-3 py-1.5 flex items-center justify-between gap-2 max-w-2xl">
-          <div class="min-w-0 flex-1 flex items-center justify-between gap-1.5">
-            <div class="min-w-0">
-              <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Từ ngày</div>
-              <div class="font-mono font-black text-[11.5px] text-slate-900 tabular-nums">${escapeHtml(startDmy)}</div>
-            </div>
-            <input
-              type="date"
-              aria-label="Từ ngày"
-              value="${escapeHtml(state.checkStart)}"
-              onchange="appActions.setCheckDate('checkStart', this.value)"
-              class="w-7 h-7 bg-slate-50 border border-slate-200/80 rounded-lg text-[10px] font-mono text-slate-700 shrink-0 focus:outline-none"
-            />
+      <!-- Top Bar gọn + tiêu đề cũ -->
+      <div class="bg-[#f8fafc] px-3 py-2 border-b border-slate-200/90 shrink-0 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="leading-none shrink-0">
+            <div class="text-[8.5px] font-extrabold tracking-wider text-slate-400 uppercase">ACTION × SAY • CREW BOARD</div>
+            <h2 class="font-black text-xs text-slate-900 uppercase tracking-tight mt-0.5">NHÂN SỰ RẢNH / BẬN</h2>
           </div>
 
-          <span class="text-slate-300 font-black shrink-0">→</span>
-
-          <div class="min-w-0 flex-1 flex items-center justify-between gap-1.5">
-            <div class="min-w-0">
-              <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Đến ngày</div>
-              <div class="font-mono font-black text-[11.5px] text-slate-900 tabular-nums">${escapeHtml(endDmy)}</div>
+          <div class="bg-white rounded-xl border border-slate-200/90 px-2.5 py-1 flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9px] font-black text-slate-400 uppercase">Từ</span>
+              <span class="font-mono font-black text-[11px] text-slate-900 tabular-nums">${escapeHtml(startDmy)}</span>
+              <label class="relative w-5 h-5 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0" title="Chọn từ ngày">
+                <span class="font-mono font-black text-[9px] text-slate-700 tabular-nums pointer-events-none">${escapeHtml(startDayNum)}</span>
+                <input
+                  type="date"
+                  aria-label="Từ ngày"
+                  value="${escapeHtml(state.checkStart)}"
+                  onchange="appActions.setCheckDate('checkStart', this.value)"
+                  class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                />
+              </label>
             </div>
-            <input
-              type="date"
-              aria-label="Đến ngày"
-              min="${escapeHtml(state.checkStart)}"
-              value="${escapeHtml(state.checkEnd)}"
-              onchange="appActions.setCheckDate('checkEnd', this.value)"
-              class="w-7 h-7 bg-slate-50 border border-slate-200/80 rounded-lg text-[10px] font-mono text-slate-700 shrink-0 focus:outline-none"
-            />
+            <span class="text-slate-300 font-black">→</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9px] font-black text-slate-400 uppercase">Đến</span>
+              <span class="font-mono font-black text-[11px] text-slate-900 tabular-nums">${escapeHtml(endDmy)}</span>
+              <label class="relative w-5 h-5 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0" title="Chọn đến ngày">
+                <span class="font-mono font-black text-[9px] text-slate-700 tabular-nums pointer-events-none">${escapeHtml(endDayNum)}</span>
+                <input
+                  type="date"
+                  aria-label="Đến ngày"
+                  min="${escapeHtml(state.checkStart)}"
+                  value="${escapeHtml(state.checkEnd)}"
+                  onchange="appActions.setCheckDate('checkEnd', this.value)"
+                  class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                />
+              </label>
+            </div>
           </div>
         </div>
+
+        <button
+          type="button"
+          onclick="appActions.openAddModal('${escapeHtml(state.checkStart)}')"
+          class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition shrink-0"
+        >⚡ Nổ Show Ngày Này</button>
       </div>
 
       <!-- Layout 2 cột đồng bộ CTP / Công nợ -->
       <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[336px_minmax(0,1fr)]">
         <!-- Sidebar Desktop -->
-        <aside class="hidden lg:flex flex-col gap-3 p-3.5 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
-          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2 text-[11px]">
+        <aside class="hidden lg:flex flex-col gap-2.5 p-3 bg-[#f8fafc] border-r border-slate-200/90 overflow-y-auto custom-scroll">
+          <div class="bg-white p-3 rounded-2xl border border-slate-200/90 space-y-2 text-[11px]">
             <div class="flex items-center justify-between gap-1">
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tổng quan quân số</span>
               <span class="font-mono font-black text-slate-900">${totalCount} thành viên</span>
             </div>
-            <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+            <div class="grid grid-cols-2 gap-1.5">
               <div class="px-2.5 py-1.5 rounded-xl bg-[#f8fafc] border border-slate-200/70 flex items-center justify-between">
                 <span class="text-slate-500 font-semibold">Sẵn sàng</span>
                 <span class="font-mono font-black text-emerald-700">${freeList.length}</span>
@@ -143,13 +165,13 @@ export function renderCrewBoardTabHtml() {
             </div>
           </div>
 
-          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2">
+          <div class="bg-white p-3 rounded-2xl border border-slate-200/90 space-y-2">
             <div class="flex items-center justify-between gap-1">
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Chạm nhanh nổ show</span>
               <span class="font-mono font-bold text-[10px] text-emerald-700">${freeList.length} rảnh</span>
             </div>
             ${freeList.length === 0 ? `
-              <div class="text-[11px] text-slate-400 py-3 text-center">Toàn bộ ekip đều kín lịch</div>
+              <div class="text-[11px] text-slate-400 py-2 text-center">Toàn bộ ekip đều kín lịch</div>
             ` : `
               <div class="flex flex-wrap gap-1.5">
                 ${freeList.map(m => `
@@ -163,7 +185,7 @@ export function renderCrewBoardTabHtml() {
             `}
           </div>
 
-          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 space-y-2">
+          <div class="bg-white p-3 rounded-2xl border border-slate-200/90 space-y-2">
             <div class="flex items-center justify-between gap-1">
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tóm tắt lịch bận theo địa điểm</span>
               <span class="font-mono font-bold text-[10px] text-amber-700">${busyByLocation.length} địa điểm</span>
@@ -175,7 +197,7 @@ export function renderCrewBoardTabHtml() {
             ` : `
               <div class="space-y-1.5">
                 ${busyByLocation.map(grp => `
-                  <div class="px-2.5 py-2 rounded-xl bg-[#f8fafc] border border-slate-200/80 space-y-1">
+                  <div class="px-2.5 py-1.5 rounded-xl bg-[#f8fafc] border border-slate-200/80 space-y-1">
                     <div class="flex items-center justify-between gap-2">
                       <span class="font-black text-[11px] text-slate-900 truncate">📍 ${escapeHtml(grp.location)}</span>
                       <span class="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200/90 font-mono font-black text-[9.5px] text-amber-800 shrink-0">${grp.members.length} người</span>
@@ -193,12 +215,12 @@ export function renderCrewBoardTabHtml() {
         </aside>
 
         <!-- Main Content -->
-        <div id="crew-board-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-4">
-          <div class="max-w-6xl mx-auto space-y-3">
+        <div id="crew-board-scroll-list" class="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 sm:px-4 pb-3">
+          <div class="max-w-6xl mx-auto space-y-2.5">
             <!-- Sticky 4 Stat Cards -->
-            <div class="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-3 pb-2.5 border-b border-slate-200/80">
+            <div class="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f1f5f9] -mx-3 sm:-mx-4 px-3 sm:px-4 pt-2 pb-2 border-b border-slate-200/80">
               ${statCards.map(c => `
-                <div class="px-3.5 py-2 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
+                <div class="px-3 py-1.5 rounded-2xl border shadow-2xs transition ${c.wrapCls}">
                   <span class="text-[9px] font-extrabold uppercase tracking-wider block truncate ${c.labelCls}">${c.label}</span>
                   <span class="font-black font-mono tabular-nums text-xs sm:text-sm mt-0.5 block ${c.valCls}">${c.val}</span>
                 </div>
@@ -206,8 +228,8 @@ export function renderCrewBoardTabHtml() {
             </div>
 
             <!-- Section 1: Ekip sẵn sàng -->
-            <section class="bg-white rounded-3xl border border-slate-200/90 p-3.5 sm:p-4 space-y-3 shadow-2xs">
-              <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+            <section class="bg-white rounded-3xl border border-slate-200/90 p-3 space-y-2 shadow-2xs">
+              <div class="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-100">
                 <div class="flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
                   <h3 class="font-black text-xs text-slate-900 uppercase tracking-tight">Ekip sẵn sàng (${freeList.length}/${totalCount})</h3>
@@ -216,7 +238,7 @@ export function renderCrewBoardTabHtml() {
               </div>
 
               ${freeList.length === 0 ? `
-                <div class="py-6 text-center text-[11px] text-slate-400 bg-[#f8fafc] rounded-2xl border border-dashed border-slate-200">
+                <div class="py-5 text-center text-[11px] text-slate-400 bg-[#f8fafc] rounded-2xl border border-dashed border-slate-200">
                   Không có nhân sự rảnh trong khoảng ngày này.
                 </div>
               ` : `
@@ -242,8 +264,8 @@ export function renderCrewBoardTabHtml() {
             </section>
 
             <!-- Section 2: Ekip đang có lịch -->
-            <section class="bg-white rounded-3xl border border-slate-200/90 p-3.5 sm:p-4 space-y-3 shadow-2xs">
-              <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+            <section class="bg-white rounded-3xl border border-slate-200/90 p-3 space-y-2 shadow-2xs">
+              <div class="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-100">
                 <div class="flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
                   <h3 class="font-black text-xs text-slate-900 uppercase tracking-tight">Ekip đang có lịch (${busyList.length}/${totalCount})</h3>
@@ -252,7 +274,7 @@ export function renderCrewBoardTabHtml() {
               </div>
 
               ${busyList.length === 0 ? `
-                <div class="py-6 text-center text-[11px] text-emerald-700 font-semibold bg-[#f8fafc] rounded-2xl border border-dashed border-slate-200">
+                <div class="py-5 text-center text-[11px] text-emerald-700 font-semibold bg-[#f8fafc] rounded-2xl border border-dashed border-slate-200">
                   ✓ Tất cả nhân sự đều đang rảnh.
                 </div>
               ` : `
