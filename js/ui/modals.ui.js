@@ -1029,8 +1029,8 @@ export function renderQuickExpenseModalHtml() {
 
         <!-- Body -->
         <div class="flex-1 min-h-0 overflow-y-auto custom-scroll space-y-2.5 pr-0.5">
-          <!-- 1. Chọn Show gọn 1 dòng -->
-          <div class="space-y-1">
+          <!-- 1. Chọn Show gọn 1 hàng cuộn ngang -->
+          <div class="space-y-1.5">
             <div class="flex items-center justify-between px-0.5">
               <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Show hôm nay</span>
               <span class="text-[9.5px] font-mono font-bold text-slate-400">${activeShows.length} show</span>
@@ -1041,7 +1041,7 @@ export function renderQuickExpenseModalHtml() {
                 Hôm nay không có show nào đang chạy.
               </div>
             ` : `
-              <div class="space-y-1">
+              <div class="flex items-center gap-1.5 overflow-x-auto custom-scroll pb-1">
                 ${activeShows.map(sh => {
                   const isSel = sh.id === activeShowId;
                   const partner = getVisiblePartnerText(sh);
@@ -1050,26 +1050,27 @@ export function renderQuickExpenseModalHtml() {
                     <button
                       type="button"
                       onclick="appActions.selectQuickExpenseShow('${sh.id}')"
-                      class="w-full px-2.5 py-1.5 rounded-xl border text-left flex items-center justify-between gap-2 transition ${
+                      class="px-2.5 py-1.5 rounded-xl border text-left flex items-center gap-1.5 shrink-0 max-w-[210px] transition ${
                         isSel
                           ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
-                          : 'bg-[#f8fafc] hover:bg-slate-100 border-slate-200/80 text-slate-800'
+                          : 'bg-[#f8fafc] hover:bg-slate-100 border-slate-200/90 text-slate-800'
                       }"
                     >
-                      <div class="min-w-0 flex items-center gap-1.5">
-                        <span class="px-1.5 py-0.5 rounded-md font-mono font-bold text-[9.5px] shrink-0 ${
-                          isSel ? 'bg-amber-400/20 text-amber-300' : 'bg-white text-indigo-600 border border-slate-200/80'
-                        }">${escapeHtml(dateShort)}</span>
-                        <span class="font-extrabold text-[11.5px] truncate">${escapeHtml(sh.location)}</span>
-                        ${partner ? `<span class="text-[10px] truncate ${isSel ? 'text-slate-300' : 'text-slate-500'}">(${escapeHtml(partner)})</span>` : ''}
-                      </div>
-                      <span class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
-                        isSel ? 'bg-emerald-500 text-white' : 'border border-slate-300 text-transparent'
-                      }">✓</span>
+                      <span class="px-1.5 py-0.5 rounded-md font-mono font-bold text-[9.5px] shrink-0 ${
+                        isSel ? 'bg-amber-400/20 text-amber-300' : 'bg-white text-indigo-600 border border-slate-200/80'
+                      }">${escapeHtml(dateShort)}</span>
+                      <span class="font-extrabold text-[11px] truncate">${escapeHtml(sh.location)}</span>
+                      ${partner ? `<span class="text-[9.5px] truncate ${isSel ? 'text-slate-300' : 'text-slate-500'}">• ${escapeHtml(partner)}</span>` : ''}
                     </button>
                   `;
                 }).join('')}
               </div>
+              ${selectedShow ? `
+                <div class="px-2 py-1 rounded-xl bg-amber-50/70 border border-amber-200/70 flex items-center justify-between gap-2 text-[10px] text-slate-600">
+                  <span class="truncate">Đang chọn: <b class="text-slate-900">${escapeHtml(selectedShow.location)}</b>${getVisiblePartnerText(selectedShow) ? ` (${escapeHtml(getVisiblePartnerText(selectedShow))})` : ''}</span>
+                  <span class="text-slate-400 shrink-0">Chủ: <b class="text-slate-700">${escapeHtml(getMember(selectedShow.ownerId)?.name || '')}</b></span>
+                </div>
+              ` : ''}
             `}
           </div>
 
